@@ -303,14 +303,9 @@ export default function SeatScanning() {
   <CardContent className="pt-6">
     <div className="space-y-6">
       {/* Name Display - Always visible */}
-      <div className="flex justify-between items-center p-5 rounded-xl bg-violet-50/50 dark:bg-violet-900/20">
-        <span className="text-lg sm:text-xl font-bold text-violet-600 dark:text-violet-400">
-          Name
-        </span>
-        <span className="font-semibold text-4xl sm:text-4xl text-zinc-800 dark:text-zinc-200">
+        <span className="font-semibold text-center text-4xl sm:text-4xl text-zinc-800 dark:text-zinc-200">
           {searchResult.name}
         </span>
-      </div>
       
       {/* Table Notes - Show if available */}
       {tableNotes && (
