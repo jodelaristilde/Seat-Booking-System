@@ -302,11 +302,7 @@ export default function SeatScanning() {
 <Card className="border-0 shadow-2xl shadow-lime-500/10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl overflow-hidden">
   <CardContent className="pt-6">
     <div className="space-y-6">
-      {/* Name Display - Always visible */}
-        <span className="font-semibold text-center text-4xl sm:text-4xl text-zinc-800 dark:text-zinc-200">
-          {searchResult.name}
-        </span>
-      
+
       {/* Table Notes - Show if available */}
       {tableNotes && (
         <div className="p-4 rounded-xl bg-yellow-50/50 dark:bg-yellow-900/20 border-l-4 border-yellow-400">
@@ -325,11 +321,18 @@ export default function SeatScanning() {
           </div>
         </div>
       )}
+
+      {/* Name Display - Always visible */}
+        <div className="max-w-full flex items-center justify-center">
+        <span className="font-semibold text-center text-4xl sm:text-4xl text-zinc-800 dark:text-zinc-200">
+          {searchResult.name}
+        </span>
+        </div>
       
       {seatIsReceived ? (
         // Show seat details after check-in
         <>
-          <div className="flex justify-center items-center gap-3 flex-col py-4">
+          <div className="flex justify-center items-center gap-3 flex-col pb-4">
             <span className="text-3xl sm:text-4xl font-bold text-green-600 dark:text-lime-400">
               You&apos;re on
             </span>
