@@ -1,3 +1,5 @@
+import { authOptions } from "@/lib/auth.config"
+import { hashPassword, verifyPassword } from "@/lib/password"
 import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
@@ -6,7 +8,7 @@ const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
 
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 })
@@ -18,43 +20,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Get the user from the database
+    if (String(newPassword).length < 6) {
+      return NextResponse.json(
+        { success: false, message: "New password must be at least 6 characters" },
+        { status: 400 },
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: {
-        email: session.user.email,
-      },
-      select: {
-        id: true,
-        password: true,
-      },
+      where: { email: session.user.email },
+      select: { id: true, password: true },
     })
 
     if (!user) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
-    // Verify current password
-    if (user.password !== currentPassword) {
+    if (!(await verifyPassword(currentPassword, user.password))) {
       return NextResponse.json({ success: false, message: "Current password is incorrect" }, { status: 401 })
     }
 
-    // Update the password
     await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        password: newPassword,
-      },
+      where: { id: user.id },
+      data: { password: await hashPassword(newPassword) },
     })
 
-    return NextResponse.json({
-      success: true,
-      message: "Password updated successfully",
-    })
+    return NextResponse.json({ success: true, message: "Password updated successfully" })
   } catch (error) {
     console.error("Error changing password:", error)
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
   }
 }
-
