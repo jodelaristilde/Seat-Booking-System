@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import type { NextAuthOptions } from "next-auth"
 import NextAuth from "next-auth/next"
+import { hashPassword, isHashed, verifyPassword } from "@/lib/password"
 import CredentialsProvider from "next-auth/providers/credentials"
 
 const prisma = new PrismaClient()
@@ -24,11 +25,19 @@ const authOptions: NextAuthOptions = {
           },
         })
 
-        if (!user || user.password !== credentials.password) {
+        if (!user || !(await verifyPassword(credentials.password, user.password))) {
           throw new Error("Invalid credentials")
         }
 
-        return user
+        // Old plain-text accounts get upgraded to a hashed password at login
+        if (!isHashed(user.password)) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { password: await hashPassword(credentials.password) },
+          })
+        }
+
+        return { id: user.id, email: user.email, name: user.name }
       },
     }),
   ],
