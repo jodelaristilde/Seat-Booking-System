@@ -1,4 +1,7 @@
+import { authOptions } from "@/lib/auth.config";
+import { hashPassword } from "@/lib/password";
 import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
@@ -12,16 +15,27 @@ export async function POST(request: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    // Store password without encryption
+    // Only the very first account can be created without logging in
+    // (so a brand-new site can get its "admin" account).
+    // After that, only the logged-in "admin" can create accounts.
+    const userCount = await prisma.user.count();
+    if (userCount > 0) {
+      const session = await getServerSession(authOptions);
+      if (session?.user?.email !== "admin") {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         email,
-        password, // Plain text password
-        name
-      }
+        password: await hashPassword(password),
+        name,
+      },
     });
 
-    return NextResponse.json(user);
+    // Never send the password back
+    return NextResponse.json({ id: user.id, email: user.email, name: user.name });
   } catch (error) {
     console.log(error);
     return new NextResponse("Internal error", { status: 500 });
