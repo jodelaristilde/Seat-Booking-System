@@ -1,7 +1,32 @@
 import { withAuth } from "next-auth/middleware"
-import { NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server"
 
-export default withAuth(
+// ---------------------------------------------------------------
+// PUBLIC API ROUTES
+// These are the only /api routes that work WITHOUT being logged in.
+// They are what guests need for the QR seat finder and the client view.
+// Every other /api route now requires a login.
+// ---------------------------------------------------------------
+const PUBLIC_API: { path: string; methods: string[] }[] = [
+  { path: "/api/auth", methods: ["GET", "POST"] }, // login itself
+  { path: "/api/floor-map", methods: ["GET"] }, // guests see the floor map (upload/delete need login)
+  { path: "/api/find-guest", methods: ["GET"] }, // guest name search (max 5 matches)
+  { path: "/api/get-seat-checkin", methods: ["GET"] }, // guest seat lookup
+  { path: "/api/get-seat", methods: ["GET"] }, // client view (names are hidden unless logged in)
+  { path: "/api/seat-checkin", methods: ["POST"] }, // guest taps "I've arrived"
+  { path: "/api/register", methods: ["POST"] }, // the route itself checks who is allowed
+]
+
+const isPublicApi = (path: string, method: string) =>
+  PUBLIC_API.some(
+    (r) =>
+      (path === r.path || path.startsWith(r.path + "/")) &&
+      r.methods.includes(method)
+  )
+
+// The original page rules, unchanged.
+const pageMiddleware = withAuth(
   function middleware(req) {
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
@@ -28,11 +53,9 @@ export default withAuth(
 
         // Require authentication for check-in page, but allow access to check-in/login
         if (path.startsWith("/check-in")) {
-          // Allow access to the login page without authentication
           if (path.startsWith("/check-in/login")) {
             return true
           }
-          // Require authentication for the actual check-in process
           return !!token
         }
 
@@ -52,6 +75,32 @@ export default withAuth(
   },
 )
 
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
+  const path = req.nextUrl.pathname
+
+  // --- API routes: must be public-listed, or the person must be logged in ---
+  if (path.startsWith("/api/")) {
+    if (isPublicApi(path, req.method)) {
+      return NextResponse.next()
+    }
+    const token = await getToken({ req })
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Please log in first" },
+        { status: 401 }
+      )
+    }
+    return NextResponse.next()
+  }
+
+  // --- Pages: same behavior as before ---
+  const run = pageMiddleware as unknown as (
+    req: NextRequest,
+    event: NextFetchEvent
+  ) => Promise<Response | undefined> | Response | undefined
+  return run(req, event)
+}
+
 export const config = {
   matcher: [
     "/",
@@ -59,6 +108,6 @@ export const config = {
     "/client-view/:path*",
     "/seat-scanning/:path*",
     "/check-in/:path*",
-    // '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    "/api/:path*",
   ],
 }
