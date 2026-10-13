@@ -1,7 +1,12 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { TableData } from "../types/booking";
 
 type Pos = { x: number; y: number };
@@ -65,7 +70,7 @@ export function FloorPlanView({
       y: 8 + Math.floor(i / 6) * 14,
     };
 
-  const onMove = (e: React.PointerEvent) => {
+  const onMove = (e: ReactPointerEvent) => {
     const key = dragKey.current;
     const box = boxRef.current;
     if (!key || !box) return;
