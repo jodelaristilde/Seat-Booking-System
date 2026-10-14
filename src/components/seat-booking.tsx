@@ -747,7 +747,9 @@ const handleTableClick = () => {
               style={{
                 left: `${left}%`,
                 top: `${top}%`,
-                transform: "translate(-50%, -50%)",
+                // centre the seat on its spot (x/y so the pop-in animation keeps it)
+                x: "-50%",
+                y: "-50%",
                 // on a rectangle, seats are about 15% of the table's height
                 ...(isRect ? { width: `${Math.min(8, 28 / ratio)}%` } : {}),
               }}
@@ -832,13 +834,15 @@ const handleTableClick = () => {
                           // just outside this seat, pointing away from the table
                           left: `${50 + ((nameSpot.left - left) / seatW) * 100}%`,
                           top: `${50 + ((nameSpot.top - top) / (seatW * ratio)) * 100}%`,
-                          transform: "translate(-50%, -50%)",
+                          x: "-50%",
+                          y: "-50%",
                         }
                       : {
                           // Calculate position further out from the seat position
                           left: `${nameSpot.left}%`,
                           top: `${nameSpot.top}%`,
-                          transform: "translate(-50%, -50%)",
+                          x: "-50%",
+                          y: "-50%",
                         }
                   }
                 >
