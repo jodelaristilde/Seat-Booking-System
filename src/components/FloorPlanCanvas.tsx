@@ -1236,7 +1236,13 @@ export function FloorPlanCanvas({
           </div>
           <ul className="max-h-40 lg:max-h-[calc(100vh-6rem)] overflow-y-auto divide-y divide-green-100">
             <AnimatePresence initial={false}>
-              {arrivals.map((a) => (
+              {[...arrivals]
+                .sort((a, b) => {
+                  // by table (Table 2 before Table 10), then by name
+                  const t = a.table.localeCompare(b.table, undefined, { numeric: true, sensitivity: "base" });
+                  return t !== 0 ? t : a.name.localeCompare(b.name);
+                })
+                .map((a) => (
                 <motion.li
                   key={a.seatId}
                   layout
@@ -1244,19 +1250,14 @@ export function FloorPlanCanvas({
                   animate={{ opacity: 1, x: 0, backgroundColor: "rgba(255,255,255,0)" }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
-                  className="px-3 py-1.5"
+                  className="px-3 py-1.5 flex items-baseline justify-between gap-2"
                 >
-                  <div className="font-medium text-zinc-900 leading-tight truncate" title={a.name}>
+                  <span className="font-medium text-zinc-900 leading-tight truncate" title={a.name}>
                     {a.name}
-                  </div>
-                  <div className="text-xs text-zinc-600 flex justify-between gap-2">
-                    <span className="truncate">{a.table}</span>
-                    {a.at && (
-                      <span className="tabular-nums shrink-0">
-                        {new Date(a.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                      </span>
-                    )}
-                  </div>
+                  </span>
+                  <span className="text-xs font-semibold text-green-800 shrink-0" title={a.table}>
+                    {a.table}
+                  </span>
                 </motion.li>
               ))}
             </AnimatePresence>
