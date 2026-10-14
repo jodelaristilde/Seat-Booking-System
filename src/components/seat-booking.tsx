@@ -577,12 +577,16 @@ const handleTableClick = () => {
     return (
       <motion.div
         key={tableId}
-        style={isRect ? { aspectRatio: String(ratio) } : undefined}
+        style={{
+          ...(isRect ? { aspectRatio: String(ratio) } : {}),
+          // On the floor plan, text sizes follow the table's size
+          ...(inFloorPlan ? { containerType: "inline-size" as const } : {}),
+        }}
         className={`relative w-full mx-auto ${
           isRect ? "" : "aspect-square"
         } ${
           inFloorPlan ? "" : isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
-        } ${showNames ? "p-8" : ""}`} // Add padding when names are shown
+        } ${showNames && !inFloorPlan ? "p-8" : ""}`} // Add padding when names are shown
         onMouseEnter={() => setHoveredTable(tableId)}
         onMouseLeave={() => setHoveredTable(null)}
         layout={!inFloorPlan}
@@ -625,10 +629,15 @@ const handleTableClick = () => {
               <span
                 className={`font-semibold text-center ${
                   inFloorPlan
-                    ? "text-[10px] leading-4 whitespace-nowrap overflow-hidden text-ellipsis block max-w-full"
+                    ? "leading-tight whitespace-nowrap overflow-hidden text-ellipsis block max-w-full"
                     : "text-lg"
                 }`}
                 title={displayName}
+                style={
+                  inFloorPlan
+                    ? { fontSize: isRect ? "clamp(9px, 6cqw, 26px)" : "clamp(9px, 11cqw, 26px)" }
+                    : undefined
+                }
               >
                 {displayName}
               </span>
@@ -694,7 +703,8 @@ const handleTableClick = () => {
           </div>
           {inFloorPlan && hideSeats && (
             <span
-              className="text-[10px] font-medium text-zinc-600 bg-white/80 rounded px-1 tabular-nums"
+              className="font-medium text-zinc-600 bg-white/80 rounded px-1 tabular-nums"
+              style={{ fontSize: isRect ? "clamp(8px, 4.5cqw, 18px)" : "clamp(8px, 8cqw, 18px)" }}
               title="Guests seated / seats at this table"
             >
               {table.seats.filter((s) => s.isBooked).length}/{table.seats.length}
@@ -721,6 +731,8 @@ const handleTableClick = () => {
         {!hideSeats && table.seats.map((seat, seatIndex) => {
           const countofseats = table.seats.length;
           const { left, top } = seatSpot(seatIndex, countofseats);
+          // seat width in % of the table's width
+          const seatW = isRect ? Math.min(8, 28 / ratio) : isFullScreen && !inFloorPlan ? 20 : 15;
           const nameSpot = seatSpot(seatIndex, countofseats, 12);
 
           return (
@@ -772,9 +784,14 @@ const handleTableClick = () => {
                         )
                       ) : (
                         <span
-                          className={`text-sm font-medium ${
-                            isFullScreen ? "text-lg" : ""
+                          className={`font-medium ${
+                            inFloorPlan ? "" : isFullScreen ? "text-sm text-lg" : "text-sm"
                           }`}
+                          style={
+                            inFloorPlan
+                              ? { fontSize: isRect ? "clamp(7px, 3.6cqw, 16px)" : "clamp(7px, 7cqw, 16px)" }
+                              : undefined
+                          }
                         >
                           {seat.seat}
                         </span>
@@ -809,14 +826,28 @@ const handleTableClick = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="absolute whitespace-nowrap pointer-events-none z-20"
-                  style={{
-                    // Calculate position further out from the seat position
-                    left: `${nameSpot.left}%`,
-                    top: `${nameSpot.top}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
+                  style={
+                    inFloorPlan
+                      ? {
+                          // just outside this seat, pointing away from the table
+                          left: `${50 + ((nameSpot.left - left) / seatW) * 100}%`,
+                          top: `${50 + ((nameSpot.top - top) / (seatW * ratio)) * 100}%`,
+                          transform: "translate(-50%, -50%)",
+                        }
+                      : {
+                          // Calculate position further out from the seat position
+                          left: `${nameSpot.left}%`,
+                          top: `${nameSpot.top}%`,
+                          transform: "translate(-50%, -50%)",
+                        }
+                  }
                 >
-                  <span className="text-[0.60rem] font-medium text-zinc-600 bg-white/90 px-1.5 py-0.5 rounded shadow-sm block">
+                  <span
+                    className={`font-medium text-zinc-700 bg-white/90 px-1.5 py-0.5 rounded shadow-sm block ${
+                      inFloorPlan ? "" : "text-[0.60rem]"
+                    }`}
+                    style={inFloorPlan ? { fontSize: isRect ? "clamp(8px, 3.5cqw, 16px)" : "clamp(8px, 6cqw, 16px)" } : undefined}
+                  >
                     {seat.user?.firstname} {seat.user?.lastname}
                   </span>
                 </motion.div>
@@ -1267,6 +1298,8 @@ const handleTableClick = () => {
                 renderTable={(table, index, hideSeats) =>
                   renderCircularTable(table, index, true, hideSeats)
                 }
+                guestNames={showNames}
+                onGuestNamesChange={setShowNames}
                 onTablesChanged={refreshSeats}
                 roomOnly={isFullScreen}
                 onRoomOnlyChange={setIsFullScreen}

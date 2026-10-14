@@ -41,6 +41,9 @@ interface FloorPlanCanvasProps {
   // "Room only": hide the rest of the dashboard while working on the room
   roomOnly?: boolean;
   onRoomOnlyChange?: (on: boolean) => void;
+  // Show the names of seated guests next to their seats
+  guestNames?: boolean;
+  onGuestNamesChange?: (on: boolean) => void;
 }
 
 // One table while checking the picture
@@ -128,6 +131,8 @@ export function FloorPlanCanvas({
   onTablesChanged,
   roomOnly = false,
   onRoomOnlyChange,
+  guestNames = false,
+  onGuestNamesChange,
 }: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
@@ -827,6 +832,35 @@ export function FloorPlanCanvas({
 
   const pickedCount = review?.filter((r) => r.picked).length ?? 0;
 
+  // The part of the room to show: everything while editing, otherwise just
+  // around the tables (with a little margin), in % of the room
+  const view = (() => {
+    const whole = { x: 0, y: 0, w: 100, h: 100, aspect };
+    if (working || !tables.length) return whole;
+    let x0 = 100, y0 = 100, x1 = 0, y1 = 0;
+    for (const t of tables) {
+      const p = positions[tableIdOf(t)];
+      if (!p) continue;
+      const box = tableBox(t);
+      const halfW = box.width / 2;
+      const halfH = (box.width / box.ratio / 2) * aspect;
+      x0 = Math.min(x0, p.x - halfW);
+      x1 = Math.max(x1, p.x + halfW);
+      y0 = Math.min(y0, p.y - halfH);
+      y1 = Math.max(y1, p.y + halfH);
+    }
+    if (x1 <= x0 || y1 <= y0) return whole;
+    const m = 4;
+    x0 = Math.max(0, x0 - m);
+    y0 = Math.max(0, y0 - m * aspect);
+    x1 = Math.min(100, x1 + m);
+    y1 = Math.min(100, y1 + m * aspect);
+    const w = x1 - x0;
+    const h = y1 - y0;
+    if (w > 92 && h > 92) return whole;
+    return { x: x0, y: y0, w, h, aspect: (w / h) * aspect };
+  })();
+
   return (
     <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
       {/* Floor plan controls: a column down the left side on bigger screens */}
@@ -838,6 +872,7 @@ export function FloorPlanCanvas({
             onClick={() => {
               setMenuHidden(false);
               writeStored(MENU_KEY, "shown");
+              onRoomOnlyChange?.(false);
             }}
             title="Show the floor plan menu"
           >
@@ -855,8 +890,10 @@ export function FloorPlanCanvas({
             onClick={() => {
               setMenuHidden(true);
               writeStored(MENU_KEY, "hidden");
+              // hiding the menu also hides the rest of the dashboard
+              onRoomOnlyChange?.(true);
             }}
-            title="Hide this menu (the Menu button brings it back)"
+            title="Hide this menu and everything else, so the room is as big as possible"
           >
             <PanelLeftClose className="w-4 h-4 mr-2" /> Hide menu
           </Button>
@@ -1022,6 +1059,17 @@ export function FloorPlanCanvas({
           </Button>
         )}
 
+        {!working && onGuestNamesChange && (
+          <Button
+            size="sm"
+            variant={guestNames ? "default" : "outline"}
+            onClick={() => onGuestNamesChange(!guestNames)}
+            title="Show the names of seated guests next to their seats"
+          >
+            {guestNames ? "Hide guest names" : "Guest names"}
+          </Button>
+        )}
+
         {!reviewing && (
           <Button
             size="sm"
@@ -1073,17 +1121,27 @@ export function FloorPlanCanvas({
         </p>
       )}
 
-      {/* The room */}
+      {/* The room. Outside of editing, the view zooms in on the tables so
+          they are as big as possible; editing always shows the whole room. */}
       <div
-        ref={canvasRef}
         className={`relative w-full bg-white border rounded-lg overflow-hidden ${
           editing || reviewing || drawing ? "border-blue-400 border-2" : "border-zinc-200"
         }`}
         style={{
-          aspectRatio: String(aspect),
-          // Whole room visible on screen: never taller than the window
-          maxWidth: `min(100%, calc((100vh - 7rem) * ${aspect}))`,
+          aspectRatio: String(view.aspect),
+          // Never taller than the window
+          maxWidth: `min(100%, calc((100vh - ${roomOnly ? 4.5 : 7}rem) * ${view.aspect}))`,
           marginInline: "auto",
+        }}
+      >
+      <div
+        ref={canvasRef}
+        className="absolute"
+        style={{
+          width: `${10000 / view.w}%`,
+          aspectRatio: String(aspect),
+          left: `${(-view.x / view.w) * 100}%`,
+          top: `${(-view.y / view.h) * 100}%`,
         }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -1227,7 +1285,7 @@ export function FloorPlanCanvas({
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}
               >
-                {renderTable(withShape(table), index, !showSeats)}
+                {renderTable(withShape(table), index, !showSeats && !guestNames)}
                 {editing && (
                   <>
                     <div
@@ -1257,6 +1315,7 @@ export function FloorPlanCanvas({
               </div>
             );
           })}
+      </div>
       </div>
       </div>
     </div>
