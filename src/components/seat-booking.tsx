@@ -518,7 +518,8 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
 const renderCircularTable = (
     table: TableData,
     index: number,
-    inFloorPlan = false
+    inFloorPlan = false,
+    hideSeats = false
   ) => {
     const tableId = table.seats[0]?.table?.id || table.tableNumber;
     const tableName = table.seats[0]?.table?.name;
@@ -595,7 +596,11 @@ const handleTableClick = () => {
             className={`absolute border-2 border-zinc-300 bg-white/70 pointer-events-none ${
               shape === "round" ? "rounded-full" : "rounded-md"
             }`}
-            style={{ left: "12%", top: "12%", width: "66%", height: "66%" }}
+            style={
+              hideSeats
+                ? { left: "5%", top: "5%", width: "80%", height: "80%" }
+                : { left: "12%", top: "12%", width: "66%", height: "66%" }
+            }
           />
         )}
         {/* Center Table Label */}
@@ -682,14 +687,22 @@ const handleTableClick = () => {
               </motion.div>
             )}
           </div>
+          {inFloorPlan && hideSeats && (
+            <span
+              className="text-[10px] font-medium text-zinc-600 bg-white/80 rounded px-1 tabular-nums"
+              title="Guests seated / seats at this table"
+            >
+              {table.seats.filter((s) => s.isBooked).length}/{table.seats.length}
+            </span>
+          )}
           <TableNotes
             tableId={String(table.seats[0]?.table?.id || tableId)}
             initialNotes={table.seats[0]?.table?.notes}
           />
         </div>
 
-        {/* Circular Seats */}
-        {table.seats.map((seat, seatIndex) => {
+        {/* Circular Seats (hidden on the floor plan unless "Show seats" is on) */}
+        {!hideSeats && table.seats.map((seat, seatIndex) => {
           const countofseats = table.seats.length;
           const { left, top } = seatSpot(seatIndex, countofseats);
           const nameSpot = seatSpot(seatIndex, countofseats, 12);
@@ -1235,8 +1248,8 @@ const handleTableClick = () => {
             {viewMode === "plan" ? (
               <FloorPlanCanvas
                 tables={getVisibleTables()}
-                renderTable={(table, index) =>
-                  renderCircularTable(table, index, true)
+                renderTable={(table, index, hideSeats) =>
+                  renderCircularTable(table, index, true, hideSeats)
                 }
                 onTablesChanged={refreshSeats}
               />

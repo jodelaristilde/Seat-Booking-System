@@ -34,7 +34,7 @@ type Pos = { x: number; y: number };
 
 interface FloorPlanCanvasProps {
   tables: TableData[];
-  renderTable: (table: TableData, index: number) => ReactNode;
+  renderTable: (table: TableData, index: number, hideSeats: boolean) => ReactNode;
   onTablesChanged: () => void | Promise<void>;
 }
 
@@ -52,6 +52,7 @@ interface ReviewItem {
 
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture";
+const SEATS_KEY = "floorPlanShowSeats";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
 // ring spans 90% of a table's box and the top 66%, so 0.66 / 0.9.
@@ -126,6 +127,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   // The venue picture is only a guide: hidden unless you ask for it,
   // and shown faintly while drawing, moving or checking tables.
   const [showPicture, setShowPicture] = useState(false);
+  // Just the table shapes by default; seat bubbles on request
+  const [showSeats, setShowSeats] = useState(false);
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
@@ -156,6 +159,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     const s = Number(readStored(SIZE_KEY));
     if (s >= 6 && s <= 30) setTableSize(s);
     if (readStored(PICTURE_KEY) === "on") setShowPicture(true);
+    if (readStored(SEATS_KEY) === "on") setShowSeats(true);
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -952,6 +956,22 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
           />
         </label>
 
+        {!reviewing && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setShowSeats((s) => {
+                writeStored(SEATS_KEY, s ? "off" : "on");
+                return !s;
+              });
+            }}
+            title="Show or hide the numbered seats around each table"
+          >
+            {showSeats ? "Hide seats" : "Show seats"}
+          </Button>
+        )}
+
         {picture && !reviewing && !drawing && !editing && (
           <Button
             size="sm"
@@ -1132,7 +1152,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}
               >
-                {renderTable(withShape(table), index)}
+                {renderTable(withShape(table), index, !showSeats)}
                 {editing && (
                   <>
                     <div
