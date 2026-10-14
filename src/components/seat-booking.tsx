@@ -630,7 +630,7 @@ const handleTableClick = () => {
             </span>
 
             {/* Action Buttons - Shows on Hover */}
-            {isHovered && !isFullScreen && (
+            {isHovered && (!isFullScreen || inFloorPlan) && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -714,7 +714,7 @@ const handleTableClick = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: seatIndex * 0.05 }}
               className={`absolute ${
-                isRect ? "" : isFullScreen ? "w-[20%]" : "w-[15%]"
+                isRect ? "" : isFullScreen && !inFloorPlan ? "w-[20%]" : "w-[15%]"
               } aspect-square`}
               style={{
                 left: `${left}%`,
@@ -1252,6 +1252,8 @@ const handleTableClick = () => {
                   renderCircularTable(table, index, true, hideSeats)
                 }
                 onTablesChanged={refreshSeats}
+                roomOnly={isFullScreen}
+                onRoomOnlyChange={setIsFullScreen}
               />
             ) : (
             <motion.div

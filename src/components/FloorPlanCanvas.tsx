@@ -36,6 +36,9 @@ interface FloorPlanCanvasProps {
   tables: TableData[];
   renderTable: (table: TableData, index: number, hideSeats: boolean) => ReactNode;
   onTablesChanged: () => void | Promise<void>;
+  // "Room only": hide the rest of the dashboard while working on the room
+  roomOnly?: boolean;
+  onRoomOnlyChange?: (on: boolean) => void;
 }
 
 // One table while checking the picture
@@ -116,7 +119,13 @@ const ShapeIcon = ({ shape, className }: { shape: Shape; className?: string }) =
     <RectangleHorizontal className={className} />
   );
 
-export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorPlanCanvasProps) {
+export function FloorPlanCanvas({
+  tables,
+  renderTable,
+  onTablesChanged,
+  roomOnly = false,
+  onRoomOnlyChange,
+}: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
   const [draft, setDraft] = useState<Record<string, Pos> | null>(null);
@@ -153,6 +162,16 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
 
   const editing = draft !== null;
   const reviewing = review !== null;
+
+  // Drawing, moving or checking tables: show only the room, then bring the
+  // rest of the dashboard back when finished
+  const working = drawing || editing || reviewing;
+  const wasWorking = useRef(false);
+  useEffect(() => {
+    if (working && !wasWorking.current) onRoomOnlyChange?.(true);
+    if (!working && wasWorking.current) onRoomOnlyChange?.(false);
+    wasWorking.current = working;
+  }, [working, onRoomOnlyChange]);
 
   // Remembered per browser: table size and picture on/off
   useEffect(() => {
@@ -955,6 +974,17 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             onChange={(e) => changeTableSize(Number(e.target.value))}
           />
         </label>
+
+        {!working && onRoomOnlyChange && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onRoomOnlyChange(!roomOnly)}
+            title="Hide everything except the room (Esc to go back)"
+          >
+            {roomOnly ? "Show everything" : "Room only"}
+          </Button>
+        )}
 
         {!reviewing && (
           <Button
