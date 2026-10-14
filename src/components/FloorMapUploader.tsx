@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { enhancePicture } from "@/lib/enhancePicture";
 import {
   Sheet,
   SheetContent,
@@ -69,8 +70,16 @@ export function FloorMapUploader() {
 
       setFile(selectedFile);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const raw = reader.result as string;
+        setPreview(raw);
+        // Show the cleaned-up, sharpened version that will be saved
+        try {
+          const better = await enhancePicture(raw);
+          setPreview(better.data);
+        } catch {
+          /* keep the original preview */
+        }
       };
       reader.readAsDataURL(selectedFile);
     }
@@ -83,7 +92,18 @@ export function FloorMapUploader() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64Data = reader.result as string;
+        let picture = reader.result as string;
+        let mimeType = file.type;
+        let size = file.size;
+        // Clean up and sharpen the picture before saving it
+        try {
+          const better = await enhancePicture(picture);
+          picture = better.data;
+          mimeType = better.mimeType;
+          size = better.size;
+        } catch (e) {
+          console.warn("Picture clean-up skipped:", e);
+        }
 
         const response = await fetch("/api/floor-map", {
           method: "POST",
@@ -92,9 +112,10 @@ export function FloorMapUploader() {
           },
           body: JSON.stringify({
             filename: file.name,
-            data: base64Data,
-            mimeType: file.type,
-            size: file.size,
+            data: picture,
+            mimeType,
+            size,
+            original: picture,
           }),
         });
 
