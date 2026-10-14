@@ -217,7 +217,7 @@ export function BookingSidebar({
           <div>
             {filteredBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
-              <table className="w-auto text-sm border-collapse">
+              <table className="w-auto ml-auto text-sm border-collapse">
                 <tbody>
                   {filteredBookings.map((seat) => (
                     <tr
