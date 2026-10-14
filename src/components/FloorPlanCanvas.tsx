@@ -47,6 +47,8 @@ interface FloorPlanCanvasProps {
   // Show the names of seated guests next to their seats
   guestNames?: boolean;
   onGuestNamesChange?: (on: boolean) => void;
+  // Number of guests in the guest list (for the totals shown in full screen)
+  invited?: number;
 }
 
 // One table while checking the picture
@@ -135,6 +137,7 @@ export function FloorPlanCanvas({
   onRoomOnlyChange,
   guestNames = false,
   onGuestNamesChange,
+  invited,
 }: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
@@ -1346,6 +1349,25 @@ export function FloorPlanCanvas({
               }
         }
       >
+      {/* Totals, shown in full screen where the top bar is hidden */}
+      {roomOnly && !working && (
+        <div className="absolute top-2 left-2 z-30 flex gap-1.5 pointer-events-none">
+          {[
+            { label: "Seats", value: tables.reduce((n, t) => n + t.seats.length, 0), c: "bg-zinc-50 border-zinc-200 text-zinc-500", v: "text-zinc-800" },
+            ...(invited !== undefined
+              ? [{ label: "Invited", value: invited, c: "bg-cyan-50 border-cyan-200 text-cyan-600", v: "text-cyan-800" }]
+              : []),
+            { label: "Assigned", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0), c: "bg-red-50 border-red-200 text-red-600", v: "text-red-800" },
+            { label: "Available", value: tables.reduce((n, t) => n + t.seats.filter((s) => !s.isBooked).length, 0), c: "bg-green-50 border-green-200 text-green-600", v: "text-green-800" },
+            { label: "Arrived", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0), c: "bg-blue-50 border-blue-200 text-blue-600", v: "text-blue-800" },
+          ].map((b) => (
+            <div key={b.label} className={`rounded-md border px-2 py-0.5 text-center shadow-sm ${b.c}`}>
+              <div className="text-[10px] leading-tight uppercase tracking-wider">{b.label}</div>
+              <div className={`text-sm leading-tight font-bold tabular-nums ${b.v}`}>{b.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
       <div
         ref={canvasRef}
         className="absolute"

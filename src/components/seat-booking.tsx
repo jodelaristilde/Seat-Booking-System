@@ -1304,6 +1304,7 @@ const handleTableClick = () => {
                 }
                 guestNames={showNames}
                 onGuestNamesChange={setShowNames}
+                invited={totalGuests}
                 onTablesChanged={refreshSeats}
                 roomOnly={isFullScreen}
                 onRoomOnlyChange={setIsFullScreen}
