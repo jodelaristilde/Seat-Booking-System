@@ -881,7 +881,7 @@ export function FloorPlanCanvas({
     const measure = () => {
       const r = el.getBoundingClientRect();
       // instructions above the room take some height while editing
-      const note = working ? 44 : 0;
+      const note = working ? 44 : roomOnly ? 46 : 0; // instructions, or the totals heading
       const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - 12);
       setAvail({ w: r.width, h });
     };
@@ -1332,6 +1332,25 @@ export function FloorPlanCanvas({
         </p>
       )}
 
+      {/* Totals, shown in full screen where the top bar is hidden */}
+      {roomOnly && !working && (
+        <div className="flex flex-wrap gap-1.5 mb-2 pointer-events-none">
+          {[
+            { label: "Seats", value: tables.reduce((n, t) => n + t.seats.length, 0), c: "bg-zinc-50 border-zinc-200 text-zinc-500", v: "text-zinc-800" },
+            ...(invited !== undefined
+              ? [{ label: "Invited", value: invited, c: "bg-cyan-50 border-cyan-200 text-cyan-600", v: "text-cyan-800" }]
+              : []),
+            { label: "Assigned", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0), c: "bg-red-50 border-red-200 text-red-600", v: "text-red-800" },
+            { label: "Available", value: tables.reduce((n, t) => n + t.seats.filter((s) => !s.isBooked).length, 0), c: "bg-green-50 border-green-200 text-green-600", v: "text-green-800" },
+            { label: "Arrived", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0), c: "bg-blue-50 border-blue-200 text-blue-600", v: "text-blue-800" },
+          ].map((b) => (
+            <div key={b.label} className={`rounded-md border px-2 py-0.5 text-center shadow-sm ${b.c}`}>
+              <div className="text-[10px] leading-tight uppercase tracking-wider">{b.label}</div>
+              <div className={`text-sm leading-tight font-bold tabular-nums ${b.v}`}>{b.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* The room. Outside of editing, the view zooms in on the tables so
           they are as big as possible; editing always shows the whole room. */}
       <div
@@ -1351,25 +1370,6 @@ export function FloorPlanCanvas({
               }
         }
       >
-      {/* Totals, shown in full screen where the top bar is hidden */}
-      {roomOnly && !working && (
-        <div className="absolute top-2 left-2 z-30 flex gap-1.5 pointer-events-none">
-          {[
-            { label: "Seats", value: tables.reduce((n, t) => n + t.seats.length, 0), c: "bg-zinc-50 border-zinc-200 text-zinc-500", v: "text-zinc-800" },
-            ...(invited !== undefined
-              ? [{ label: "Invited", value: invited, c: "bg-cyan-50 border-cyan-200 text-cyan-600", v: "text-cyan-800" }]
-              : []),
-            { label: "Assigned", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0), c: "bg-red-50 border-red-200 text-red-600", v: "text-red-800" },
-            { label: "Available", value: tables.reduce((n, t) => n + t.seats.filter((s) => !s.isBooked).length, 0), c: "bg-green-50 border-green-200 text-green-600", v: "text-green-800" },
-            { label: "Arrived", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0), c: "bg-blue-50 border-blue-200 text-blue-600", v: "text-blue-800" },
-          ].map((b) => (
-            <div key={b.label} className={`rounded-md border px-2 py-0.5 text-center shadow-sm ${b.c}`}>
-              <div className="text-[10px] leading-tight uppercase tracking-wider">{b.label}</div>
-              <div className={`text-sm leading-tight font-bold tabular-nums ${b.v}`}>{b.value}</div>
-            </div>
-          ))}
-        </div>
-      )}
       <div
         ref={canvasRef}
         className="absolute"
