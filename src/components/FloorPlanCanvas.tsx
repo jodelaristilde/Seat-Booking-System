@@ -10,6 +10,8 @@ import {
   ImageIcon,
   LayoutGrid,
   ScanSearch,
+  PenLine,
+  Undo2,
   Type,
   Circle,
   Square,
@@ -131,6 +133,15 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   const [replaceOld, setReplaceOld] = useState(true);
   // Write the table names onto the floor plan picture itself
   const [writeNames, setWriteNames] = useState(true);
+
+  // "Draw tables": pick a shape and seats, then drag on the picture
+  const [drawing, setDrawing] = useState(false);
+  const [drawShape, setDrawShape] = useState<Shape>("round");
+  const [drawSeats, setDrawSeats] = useState(10);
+  const [drawBox, setDrawBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const drawStart = useRef<{ x: number; y: number } | null>(null);
+  const [drawnIds, setDrawnIds] = useState<string[]>([]);
+  const [drawBusy, setDrawBusy] = useState(false);
 
   const editing = draft !== null;
   const reviewing = review !== null;
@@ -630,6 +641,113 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     }
   };
 
+  // ---------- drawing tables on the picture ----------
+  // The box being drawn, in % of the plan. Round and square tables are kept
+  // truly round/square on screen, whichever way the mouse goes.
+  const shapedBox = (b: { x0: number; y0: number; x1: number; y1: number }) => {
+    let w = Math.abs(b.x1 - b.x0);
+    let h = Math.abs(b.y1 - b.y0);
+    if (drawShape !== "rectangle") {
+      // same real size both ways: h% of height = w% of width * aspect
+      const side = Math.max(w, h / aspect);
+      w = side;
+      h = side * aspect;
+    }
+    const left = b.x1 >= b.x0 ? b.x0 : b.x0 - w;
+    const top = b.y1 >= b.y0 ? b.y0 : b.y0 - h;
+    return { x: left + w / 2, y: top + h / 2, w, h };
+  };
+
+  const onDrawDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (drawBusy) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const p = pointToPercent(e.clientX, e.clientY);
+    drawStart.current = p;
+    setDrawBox({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+  };
+  const onDrawMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const s = drawStart.current;
+    if (!s) return;
+    const p = pointToPercent(e.clientX, e.clientY);
+    setDrawBox({
+      x0: s.x,
+      y0: s.y,
+      x1: Math.min(100, Math.max(0, p.x)),
+      y1: Math.min(100, Math.max(0, p.y)),
+    });
+  };
+  const onDrawUp = async () => {
+    const box = drawBox;
+    drawStart.current = null;
+    setDrawBox(null);
+    if (!box) return;
+    const b = shapedBox(box);
+    if (b.w < 1.5 || b.h < 1.5) {
+      toast.message("Drag to draw the table: press, hold and move, then let go.");
+      return;
+    }
+    setDrawBusy(true);
+    try {
+      const name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
+      const res = await fetch("/api/floor-plan-apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tables: [{ name, x: b.x, y: b.y, w: b.w, h: b.h, shape: drawShape, seats: drawSeats }],
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      setDrawnIds((prev) => [...prev, ...(json.createdIds ?? [])]);
+      await onTablesChanged();
+      await loadPositions();
+      toast.success(`${name} added with ${drawSeats} seats`);
+    } catch (e) {
+      toast.error("Could not add the table", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setDrawBusy(false);
+    }
+  };
+
+  const undoLastDrawn = async () => {
+    const id = drawnIds[drawnIds.length - 1];
+    if (!id) return;
+    setDrawBusy(true);
+    try {
+      const res = await fetch("/api/delete-table", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tableId: id }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      setDrawnIds((prev) => prev.slice(0, -1));
+      await onTablesChanged();
+      await loadPositions();
+      toast.success("Last table removed");
+    } catch (e) {
+      toast.error("Could not remove the table", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setDrawBusy(false);
+    }
+  };
+
+  const finishDrawing = async () => {
+    setDrawing(false);
+    setDrawBox(null);
+    if (drawnIds.length && picture) {
+      setSaving(true);
+      await writeNamesOnPicture(currentStamps(saved));
+      setSaving(false);
+    }
+    setDrawnIds([]);
+  };
+
   // ---------- dragging (tables and review shapes) ----------
   const pointToPercent = (clientX: number, clientY: number) => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -668,7 +786,47 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     <div className="px-4 sm:px-8 py-4 sm:pb-[3rem] pb-[9rem]">
       {/* Floor plan controls */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        {reviewing ? (
+        {drawing ? (
+          <>
+            <Button onClick={finishDrawing} size="sm" disabled={drawBusy || saving}>
+              <Save className="w-4 h-4 mr-2" /> Done drawing
+            </Button>
+            <Button
+              onClick={undoLastDrawn}
+              size="sm"
+              variant="outline"
+              disabled={drawBusy || drawnIds.length === 0}
+              title="Remove the last table you drew"
+            >
+              <Undo2 className="w-4 h-4 mr-2" /> Undo last
+            </Button>
+            <span className="text-sm text-zinc-600 ml-1">1. Shape:</span>
+            {SHAPES.map((s) => (
+              <Button
+                key={s}
+                size="sm"
+                variant={drawShape === s ? "default" : "outline"}
+                onClick={() => setDrawShape(s)}
+                aria-pressed={drawShape === s}
+              >
+                <ShapeIcon shape={s} className="w-4 h-4 mr-1" /> {s[0].toUpperCase() + s.slice(1)}
+              </Button>
+            ))}
+            <label className="flex items-center gap-2 text-sm text-zinc-600 ml-1" htmlFor="draw-seats">
+              2. Seats:
+              <input
+                id="draw-seats"
+                type="number"
+                min={1}
+                max={20}
+                value={drawSeats}
+                onChange={(e) => setDrawSeats(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                className="w-16 border rounded px-2 py-1"
+              />
+            </label>
+            <span className="text-sm text-zinc-600 ml-1">3. Drag on the picture to draw it.</span>
+          </>
+        ) : reviewing ? (
           <>
             <Button onClick={applyReview} size="sm" disabled={saving || !!reviewBusy}>
               <Save className="w-4 h-4 mr-2" />
@@ -713,7 +871,17 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
           </>
         ) : !editing ? (
           <>
-            <Button onClick={startEditing} size="sm">
+            <Button
+              onClick={() => {
+                setDrawnIds([]);
+                setShowPicture(true);
+                setDrawing(true);
+              }}
+              size="sm"
+            >
+              <PenLine className="w-4 h-4 mr-2" /> Draw tables
+            </Button>
+            <Button onClick={startEditing} size="sm" variant="outline">
               <Move className="w-4 h-4 mr-2" /> Move tables
             </Button>
             {picture && (
@@ -786,9 +954,13 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         )}
       </div>
 
-      {(editing || reviewing) && (
+      {(editing || reviewing || drawing) && (
         <p className="text-sm text-blue-800 bg-blue-50 rounded px-3 py-2 mb-3">
-          {reviewing
+          {drawing
+            ? drawBusy
+              ? "Adding the table..."
+              : `Drawing ${drawShape} tables with ${drawSeats} seats. Press on the picture where the table starts, drag to its size, and let go. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
+            : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
             : "Drag each table to its spot. Click a table's Shape button to switch round / square / rectangle. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
@@ -800,7 +972,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       <div
         ref={canvasRef}
         className={`relative w-full bg-white border rounded-lg overflow-hidden ${
-          editing || reviewing ? "border-blue-400 border-2" : "border-zinc-200"
+          editing || reviewing || drawing ? "border-blue-400 border-2" : "border-zinc-200"
         }`}
         style={{ aspectRatio: String(aspect) }}
         onPointerMove={onPointerMove}
@@ -881,11 +1053,47 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             </div>
           ))}
 
+        {/* Drawing: a layer over everything that catches the mouse */}
+        {drawing && (
+          <div
+            className={`absolute inset-0 z-50 touch-none ${drawBusy ? "cursor-wait" : "cursor-crosshair"}`}
+            onPointerDown={onDrawDown}
+            onPointerMove={onDrawMove}
+            onPointerUp={onDrawUp}
+            onPointerCancel={() => {
+              drawStart.current = null;
+              setDrawBox(null);
+            }}
+          >
+            {drawBox &&
+              (() => {
+                const b = shapedBox(drawBox);
+                return (
+                  <div
+                    className={`absolute border-2 border-blue-600 bg-blue-500/20 pointer-events-none ${
+                      drawShape === "round" ? "rounded-full" : "rounded-sm"
+                    }`}
+                    style={{
+                      left: `${b.x - b.w / 2}%`,
+                      top: `${b.y - b.h / 2}%`,
+                      width: `${b.w}%`,
+                      height: `${b.h}%`,
+                    }}
+                  >
+                    <span className="absolute left-1/2 top-full -translate-x-1/2 mt-1 whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow">
+                      {drawSeats} seats
+                    </span>
+                  </div>
+                );
+              })()}
+          </div>
+        )}
+
         {/* Normal view */}
         {!reviewing && tables.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-sm text-center px-4">
             {picture
-              ? 'No tables yet. Click "Read tables from picture" to make them from your floor plan.'
+              ? 'No tables yet. Click "Draw tables" to draw them on your floor plan, or "Read tables from picture".'
               : "No tables yet. Upload your floor plan with the FLOOR MAP button, or add tables."}
           </div>
         )}

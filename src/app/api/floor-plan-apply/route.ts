@@ -75,6 +75,7 @@ export async function POST(req: Request) {
 
     let created = 0
     let moved = 0
+    const createdIds: string[] = []
     for (const it of items) {
       const id = byName.get(it.name.toLowerCase())
       if (id) {
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
         })
         moved++
       } else {
-        await prisma.table.create({
+        const made = await prisma.table.create({
           data: {
             name: it.name,
             posX: it.x,
@@ -101,11 +102,12 @@ export async function POST(req: Request) {
             },
           },
         })
+        createdIds.push(made.id)
         created++
       }
     }
 
-    return NextResponse.json({ success: true, created, moved, removed })
+    return NextResponse.json({ success: true, created, moved, removed, createdIds })
   } catch (error) {
     console.error("Error applying floor plan:", error)
     return NextResponse.json(
