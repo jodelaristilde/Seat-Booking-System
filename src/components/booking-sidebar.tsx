@@ -218,7 +218,7 @@ export function BookingSidebar({
           <div>
             {filteredBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
-              <table className="w-full text-sm border-collapse">
+              <table className="w-auto text-sm border-collapse">
                 <tbody>
                   {filteredBookings.map((seat) => (
                     <tr
@@ -247,8 +247,6 @@ export function BookingSidebar({
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
                       </td>
-                      {/* empty space, so name and table stay close together */}
-                      <td className="w-full" />
                       <td className="py-0.5 align-middle">
                         <button
                           type="button"

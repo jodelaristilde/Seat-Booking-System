@@ -1334,7 +1334,7 @@ const handleTableClick = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
               transition={{ duration: 0.3 }}
-              className={`hidden xl:block ${isFullScreen ? "w-64 shrink-0" : "w-1/4"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
+              className={`hidden xl:block ${isFullScreen ? "w-fit min-w-[13rem] max-w-xs shrink-0" : "w-1/4"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
             >
               <BookingSidebar
                 bookedSeats={bookedSeats}

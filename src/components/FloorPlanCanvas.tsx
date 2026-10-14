@@ -869,6 +869,29 @@ export function FloorPlanCanvas({
 
   const pickedCount = review?.filter((r) => r.picked).length ?? 0;
 
+  // How much room the floor plan has on this screen (any monitor size)
+  const roomColRef = useRef<HTMLDivElement>(null);
+  const [avail, setAvail] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = roomColRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      // instructions above the room take some height while editing
+      const note = working ? 44 : 0;
+      const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - 12);
+      setAvail({ w: r.width, h });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [working, roomOnly]);
+
   // ---------- Arrivals ----------
   // Everyone who has arrived (QR scan or ticked by hand), from the seats
   const arrivedNow = useMemo(
@@ -936,23 +959,48 @@ export function FloorPlanCanvas({
       y1 = Math.max(y1, p.y + halfH);
     }
     if (x1 <= x0 || y1 <= y0) return whole;
-    const m = 4;
+    const m = 2;
     x0 = Math.max(0, x0 - m);
     y0 = Math.max(0, y0 - m * aspect);
     x1 = Math.min(100, x1 + m);
     y1 = Math.min(100, y1 + m * aspect);
     const w = x1 - x0;
     const h = y1 - y0;
-    if (w > 92 && h > 92) return whole;
     return { x: x0, y: y0, w, h, aspect: (w / h) * aspect };
   })();
 
+  // Stretch that view to the exact shape of the space on screen, so the room
+  // fills it with no empty bands, on any monitor
+  const fitted = (() => {
+    if (!avail || avail.w < 50) return null;
+    const target = avail.w / avail.h;
+    let { x, y, w, h } = view;
+    const current = (w / h) * aspect;
+    if (current < target) {
+      const nw = (h * target) / aspect;
+      x -= (nw - w) / 2;
+      w = nw;
+    } else {
+      const nh = (w * aspect) / target;
+      y -= (nh - h) / 2;
+      h = nh;
+    }
+    return { x, y, w, h, width: avail.w, height: avail.h };
+  })();
+  const show = fitted ?? { ...view, width: undefined, height: undefined };
+
   return (
-    <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
+    <div
+      className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
+        roomOnly ? "py-2" : "py-3 pb-[9rem] sm:pb-3"
+      }`}
+    >
       {/* Floor plan controls: a column down the left side on bigger screens */}
       {/* Full screen ("Hide menu"): a slim column of icons on the right */}
       {roomOnly && !working ? (
-        <div className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2">
+        <div className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2 items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="Seating4U" className="w-16 h-auto mb-1 select-none" draggable={false} />
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
             <PanelRightOpen className="w-4 h-4" />
           </Button>
@@ -1266,7 +1314,7 @@ export function FloorPlanCanvas({
       )}
 
       {/* The room, with any instructions above it */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" ref={roomColRef}>
       {(editing || reviewing || drawing) && (
         <p className="text-sm text-blue-800 bg-blue-50 rounded px-3 py-2 mb-3">
           {drawing
@@ -1287,21 +1335,25 @@ export function FloorPlanCanvas({
         className={`relative w-full bg-white border rounded-lg overflow-hidden ${
           editing || reviewing || drawing ? "border-blue-400 border-2" : "border-zinc-200"
         }`}
-        style={{
-          aspectRatio: String(view.aspect),
-          // Never taller than the window
-          maxWidth: `min(100%, calc((100vh - ${roomOnly ? 4.5 : 7}rem) * ${view.aspect}))`,
-          marginInline: "auto",
-        }}
+        style={
+          show.width
+            ? { width: show.width, height: show.height }
+            : {
+                aspectRatio: String(view.aspect),
+                // Never taller than the window
+                maxWidth: `min(100%, calc((100vh - ${roomOnly ? 4.5 : 7}rem) * ${view.aspect}))`,
+                marginInline: "auto",
+              }
+        }
       >
       <div
         ref={canvasRef}
         className="absolute"
         style={{
-          width: `${10000 / view.w}%`,
+          width: `${10000 / show.w}%`,
           aspectRatio: String(aspect),
-          left: `${(-view.x / view.w) * 100}%`,
-          top: `${(-view.y / view.h) * 100}%`,
+          left: `${(-show.x / show.w) * 100}%`,
+          top: `${(-show.y / show.h) * 100}%`,
         }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
