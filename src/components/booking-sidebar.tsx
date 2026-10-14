@@ -215,14 +215,14 @@ export function BookingSidebar({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-3 py-1">
+        <ScrollArea className="flex-1 px-2 py-0.5">
           <div className="divide-y divide-gray-100">
             {filteredBookings.length > 0 ? (
               filteredBookings.map((seat) => (
                 // One tight line: [arrived] Name ........ Table 1  #4  [delete]
                 <div
                   key={seat.id}
-                  className={`flex items-center gap-2 py-1.5 ${seat.isReceived ? "bg-green-50/70" : ""}`}
+                  className={`flex items-center gap-1.5 py-0.5 ${seat.isReceived ? "bg-green-50/70" : ""}`}
                 >
                   <Checkbox
                     id={`received-${seat.id}`}
@@ -241,7 +241,7 @@ export function BookingSidebar({
                     {seat.user?.firstname} {seat.user?.lastname}
                   </label>
                   <span className="shrink-0 text-xs text-gray-500 whitespace-nowrap">{seat.table.name}</span>
-                  <span className="shrink-0 ml-auto w-8 text-right text-sm font-bold text-lime-600 tabular-nums">
+                  <span className="shrink-0 text-sm font-bold text-lime-600 tabular-nums">
                     #{seat.seat}
                   </span>
                   <button
@@ -250,7 +250,7 @@ export function BookingSidebar({
                       setSeatToDelete(seat.id);
                       setIsDeleteBookingDialogOpen(true);
                     }}
-                    className="shrink-0 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    className="shrink-0 ml-auto p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
                     title="Remove from this seat"
                     aria-label="Remove from this seat"
                   >
