@@ -6,6 +6,10 @@ export interface Table {
   shape?: string
   posX?: number | null
   posY?: number | null
+  sizeW?: number | null
+  sizeH?: number | null
+  // width ÷ height on screen, worked out by the floor plan view
+  ratio?: number
   Seat: Seat[]
 }
 

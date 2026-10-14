@@ -249,12 +249,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         };
         setReview(toItems(ordered));
 
-        const found = ordered.filter((s) => s.likelyTable);
-        if (found.length) {
-          // Make tables about as big as in the picture (chairs included)
-          const ws = found.map((s) => s.w).sort((a, b) => a - b);
-          changeTableSize(ws[Math.floor(ws.length / 2)] * 1.35);
-        }
+        // Tables now take their own size from the picture; reset the zoom
+        changeTableSize(12);
 
         // Copy numbers / names written in the picture
         setReviewBusy("Reading table numbers and names...");
@@ -388,7 +384,12 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
 
   const currentStamps = (pos: Record<string, Pos>) =>
     tables
-      .map((t) => ({ name: tableNameOf(t), ...pos[tableIdOf(t)] }))
+      .map((t) => ({
+        name: tableNameOf(t),
+        // width of the table top itself (the box is 66% of the drawn table)
+        w: tableBox(t).width * 0.66,
+        ...pos[tableIdOf(t)],
+      }))
       .filter((s) => typeof s.x === "number" && typeof s.y === "number");
 
   // When a table is renamed (gear icon), write the new name on the picture
@@ -472,6 +473,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             y: p.y,
             shape: p.shape,
             seats: seatsPerTable,
+            w: p.w,
+            h: p.h,
           })),
         }),
       });
@@ -488,7 +491,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       toast.success(parts.join(", ") || "Floor plan saved");
       if (writeNames) {
         await writeNamesOnPicture(
-          picked.map((p) => ({ name: p.name.trim(), x: p.x, y: p.y }))
+          picked.map((p) => ({ name: p.name.trim(), x: p.x, y: p.y, w: p.w }))
         );
       }
     } catch (e) {
@@ -525,12 +528,38 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   };
   const shapeOf = (t: TableData): Shape =>
     draftShapes[tableIdOf(t)] ?? ((t.seats[0]?.table?.shape as Shape) || "round");
+  // How big a table is drawn: its size traced from the picture when known,
+  // otherwise the standard size. The Table size slider zooms all of them.
+  const tableBox = (t: TableData): { width: number; ratio: number } => {
+    const shape = shapeOf(t);
+    const zoom = tableSize / 12;
+    const sw = Number(t.seats[0]?.table?.sizeW) || 0;
+    const sh = Number(t.seats[0]?.table?.sizeH) || 0;
+    if (sw > 0 && sh > 0) {
+      const shW = sh / aspect; // the traced height, in % of picture width
+      if (shape !== "rectangle") {
+        return { width: (Math.min(sw, shW) / 0.66) * zoom, ratio: 1 };
+      }
+      const long = Math.max(sw, shW);
+      const short = Math.min(sw, shW);
+      if (long / short < 1.2) {
+        // traced as round/square but switched to rectangle: make it long
+        return { width: ((short * 1.8) / 0.66) * zoom, ratio: 2 };
+      }
+      return { width: (long / 0.66) * zoom, ratio: long / short };
+    }
+    return shape === "rectangle"
+      ? { width: tableSize * 1.6, ratio: 2 }
+      : { width: tableSize, ratio: 1 };
+  };
   const withShape = (t: TableData): TableData => {
-    const shape = draftShapes[tableIdOf(t)];
-    if (!shape) return t;
+    const shape = shapeOf(t);
+    const { ratio } = tableBox(t);
     return {
       ...t,
-      seats: t.seats.map((s, i) => (i === 0 ? { ...s, table: { ...s.table, shape } } : s)),
+      seats: t.seats.map((s, i) =>
+        i === 0 ? { ...s, table: { ...s.table, shape, ratio } } : s
+      ),
     };
   };
 
@@ -874,7 +903,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
                 style={{
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
-                  width: `${shape === "rectangle" ? tableSize * 1.6 : tableSize}%`,
+                  width: `${tableBox(table).width}%`,
                   transform: "translate(-50%, -50%)",
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}

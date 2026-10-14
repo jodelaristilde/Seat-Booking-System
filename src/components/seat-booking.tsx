@@ -529,6 +529,10 @@ const renderCircularTable = (
     // round / square / rectangle (the floor plan view draws the table's outline)
     const shape = inFloorPlan ? table.seats[0]?.table?.shape ?? "round" : "round";
     const isRect = shape === "rectangle";
+    // Rectangle width ÷ height (from the picture when known)
+    const ratio = isRect
+      ? Math.min(6, Math.max(1.2, Number(table.seats[0]?.table?.ratio) || 2))
+      : 1;
     // Where seat number i goes, in % of the table area (centre is 45%, like before)
     const seatSpot = (i: number, count: number, extra = 0) => {
       if (shape === "round") {
@@ -545,7 +549,7 @@ const renderCircularTable = (
       const y1 = 90 + extra;
       const w = x1 - x0;
       const h = y1 - y0;
-      const realW = isRect ? w * 2 : w; // a rectangle is twice as wide as tall
+      const realW = w * ratio; // a rectangle is wider than tall
       const perim = 2 * (realW + h);
       let d = ((i + 0.5) / count) * perim;
       if (d < realW) return { left: x0 + (d / realW) * w, top: y0 };
@@ -570,8 +574,9 @@ const handleTableClick = () => {
     return (
       <motion.div
         key={tableId}
+        style={isRect ? { aspectRatio: String(ratio) } : undefined}
         className={`relative w-full mx-auto ${
-          isRect ? "aspect-[2/1]" : "aspect-square"
+          isRect ? "" : "aspect-square"
         } ${
           inFloorPlan ? "" : isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
         } ${showNames ? "p-8" : ""}`} // Add padding when names are shown
@@ -694,12 +699,14 @@ const handleTableClick = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: seatIndex * 0.05 }}
               className={`absolute ${
-                isRect ? "w-[8%]" : isFullScreen ? "w-[20%]" : "w-[15%]"
+                isRect ? "" : isFullScreen ? "w-[20%]" : "w-[15%]"
               } aspect-square`}
               style={{
                 left: `${left}%`,
                 top: `${top}%`,
                 transform: "translate(-50%, -50%)",
+                // on a rectangle, seats are about 15% of the table's height
+                ...(isRect ? { width: `${Math.max(3, 15 / ratio)}%` } : {}),
               }}
             >
               <TooltipProvider>

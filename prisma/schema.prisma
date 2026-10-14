@@ -37,6 +37,9 @@ model Table {
   posY      Float?
   // "round", "square" or "rectangle"
   shape     String   @default("round")
+  // Size traced from the floor plan picture (% of picture width / height)
+  sizeW     Float?
+  sizeH     Float?
 }
 
 model Password {

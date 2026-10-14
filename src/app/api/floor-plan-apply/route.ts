@@ -11,6 +11,8 @@ type Incoming = {
   y?: unknown
   shape?: unknown
   seats?: unknown
+  w?: unknown
+  h?: unknown
 }
 
 // POST - put tables on the floor plan.
@@ -41,7 +43,9 @@ export async function POST(req: Request) {
           : 10
       const shape =
         typeof t.shape === "string" && SHAPES.includes(t.shape) ? t.shape : "round"
-      items.push({ name, x: clamp(t.x), y: clamp(t.y), shape, seats })
+      const size = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.min(100, v) : null
+      items.push({ name, x: clamp(t.x), y: clamp(t.y), shape, seats, sizeW: size(t.w), sizeH: size(t.h) })
     }
 
     if (items.length === 0) {
@@ -76,7 +80,7 @@ export async function POST(req: Request) {
       if (id) {
         await prisma.table.update({
           where: { id },
-          data: { posX: it.x, posY: it.y, shape: it.shape },
+          data: { posX: it.x, posY: it.y, shape: it.shape, sizeW: it.sizeW, sizeH: it.sizeH },
         })
         moved++
       } else {
@@ -86,6 +90,8 @@ export async function POST(req: Request) {
             posX: it.x,
             posY: it.y,
             shape: it.shape,
+            sizeW: it.sizeW,
+            sizeH: it.sizeH,
             Seat: {
               create: Array.from({ length: it.seats }, (_, i) => ({
                 seat: i + 1,

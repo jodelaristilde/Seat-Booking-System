@@ -5,6 +5,7 @@ export interface Stamp {
   name: string;
   x: number; // centre, % of picture width
   y: number; // centre, % of picture height
+  w?: number; // width of this table, % of picture width (optional)
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -36,15 +37,16 @@ export async function stampNames(
   ctx.fillRect(0, 0, W, H);
   ctx.drawImage(img, 0, 0, W, H);
 
-  const tableW = (Math.max(4, tableWidthPct) / 100) * W;
-  const maxTextW = tableW * 0.62;
-  const baseFont = Math.max(11, Math.round(tableW * 0.13));
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const s of stamps) {
     const text = s.name.trim();
     if (!text) continue;
+    // Size the name to this table (its traced width when known)
+    const tableW = (Math.max(3, s.w ?? tableWidthPct * 0.66) / 100) * W;
+    const maxTextW = tableW * 0.9;
+    const baseFont = Math.max(11, Math.round(tableW * 0.2));
     // Shrink long names so they fit inside the table
     let size = baseFont;
     ctx.font = `700 ${size}px Arial, Helvetica, sans-serif`;
