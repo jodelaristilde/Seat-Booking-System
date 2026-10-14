@@ -355,7 +355,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     list: { name: string; x: number; y: number }[],
     quiet = false
   ) => {
-    if (!picture || !list.length) return;
+    if (!picture || !list.length) return false;
     try {
       const { data, mimeType, size } = await stampNames(picture, list, tableSize);
       if (size > 10 * 1024 * 1024) throw new Error("The picture is too big to save with names (over 10 MB).");
@@ -375,10 +375,12 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         throw new Error(j.error || "Upload failed");
       }
       if (!quiet) toast.success("Table names written on the floor plan picture");
+      return true;
     } catch (e) {
       toast.error("Could not write the names on the picture", {
         description: e instanceof Error ? e.message : undefined,
       });
+      return false;
     }
   };
 
@@ -386,6 +388,42 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     tables
       .map((t) => ({ name: tableNameOf(t), ...pos[tableIdOf(t)] }))
       .filter((s) => typeof s.x === "number" && typeof s.y === "number");
+
+  // When a table is renamed (gear icon), write the new name on the picture
+  // right away, in the centre of that table.
+  const namesKey = tables
+    .map((t) => `${tableIdOf(t)}:${tableNameOf(t)}`)
+    .sort()
+    .join("|");
+  const lastNamesKey = useRef<string | null>(null);
+  const skipNextStamp = useRef(false);
+  useEffect(() => {
+    if (lastNamesKey.current === null || !tables.length) {
+      lastNamesKey.current = namesKey;
+      return;
+    }
+    if (namesKey === lastNamesKey.current) return;
+    const before = new Map(
+      lastNamesKey.current.split("|").map((p) => [p.slice(0, p.indexOf(":")), p.slice(p.indexOf(":") + 1)])
+    );
+    lastNamesKey.current = namesKey;
+    if (skipNextStamp.current) {
+      // the picture was just written by "Use these tables"
+      skipNextStamp.current = false;
+      return;
+    }
+    if (!picture || reviewing || editing) return;
+    // Only when an existing table got a new name (not when tables were added/removed)
+    const renamed = tables.some((t) => {
+      const old = before.get(tableIdOf(t));
+      return old !== undefined && old !== tableNameOf(t);
+    });
+    if (!renamed) return;
+    writeNamesOnPicture(currentStamps(saved), true).then((ok) => {
+      if (ok) toast.success("New table name written on the floor plan picture");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namesKey]);
 
   const applyReview = async () => {
     if (!review) return;
@@ -438,6 +476,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
       setReview(null);
+      skipNextStamp.current = writeNames;
       await onTablesChanged();
       await loadPositions();
       const parts = [];
