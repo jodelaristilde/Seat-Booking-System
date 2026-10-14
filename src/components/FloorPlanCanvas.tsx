@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Move,
   Save,
@@ -868,6 +869,55 @@ export function FloorPlanCanvas({
 
   const pickedCount = review?.filter((r) => r.picked).length ?? 0;
 
+  // ---------- Arrivals ----------
+  // Everyone who has arrived (QR scan or ticked by hand), from the seats
+  const arrivedNow = useMemo(
+    () =>
+      tables.flatMap((t) =>
+        t.seats
+          .filter((s) => s.isBooked && s.isReceived)
+          .map((s) => ({
+            seatId: s.id,
+            name: `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest",
+            table: tableNameOf(t),
+            tableId: tableIdOf(t),
+          }))
+      ),
+    [tables]
+  );
+  type Arrival = (typeof arrivedNow)[number] & { at?: number };
+  const [arrivals, setArrivals] = useState<Arrival[]>([]);
+  const [popups, setPopups] = useState<(Arrival & { phase: "pop" | "fly" })[]>([]);
+  const knownArrivals = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(arrivedNow.map((a) => a.seatId));
+    if (knownArrivals.current === null) {
+      // First load: list who is already here, no pop-ups
+      if (!tables.length) return;
+      knownArrivals.current = ids;
+      setArrivals([...arrivedNow].sort((a, b) => a.name.localeCompare(b.name)));
+      return;
+    }
+    const known = knownArrivals.current;
+    const fresh = arrivedNow.filter((a) => !known.has(a.seatId));
+    // Unticked by mistake: take them off the list
+    setArrivals((prev) => prev.filter((a) => ids.has(a.seatId)));
+    knownArrivals.current = ids;
+    fresh.forEach((a, i) => {
+      const item = { ...a, at: Date.now() };
+      // pop out at the table, then fly to the Arrived list
+      setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 700);
+      setTimeout(
+        () => setPopups((p) => p.map((x) => (x.seatId === a.seatId ? { ...x, phase: "fly" } : x))),
+        i * 700 + 2600
+      );
+      setTimeout(() => {
+        setPopups((p) => p.filter((x) => x.seatId !== a.seatId));
+        setArrivals((prev) => [item, ...prev.filter((x) => x.seatId !== a.seatId)]);
+      }, i * 700 + 3300);
+    });
+  }, [arrivedNow, tables.length]);
+
   // The part of the room to show: everything while editing, otherwise just
   // around the tables (with a little margin), in % of the room
   const view = (() => {
@@ -1177,6 +1227,43 @@ export function FloorPlanCanvas({
 
       )}
 
+      {/* Arrived guests, newest first (left of the room) */}
+      {arrivals.length > 0 && !working && (
+        <div className="lg:w-56 lg:shrink-0 lg:self-start lg:sticky lg:top-2 rounded-lg border border-green-200 bg-green-50/60 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-green-200 bg-green-100/70">
+            <span className="font-semibold text-green-900">Arrived</span>
+            <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
+          </div>
+          <ul className="max-h-40 lg:max-h-[calc(100vh-6rem)] overflow-y-auto divide-y divide-green-100">
+            <AnimatePresence initial={false}>
+              {arrivals.map((a) => (
+                <motion.li
+                  key={a.seatId}
+                  layout
+                  initial={{ opacity: 0, x: 40, backgroundColor: "rgba(134,239,172,0.9)" }}
+                  animate={{ opacity: 1, x: 0, backgroundColor: "rgba(255,255,255,0)" }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
+                  className="px-3 py-1.5"
+                >
+                  <div className="font-medium text-zinc-900 leading-tight truncate" title={a.name}>
+                    {a.name}
+                  </div>
+                  <div className="text-xs text-zinc-600 flex justify-between gap-2">
+                    <span className="truncate">{a.table}</span>
+                    {a.at && (
+                      <span className="tabular-nums shrink-0">
+                        {new Date(a.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    )}
+                  </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+        </div>
+      )}
+
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0">
       {(editing || reviewing || drawing) && (
@@ -1292,6 +1379,35 @@ export function FloorPlanCanvas({
               )}
             </div>
           ))}
+
+        {/* A guest just arrived: their name pops out of their table, then
+            flies off to the Arrived list on the left */}
+        <AnimatePresence>
+          {popups.map((p) => {
+            const pos = positions[p.tableId];
+            if (!pos) return null;
+            return (
+              <motion.div
+                key={p.seatId}
+                className="absolute z-[60] pointer-events-none"
+                style={{ transform: "translate(-50%, -50%)" }}
+                initial={{ left: `${pos.x}%`, top: `${pos.y}%`, opacity: 0, scale: 0.3 }}
+                animate={
+                  p.phase === "pop"
+                    ? { left: `${pos.x}%`, top: `${pos.y}%`, opacity: 1, scale: [0.3, 1.15, 1] }
+                    : { left: "-12%", top: `${Math.max(5, pos.y - 20)}%`, opacity: 0, scale: 0.5 }
+                }
+                exit={{ opacity: 0 }}
+                transition={p.phase === "pop" ? { duration: 0.6 } : { duration: 0.7, ease: "easeIn" }}
+              >
+                <div className="-translate-x-1/2 -translate-y-1/2 rounded-xl bg-green-600 text-white shadow-2xl px-4 py-2 text-center whitespace-nowrap ring-4 ring-green-200">
+                  <div className="text-lg sm:text-2xl font-bold leading-tight">{p.name}</div>
+                  <div className="text-sm sm:text-base opacity-90">arrived · {p.table}</div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
 
         {/* Drawing: a layer over everything that catches the mouse */}
         {drawing && (

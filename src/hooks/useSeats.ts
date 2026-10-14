@@ -58,7 +58,10 @@ export function useSeats() {
 
   useEffect(() => {
     fetchSeats()
-    const intervalId = setInterval(fetchSeats, 60000)
+    // Every few seconds, so guests who check in with the QR code show up quickly
+    const intervalId = setInterval(() => {
+      if (typeof document === "undefined" || !document.hidden) fetchSeats()
+    }, 6000)
     return () => clearInterval(intervalId)
   }, [fetchSeats])
 
