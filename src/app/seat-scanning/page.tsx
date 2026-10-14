@@ -58,28 +58,33 @@ export default function SeatScanning() {
   const [loadingFloorMap, setLoadingFloorMap] = useState(false);
   const [tableNotes, setTableNotes] = useState<string | null>(null);
 
-  // Fetch all guests when component mounts
+  // Search guests as the person types. This page is used by guests on their
+  // own phones (not logged in), so it uses the public search, which returns at
+  // most 5 matches, instead of downloading the whole guest list.
   useEffect(() => {
-    const fetchGuests = async () => {
-      try {
-        const response = await fetch("/api/get-guests");
-        const data = await response.json();
-
-        if (data.success) {
-          setAllUsers(data.data);
-        } else {
-          toast.error("Failed to load guest list");
-        }
-      } catch (error) {
-        console.error("Error fetching guests:", error);
-        toast.error("Failed to load guest list");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGuests();
+    setIsLoading(false);
   }, []);
+  useEffect(() => {
+    const q = searchValue.trim();
+    if (q.length < 2) {
+      setAllUsers([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}`);
+        const data = await response.json();
+        if (!cancelled && data.success) setAllUsers(data.data);
+      } catch (error) {
+        console.error("Error searching guests:", error);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchValue]);
 
   // Fetch floor map
   const fetchFloorMap = async () => {
