@@ -123,7 +123,9 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   const [draftShapes, setDraftShapes] = useState<Record<string, Shape>>({});
   const [picture, setPicture] = useState<string | null>(null);
   const [aspect, setAspect] = useState(16 / 10);
-  const [showPicture, setShowPicture] = useState(true);
+  // The venue picture is only a guide: hidden unless you ask for it,
+  // and shown faintly while drawing, moving or checking tables.
+  const [showPicture, setShowPicture] = useState(false);
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
@@ -153,7 +155,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   useEffect(() => {
     const s = Number(readStored(SIZE_KEY));
     if (s >= 6 && s <= 30) setTableSize(s);
-    if (readStored(PICTURE_KEY) === "off") setShowPicture(false);
+    if (readStored(PICTURE_KEY) === "on") setShowPicture(true);
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -232,7 +234,6 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       setDraft(null);
       setReviewBusy("Looking for tables in the picture...");
       setReview([]);
-      setShowPicture(true);
       try {
         const { shapes, canvas } = await findShapes(pic);
         const ordered = readingOrder(shapes);
@@ -889,7 +890,6 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             <Button
               onClick={() => {
                 setDrawnIds([]);
-                setShowPicture(true);
                 setDrawing(true);
               }}
               size="sm"
@@ -952,7 +952,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
           />
         </label>
 
-        {picture && !reviewing && (
+        {picture && !reviewing && !drawing && !editing && (
           <Button
             size="sm"
             variant="outline"
@@ -994,13 +994,13 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        {picture && (showPicture || reviewing) && (
+        {picture && (showPicture || reviewing || drawing || editing) && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={picture}
             alt="Floor plan"
             className={`absolute inset-0 w-full h-full object-fill pointer-events-none select-none ${
-              reviewing ? "opacity-70" : "opacity-40"
+              reviewing ? "opacity-70" : drawing || editing ? "opacity-50" : "opacity-40"
             }`}
             draggable={false}
           />
