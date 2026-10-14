@@ -822,9 +822,11 @@ export function FloorPlanCanvas({
   const pickedCount = review?.filter((r) => r.picked).length ?? 0;
 
   return (
-    <div className="px-4 sm:px-8 py-4 sm:pb-[3rem] pb-[9rem]">
-      {/* Floor plan controls */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+    <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
+      {/* Floor plan controls: a column down the left side on bigger screens */}
+      <div
+        className="flex flex-wrap items-center gap-2 lg:flex-col lg:flex-nowrap lg:items-stretch lg:w-52 lg:shrink-0 lg:sticky lg:top-2 lg:self-start lg:max-h-[calc(100vh-1rem)] lg:overflow-y-auto [&>button]:lg:justify-start [&>label]:lg:justify-between [&>span]:lg:mt-2"
+      >
         {drawing ? (
           <>
             <Button onClick={finishDrawing} size="sm" disabled={drawBusy || saving}>
@@ -964,7 +966,7 @@ export function FloorPlanCanvas({
           </>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-zinc-600 ml-auto">
+        <label className="flex items-center gap-2 text-sm text-zinc-600 ml-auto lg:ml-0 lg:mt-2 lg:flex-col lg:items-stretch">
           Table size
           <input
             type="range"
@@ -1019,6 +1021,8 @@ export function FloorPlanCanvas({
         )}
       </div>
 
+      {/* The room, with any instructions above it */}
+      <div className="flex-1 min-w-0">
       {(editing || reviewing || drawing) && (
         <p className="text-sm text-blue-800 bg-blue-50 rounded px-3 py-2 mb-3">
           {drawing
@@ -1039,7 +1043,12 @@ export function FloorPlanCanvas({
         className={`relative w-full bg-white border rounded-lg overflow-hidden ${
           editing || reviewing || drawing ? "border-blue-400 border-2" : "border-zinc-200"
         }`}
-        style={{ aspectRatio: String(aspect) }}
+        style={{
+          aspectRatio: String(aspect),
+          // Whole room visible on screen: never taller than the window
+          maxWidth: `min(100%, calc((100vh - 7rem) * ${aspect}))`,
+          marginInline: "auto",
+        }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
@@ -1212,6 +1221,7 @@ export function FloorPlanCanvas({
               </div>
             );
           })}
+      </div>
       </div>
     </div>
   );
