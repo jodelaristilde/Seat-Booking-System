@@ -1337,6 +1337,7 @@ const handleTableClick = () => {
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
                 onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
+                compact={isFullScreen}
               />
             </motion.div>
           )}

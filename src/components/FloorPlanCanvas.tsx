@@ -12,7 +12,9 @@ import {
   ScanSearch,
   PenLine,
   PanelLeftClose,
-  PanelLeftOpen,
+  PanelRightOpen,
+  Users,
+  Armchair,
   Undo2,
   Type,
   Circle,
@@ -860,17 +862,71 @@ export function FloorPlanCanvas({
   return (
     <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
       {/* Floor plan controls: a column down the left side on bigger screens */}
-      {/* Full screen ("Hide menu"): just a small Menu button */}
+      {/* Full screen ("Hide menu"): a slim column of icons on the right */}
       {roomOnly && !working ? (
-        <div className="lg:self-start">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onRoomOnlyChange?.(false)}
-            title="Show the floor plan menu"
-          >
-            <PanelLeftOpen className="w-4 h-4 mr-2" /> Menu
+        <div className="flex flex-wrap gap-2 lg:flex-col lg:order-last lg:self-start lg:sticky lg:top-2">
+          <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
+            <PanelRightOpen className="w-4 h-4" />
           </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => {
+              setDrawnIds([]);
+              setDrawing(true);
+            }}
+            title="Draw tables"
+            aria-label="Draw tables"
+          >
+            <PenLine className="w-4 h-4" />
+          </Button>
+          <Button size="icon" variant="outline" onClick={startEditing} title="Move tables" aria-label="Move tables">
+            <Move className="w-4 h-4" />
+          </Button>
+          {onGuestNamesChange && (
+            <Button
+              size="icon"
+              variant={guestNames ? "default" : "outline"}
+              onClick={() => onGuestNamesChange(!guestNames)}
+              title={guestNames ? "Hide guest names" : "Show guest names"}
+              aria-label="Guest names"
+              aria-pressed={guestNames}
+            >
+              <Users className="w-4 h-4" />
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant={showSeats ? "default" : "outline"}
+            onClick={() =>
+              setShowSeats((v) => {
+                writeStored(SEATS_KEY, v ? "off" : "on");
+                return !v;
+              })
+            }
+            title={showSeats ? "Hide seats" : "Show seats"}
+            aria-label="Seats"
+            aria-pressed={showSeats}
+          >
+            <Armchair className="w-4 h-4" />
+          </Button>
+          {picture && (
+            <Button
+              size="icon"
+              variant={showPicture ? "default" : "outline"}
+              onClick={() =>
+                setShowPicture((v) => {
+                  writeStored(PICTURE_KEY, v ? "off" : "on");
+                  return !v;
+                })
+              }
+              title={showPicture ? "Hide picture" : "Show picture"}
+              aria-label="Picture"
+              aria-pressed={showPicture}
+            >
+              <ImageIcon className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       ) : (
       <div

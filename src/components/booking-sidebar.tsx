@@ -17,6 +17,8 @@ interface BookingSidebarProps {
   onDeleteBooking: (seatId: string) => void;
   onToggleReceived: (seatId: string, isReceived: boolean) => void;
   onDeleteAll: () => void;
+  // Full-screen floor plan: just the names, no Export / Delete All buttons
+  compact?: boolean;
 }
 
 export function BookingSidebar({
@@ -24,6 +26,7 @@ export function BookingSidebar({
   onDeleteBooking,
   onToggleReceived,
   onDeleteAll,
+  compact = false,
 }: BookingSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQueries, setSearchQueries] = useState({
@@ -165,9 +168,9 @@ export function BookingSidebar({
       <div className="flex flex-col h-full w-full bg-white">
         <div className="p-4 bg-white shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">Guest Names</h2>
+            <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap">Guest Names</h2>
             <div className="flex gap-2">
-              {bookedSeats.length > 0 && (
+              {bookedSeats.length > 0 && !compact && (
                 <>
                   <Button
                     variant="outline"
@@ -317,6 +320,7 @@ export function BookingSidebar({
       onDeleteBooking,
       onToggleReceived,
       onDeleteAll,
+      compact,
       filteredBookings,
       isDeleteBookingDialogOpen,
       deleteBookingConfirmText,
