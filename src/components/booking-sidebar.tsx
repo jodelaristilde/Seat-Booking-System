@@ -216,48 +216,59 @@ export function BookingSidebar({
         </div>
 
         <ScrollArea className="flex-1 px-2 py-0.5">
-          <div className="divide-y divide-gray-100">
+          <div>
             {filteredBookings.length > 0 ? (
-              filteredBookings.map((seat) => (
-                // One tight line: [arrived] Name ........ Table 1  #4  [delete]
-                <div
-                  key={seat.id}
-                  className={`flex items-center gap-1.5 py-0.5 ${seat.isReceived ? "bg-green-50/70" : ""}`}
-                >
-                  <Checkbox
-                    id={`received-${seat.id}`}
-                    checked={seat.isReceived}
-                    onCheckedChange={(checked) =>
-                      onToggleReceived(seat.id, checked as boolean)
-                    }
-                    aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
-                    title="Arrived"
-                  />
-                  <label
-                    htmlFor={`received-${seat.id}`}
-                    className="min-w-0 truncate text-sm font-medium text-gray-900 cursor-pointer"
-                    title={`${seat.user?.firstname} ${seat.user?.lastname}`}
-                  >
-                    {seat.user?.firstname} {seat.user?.lastname}
-                  </label>
-                  <span className="shrink-0 text-xs text-gray-500 whitespace-nowrap">{seat.table.name}</span>
-                  <span className="shrink-0 text-sm font-bold text-lime-600 tabular-nums">
-                    #{seat.seat}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSeatToDelete(seat.id);
-                      setIsDeleteBookingDialogOpen(true);
-                    }}
-                    className="shrink-0 ml-auto p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    title="Remove from this seat"
-                    aria-label="Remove from this seat"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))
+              // A table so the columns line up: [arrived] Name   Table 1  #4  [delete]
+              <table className="w-auto text-sm border-collapse">
+                <tbody>
+                  {filteredBookings.map((seat) => (
+                    <tr
+                      key={seat.id}
+                      className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""}`}
+                    >
+                      <td className="py-0.5 pr-1.5 align-middle">
+                        <Checkbox
+                          id={`received-${seat.id}`}
+                          checked={seat.isReceived}
+                          onCheckedChange={(checked) =>
+                            onToggleReceived(seat.id, checked as boolean)
+                          }
+                          aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
+                          title="Arrived"
+                        />
+                      </td>
+                      <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
+                        <label
+                          htmlFor={`received-${seat.id}`}
+                          className="font-medium text-gray-900 cursor-pointer"
+                        >
+                          {seat.user?.firstname} {seat.user?.lastname}
+                        </label>
+                      </td>
+                      <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
+                        {seat.table.name}
+                      </td>
+                      <td className="py-0.5 pr-1 align-middle font-bold text-lime-600 tabular-nums whitespace-nowrap">
+                        #{seat.seat}
+                      </td>
+                      <td className="py-0.5 align-middle">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSeatToDelete(seat.id);
+                            setIsDeleteBookingDialogOpen(true);
+                          }}
+                          className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          title="Remove from this seat"
+                          aria-label="Remove from this seat"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
               <div className="text-center text-gray-500 py-8">
                 <User className="h-12 w-12 mx-auto mb-3 text-gray-400" />
