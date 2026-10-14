@@ -635,7 +635,13 @@ const handleTableClick = () => {
                 title={displayName}
                 style={
                   inFloorPlan
-                    ? { fontSize: isRect ? "clamp(9px, 6cqw, 26px)" : "clamp(9px, 11cqw, 26px)" }
+                    ? {
+                        // short names (just a number) get a much bigger font
+                        fontSize:
+                          displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "").length <= 3
+                            ? isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"
+                            : isRect ? "clamp(10px, 7cqw, 30px)" : "clamp(10px, 13cqw, 32px)",
+                      }
                     : undefined
                 }
               >
@@ -707,7 +713,7 @@ const handleTableClick = () => {
           {inFloorPlan && hideSeats && (
             <span
               className="font-medium text-zinc-600 bg-white/80 rounded px-1 tabular-nums"
-              style={{ fontSize: isRect ? "clamp(8px, 4.5cqw, 18px)" : "clamp(8px, 8cqw, 18px)" }}
+              style={{ fontSize: isRect ? "clamp(10px, 6cqw, 24px)" : "clamp(10px, 11cqw, 26px)" }}
               title="Guests seated / seats at this table"
             >
               {table.seats.filter((s) => s.isBooked).length}/{table.seats.length}
