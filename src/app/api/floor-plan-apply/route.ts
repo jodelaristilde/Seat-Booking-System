@@ -18,6 +18,8 @@ type Incoming = {
 // - A table whose name already exists is moved there (and its shape updated).
 //   Its seats and bookings are not touched.
 // - A new name creates a new table with that many seats.
+// - removeOthers: true deletes every table NOT in the list (new venue = new tables).
+//   Guests stay in the guest list; they just lose their old seat.
 // Login required (not in the middleware's public list).
 export async function POST(req: Request) {
   try {
@@ -52,6 +54,21 @@ export async function POST(req: Request) {
     const existing = await prisma.table.findMany({ select: { id: true, name: true } })
     const byName = new Map(existing.map((t: { id: string; name: string }) => [t.name.trim().toLowerCase(), t.id] as const))
 
+    let removed = 0
+    if (body?.removeOthers === true) {
+      const keep = new Set(items.map((it) => it.name.toLowerCase()))
+      const goneIds = existing
+        .filter((t: { id: string; name: string }) => !keep.has(t.name.trim().toLowerCase()))
+        .map((t: { id: string }) => t.id)
+      if (goneIds.length) {
+        await prisma.$transaction([
+          prisma.seat.deleteMany({ where: { tableId: { in: goneIds } } }),
+          prisma.table.deleteMany({ where: { id: { in: goneIds } } }),
+        ])
+        removed = goneIds.length
+      }
+    }
+
     let created = 0
     let moved = 0
     for (const it of items) {
@@ -82,7 +99,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, created, moved })
+    return NextResponse.json({ success: true, created, moved, removed })
   } catch (error) {
     console.error("Error applying floor plan:", error)
     return NextResponse.json(

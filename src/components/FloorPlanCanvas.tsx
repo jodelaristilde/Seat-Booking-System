@@ -123,6 +123,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   const [review, setReview] = useState<ReviewItem[] | null>(null);
   const [reviewBusy, setReviewBusy] = useState<string | null>(null);
   const [seatsPerTable, setSeatsPerTable] = useState(10);
+  // New venue = new tables: remove old tables that are not in the picture
+  const [replaceOld, setReplaceOld] = useState(true);
 
   const editing = draft !== null;
   const reviewing = review !== null;
@@ -358,12 +360,29 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       toast.error("Two tables have the same name. Please make each name different.");
       return;
     }
+    if (replaceOld) {
+      const keep = new Set(names);
+      const going = tables.filter((t) => !keep.has(tableNameOf(t).trim().toLowerCase()));
+      const bookedGoing = going.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0);
+      if (
+        going.length &&
+        !window.confirm(
+          `${going.length} old table${going.length === 1 ? "" : "s"} not in this picture will be removed` +
+            (bookedGoing
+              ? `, and ${bookedGoing} guest${bookedGoing === 1 ? " loses their" : "s lose their"} seat (they stay in your guest list).`
+              : ".") +
+            " Continue?"
+        )
+      )
+        return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/floor-plan-apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          removeOthers: replaceOld,
           tables: picked.map((p) => ({
             name: p.name.trim(),
             x: p.x,
@@ -381,6 +400,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       const parts = [];
       if (json.created) parts.push(`${json.created} new table${json.created === 1 ? "" : "s"} added`);
       if (json.moved) parts.push(`${json.moved} existing table${json.moved === 1 ? "" : "s"} moved into place`);
+      if (json.removed) parts.push(`${json.removed} old table${json.removed === 1 ? "" : "s"} removed`);
       toast.success(parts.join(", ") || "Floor plan saved");
     } catch (e) {
       toast.error("Could not save the tables", {
@@ -533,6 +553,14 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
                 onChange={(e) => setSeatsPerTable(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
                 className="w-16 border rounded px-2 py-1"
               />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <input
+                type="checkbox"
+                checked={replaceOld}
+                onChange={(e) => setReplaceOld(e.target.checked)}
+              />
+              Remove old tables not in this picture
             </label>
           </>
         ) : !editing ? (
