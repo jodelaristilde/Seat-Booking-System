@@ -136,20 +136,25 @@ export function BookingSidebar({
 
   // Move filtering logic to useMemo
   const filteredBookings = useMemo(() => {
-    return bookedSeats.filter((seat) => {
-      if (!searchQueries.name && !searchQueries.seat) return true;
-
-      const fullName =
-        `${seat.user?.firstname} ${seat.user?.lastname}`.toLowerCase();
-      const nameMatch =
-        !searchQueries.name ||
-        fullName.includes(searchQueries.name.toLowerCase());
-      const seatMatch =
-        !searchQueries.seat ||
-        seat.seat.toString().includes(searchQueries.seat);
-
-      return nameMatch && seatMatch;
-    });
+    const q = searchQueries.name.trim().toLowerCase();
+    const fullName = (seat: Seat) =>
+      `${seat.user?.firstname ?? ""} ${seat.user?.lastname ?? ""}`.trim();
+    return bookedSeats
+      // search by guest name or table name
+      .filter(
+        (seat) =>
+          !q ||
+          fullName(seat).toLowerCase().includes(q) ||
+          (seat.table?.name ?? "").toLowerCase().includes(q)
+      )
+      // by table first (Table 2 before Table 10), then by name
+      .sort((a, b) => {
+        const t = (a.table?.name ?? "").localeCompare(b.table?.name ?? "", undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+        return t !== 0 ? t : fullName(a).localeCompare(fullName(b));
+      });
   }, [bookedSeats, searchQueries]);
 
   // Memoized search input handlers
@@ -198,20 +203,13 @@ export function BookingSidebar({
             <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name..."
+                placeholder="Search name or table..."
                 value={searchQueries.name}
                 onChange={handleSearchChange("name")}
                 className="pl-8"
                 autoComplete="off"
               />
             </div>
-            <Input
-              placeholder="Seat #"
-              value={searchQueries.seat}
-              onChange={handleSearchChange("seat")}
-              className="w-20"
-              autoComplete="off"
-            />
           </div>
         </div>
 
