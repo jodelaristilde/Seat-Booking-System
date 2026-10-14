@@ -31,6 +31,10 @@ model Table {
   name      String
   Seat      Seat[]
   notes     String?
+  // Where the table sits on the floor plan, as a percent of the plan's width/height.
+  // Empty means "not placed yet" (the floor plan view lines it up automatically).
+  posX      Float?
+  posY      Float?
 }
 
 model Password {

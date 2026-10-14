@@ -40,6 +40,8 @@ import {
   Trash2,
   UserCheck2,
   Settings,
+  Grid3x3,
+  Map as MapIcon,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -65,6 +67,7 @@ import { EditTableDialog } from "./edit-table-dialog";
 import WashupButton from "./washup";
 import { FloorMapUploader } from "./FloorMapUploader";
 import TableNotes from "./TableNotes";
+import { FloorPlanCanvas } from "./FloorPlanCanvas";
 
 const SeatBooking = () => {
   const {
@@ -96,6 +99,26 @@ const SeatBooking = () => {
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [totalGuests, setTotalGuests] = useState(0);
   const [showNames, setShowNames] = useState(false);
+  // "plan" = tables placed like the real room, "grid" = the old rows of circles
+  const [viewMode, setViewMode] = useState<"plan" | "grid">("plan");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("dashboardView") === "grid") setViewMode("grid");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const toggleViewMode = () => {
+    setViewMode((m) => {
+      const next = m === "plan" ? "grid" : "plan";
+      try {
+        window.localStorage.setItem("dashboardView", next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
   const [isDeleteAllTablesDialogOpen, setIsDeleteAllTablesDialogOpen] =
     useState(false);
   const { data: session } = useSession();
@@ -486,7 +509,11 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
     }
   };
 
-const renderCircularTable = (table: TableData, index: number) => {
+const renderCircularTable = (
+    table: TableData,
+    index: number,
+    inFloorPlan = false
+  ) => {
     const tableId = table.seats[0]?.table?.id || table.tableNumber;
     const tableName = table.seats[0]?.table?.name;
     const tableNumber = table.tableNumber;
@@ -512,7 +539,7 @@ const handleTableClick = () => {
         } ${showNames ? "p-8" : ""}`} // Add padding when names are shown
         onMouseEnter={() => setHoveredTable(tableId)}
         onMouseLeave={() => setHoveredTable(null)}
-        layout
+        layout={!inFloorPlan}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
@@ -867,6 +894,33 @@ const handleTableClick = () => {
                   </TooltipProvider>
                 </div>
 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        className="h-8 sm:h-10"
+                        onClick={toggleViewMode}
+                      >
+                        {viewMode === "plan" ? (
+                          <>
+                            <Grid3x3 className="w-4 h-4 mr-1" /> Grid
+                          </>
+                        ) : (
+                          <>
+                            <MapIcon className="w-4 h-4 mr-1" /> Floor plan
+                          </>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {viewMode === "plan"
+                        ? "Show tables in plain rows"
+                        : "Show tables where they are in the room"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
                 <FloorMapUploader />
 
                 <WashupButton />
@@ -1111,6 +1165,14 @@ const handleTableClick = () => {
           <ScrollArea
             className={`${isFullScreen ? "h-screen" : "h-[calc(100vh-144px)]"}`}
           >
+            {viewMode === "plan" ? (
+              <FloorPlanCanvas
+                tables={getVisibleTables()}
+                renderTable={(table, index) =>
+                  renderCircularTable(table, index, true)
+                }
+              />
+            ) : (
             <motion.div
               layout
               className={`py-6 px-8 grid gap-12 sm:pb-[3rem] pb-[9rem]`}
@@ -1125,6 +1187,7 @@ const handleTableClick = () => {
                 renderCircularTable(table, index)
               )}
             </motion.div>
+            )}
           </ScrollArea>
         </motion.div>
 
