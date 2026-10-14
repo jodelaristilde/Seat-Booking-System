@@ -1250,7 +1250,7 @@ export function FloorPlanCanvas({
                   animate={{ opacity: 1, x: 0, backgroundColor: "rgba(255,255,255,0)" }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
-                  className="px-3 py-1 flex items-baseline justify-between gap-2 text-sm"
+                  className="px-3 py-1 flex items-baseline gap-2 text-sm"
                 >
                   <span className="font-medium text-zinc-900 leading-tight truncate" title={a.name}>
                     {a.name}

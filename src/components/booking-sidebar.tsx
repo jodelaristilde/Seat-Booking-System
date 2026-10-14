@@ -235,13 +235,13 @@ export function BookingSidebar({
                   />
                   <label
                     htmlFor={`received-${seat.id}`}
-                    className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 cursor-pointer"
+                    className="min-w-0 truncate text-sm font-medium text-gray-900 cursor-pointer"
                     title={`${seat.user?.firstname} ${seat.user?.lastname}`}
                   >
                     {seat.user?.firstname} {seat.user?.lastname}
                   </label>
                   <span className="shrink-0 text-xs text-gray-500 whitespace-nowrap">{seat.table.name}</span>
-                  <span className="shrink-0 w-8 text-right text-sm font-bold text-lime-600 tabular-nums">
+                  <span className="shrink-0 ml-auto w-8 text-right text-sm font-bold text-lime-600 tabular-nums">
                     #{seat.seat}
                   </span>
                   <button
