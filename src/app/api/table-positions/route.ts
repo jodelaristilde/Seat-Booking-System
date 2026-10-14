@@ -20,7 +20,7 @@ export async function GET() {
   }
 }
 
-// PUT - save table positions: { positions: [{ id, x, y }] }
+// PUT - save table positions: { positions: [{ id, x, y, shape? }] }
 // x and y are percents (0-100) of the floor plan's width and height
 export async function PUT(req: Request) {
   try {
@@ -35,6 +35,7 @@ export async function PUT(req: Request) {
     }
 
     const clamp = (n: number) => Math.min(100, Math.max(0, n))
+    const SHAPES = ["round", "square", "rectangle"]
     const valid = positions.filter(
       (p: { id?: unknown; x?: unknown; y?: unknown }) =>
         typeof p?.id === "string" &&
@@ -42,13 +43,17 @@ export async function PUT(req: Request) {
         typeof p?.y === "number" &&
         Number.isFinite(p.x) &&
         Number.isFinite(p.y)
-    ) as { id: string; x: number; y: number }[]
+    ) as { id: string; x: number; y: number; shape?: unknown }[]
 
     await prisma.$transaction(
       valid.map((p) =>
         prisma.table.update({
           where: { id: p.id },
-          data: { posX: clamp(p.x), posY: clamp(p.y) },
+          data: {
+            posX: clamp(p.x),
+            posY: clamp(p.y),
+            ...(typeof p.shape === "string" && SHAPES.includes(p.shape) ? { shape: p.shape } : {}),
+          },
         })
       )
     )

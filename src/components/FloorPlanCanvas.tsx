@@ -114,6 +114,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
   const [draft, setDraft] = useState<Record<string, Pos> | null>(null);
+  // Shape changes made in "Move tables" mode, saved with the layout
+  const [draftShapes, setDraftShapes] = useState<Record<string, Shape>>({});
   const [picture, setPicture] = useState<string | null>(null);
   const [aspect, setAspect] = useState(16 / 10);
   const [showPicture, setShowPicture] = useState(true);
@@ -513,8 +515,24 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     return result;
   }, [tables, saved, draft]);
 
-  const startEditing = () => setDraft({ ...positions });
-  const cancelEditing = () => setDraft(null);
+  const startEditing = () => {
+    setDraftShapes({});
+    setDraft({ ...positions });
+  };
+  const cancelEditing = () => {
+    setDraftShapes({});
+    setDraft(null);
+  };
+  const shapeOf = (t: TableData): Shape =>
+    draftShapes[tableIdOf(t)] ?? ((t.seats[0]?.table?.shape as Shape) || "round");
+  const withShape = (t: TableData): TableData => {
+    const shape = draftShapes[tableIdOf(t)];
+    if (!shape) return t;
+    return {
+      ...t,
+      seats: t.seats.map((s, i) => (i === 0 ? { ...s, table: { ...s.table, shape } } : s)),
+    };
+  };
 
   const lineUpAll = () => {
     const auto = autoPositions(tables.length);
@@ -531,7 +549,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         positions: tables.map((t) => {
           const id = tableIdOf(t);
           const p = draft[id] ?? positions[id];
-          return { id, x: p.x, y: p.y };
+          return { id, x: p.x, y: p.y, ...(draftShapes[id] ? { shape: draftShapes[id] } : {}) };
         }),
       };
       const res = await fetch("/api/table-positions", {
@@ -543,7 +561,10 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       if (!json.success) throw new Error(json.message);
       setSaved((prev) => ({ ...prev, ...draft }));
       const moved = { ...positions, ...draft };
+      const shapesChanged = Object.keys(draftShapes).length > 0;
       setDraft(null);
+      setDraftShapes({});
+      if (shapesChanged) await onTablesChanged();
       toast.success("Floor plan saved");
       // Keep the names on the picture in step with where the tables are now
       if (picture) await writeNamesOnPicture(currentStamps(moved), true);
@@ -741,7 +762,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
           {reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
-            : "Drag each table to its spot, then click Save layout. To rename a table, save first, then hover it and click the gear."}
+            : "Drag each table to its spot. Click a table's Shape button to switch round / square / rectangle. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
           {reviewBusy && <Loader2 className="inline w-4 h-4 ml-2 animate-spin" />}
         </p>
       )}
@@ -845,7 +866,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             const id = tableIdOf(table);
             const pos = positions[id];
             if (!pos) return null;
-            const shape = table.seats[0]?.table?.shape ?? "round";
+            const shape = shapeOf(table);
             return (
               <div
                 key={id}
@@ -858,15 +879,32 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}
               >
-                {renderTable(table, index)}
+                {renderTable(withShape(table), index)}
                 {editing && (
-                  <div
-                    className={`absolute inset-0 ${
-                      shape === "round" ? "rounded-full" : "rounded-md"
-                    } cursor-grab active:cursor-grabbing bg-blue-500/10 ring-2 ring-blue-400/60 touch-none`}
-                    onPointerDown={onPointerDown(id, pos)}
-                    title="Drag to move"
-                  />
+                  <>
+                    <div
+                      className={`absolute inset-0 ${
+                        shape === "round" ? "rounded-full" : "rounded-md"
+                      } cursor-grab active:cursor-grabbing bg-blue-500/10 ring-2 ring-blue-400/60 touch-none`}
+                      onPointerDown={onPointerDown(id, pos)}
+                      title="Drag to move"
+                    />
+                    <button
+                      type="button"
+                      className="absolute -top-2 -left-2 z-40 flex items-center gap-1 rounded-full bg-white shadow px-2 py-1 text-[11px] font-medium text-zinc-700 hover:text-blue-700 border border-zinc-200"
+                      title="Change shape: round / square / rectangle"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() =>
+                        setDraftShapes((prev) => ({
+                          ...prev,
+                          [id]: SHAPES[(SHAPES.indexOf(shape) + 1) % SHAPES.length],
+                        }))
+                      }
+                    >
+                      <ShapeIcon shape={shape} className="w-3.5 h-3.5" />
+                      Shape
+                    </button>
+                  </>
                 )}
               </div>
             );

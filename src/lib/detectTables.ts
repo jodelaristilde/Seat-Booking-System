@@ -162,7 +162,7 @@ export async function findShapes(src: string): Promise<{
 // ---- Reading text inside the shapes (optional, loaded only when needed) ----
 
 type TesseractWorker = {
-  recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string } }>;
+  recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string; confidence?: number } }>;
   setParameters: (p: Record<string, string>) => Promise<unknown>;
   terminate: () => Promise<unknown>;
 };
@@ -216,12 +216,11 @@ export async function readTextInShapes(
       let text = "";
       try {
         const r = await worker.recognize(crop);
-        text = r.data.text
+        const raw = r.data.text
           .replace(/[^A-Za-z0-9 #&'\-]/g, " ")
           .replace(/\s+/g, " ")
           .trim();
-        // Throw away single stray letters the reader sometimes "sees"
-        if (/^[A-Za-z]$/.test(text)) text = "";
+        text = acceptReading(raw, r.data.confidence ?? 0);
       } catch {
         text = "";
       }
@@ -232,6 +231,25 @@ export async function readTextInShapes(
   } finally {
     await worker.terminate().catch(() => undefined);
   }
+}
+
+// The reader sometimes "sees" letters in chair drawings or lines.
+// Keep only things that are clearly a table number or real words.
+export function acceptReading(raw: string, confidence: number): string {
+  const t = raw.trim();
+  if (!t) return "";
+  // A table number, maybe written "Table 5", "T5", "#5" or just "5"
+  const num = t.match(/^(?:table|tbl|t)?\s*#?\s*(\d{1,3})$/i);
+  if (num && confidence >= 45) return t;
+  // Words: every word at least 2 letters, at least 3 letters in total,
+  // no stray symbols, and the reader must be quite sure
+  const words = t.split(" ");
+  const letters = t.replace(/[^A-Za-z]/g, "").length;
+  const clean =
+    words.every((w) => /^[A-Za-z][A-Za-z'&\-]*[A-Za-z]$/.test(w) || /^\d{1,3}$/.test(w)) &&
+    words.some((w) => /^[A-Za-z]{3,}/.test(w));
+  if (clean && letters >= 3 && confidence >= 80) return t;
+  return "";
 }
 
 // Turn what was read into a table name. Numbers become "Table N".

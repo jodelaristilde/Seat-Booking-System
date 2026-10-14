@@ -592,13 +592,27 @@ const handleTableClick = () => {
           />
         )}
         {/* Center Table Label */}
-        <div className="absolute items-center flex flex-col gap-2 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+        <div
+          className={`absolute items-center flex flex-col z-10 transform -translate-x-1/2 -translate-y-1/2 ${
+            inFloorPlan ? "gap-1" : "gap-2 top-1/2 left-1/2"
+          }`}
+          style={inFloorPlan ? { left: "45%", top: "45%" } : undefined}
+        >
           <div
-            className={`relative ${tableColor} rounded-full px-4 py-2 transition-all duration-200 ease-in-out mt-5 ml-5 cursor-pointer hover:shadow-lg`}
+            className={`relative ${tableColor} rounded-full transition-all duration-200 ease-in-out cursor-pointer hover:shadow-lg ${
+              inFloorPlan ? "px-2 py-0.5" : "px-4 py-2 mt-5 ml-5"
+            }`}
             onClick={handleTableClick}
           >
             <span className="flex items-center justify-center">
-              <span className={`font-semibold text-lg text-center`}>
+              <span
+                className={`font-semibold text-center ${
+                  inFloorPlan
+                    ? "text-[11px] sm:text-xs whitespace-nowrap max-w-[9rem] overflow-hidden text-ellipsis block"
+                    : "text-lg"
+                }`}
+                title={displayName}
+              >
                 {displayName}
               </span>
             </span>
