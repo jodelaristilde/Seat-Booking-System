@@ -639,7 +639,10 @@ const handleTableClick = () => {
                     : undefined
                 }
               >
-                {displayName}
+                {/* On the floor plan "Table 12" is shown as just "12" so it fits */}
+                {inFloorPlan
+                  ? displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "") || displayName
+                  : displayName}
               </span>
             </span>
 

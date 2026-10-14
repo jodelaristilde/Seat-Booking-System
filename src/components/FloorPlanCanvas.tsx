@@ -1340,7 +1340,9 @@ export function FloorPlanCanvas({
         }`}
         style={
           show.width
-            ? { width: show.width, height: show.height }
+            ? // width follows the column (a fixed pixel width made the
+              // scroll area grow and pushed half the room off screen)
+              { width: "100%", height: show.height }
             : {
                 aspectRatio: String(view.aspect),
                 // Never taller than the window
