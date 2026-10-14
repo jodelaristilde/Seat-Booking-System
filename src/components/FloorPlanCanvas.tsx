@@ -64,7 +64,7 @@ interface ReviewItem {
 }
 
 const SIZE_KEY = "floorPlanTableSize";
-const PICTURE_KEY = "floorPlanShowPicture";
+const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
@@ -148,7 +148,7 @@ export function FloorPlanCanvas({
   const [aspect, setAspect] = useState(16 / 10);
   // The venue picture is only a guide: hidden unless you ask for it,
   // and shown faintly while drawing, moving or checking tables.
-  const [showPicture, setShowPicture] = useState(false);
+  const [showPicture, setShowPicture] = useState(true);
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
   const [tableSize, setTableSize] = useState(12);
@@ -193,7 +193,7 @@ export function FloorPlanCanvas({
   useEffect(() => {
     const s = Number(readStored(SIZE_KEY));
     if (s >= 6 && s <= 30) setTableSize(s);
-    if (readStored(PICTURE_KEY) === "on") setShowPicture(true);
+    if (readStored(PICTURE_KEY) === "off") setShowPicture(false);
     if (readStored(SEATS_KEY) === "on") setShowSeats(true);
   }, []);
 
@@ -948,7 +948,8 @@ export function FloorPlanCanvas({
   // around the tables (with a little margin), in % of the room
   const view = (() => {
     const whole = { x: 0, y: 0, w: 100, h: 100, aspect };
-    if (working || !tables.length) return whole;
+    // With the picture on, always show the whole picture (stage, dance floor...)
+    if (working || !tables.length || (picture && showPicture)) return whole;
     let x0 = 100, y0 = 100, x1 = 0, y1 = 0;
     for (const t of tables) {
       const p = positions[tableIdOf(t)];
@@ -1389,7 +1390,7 @@ export function FloorPlanCanvas({
             src={picture}
             alt="Floor plan"
             className={`absolute inset-0 w-full h-full object-fill pointer-events-none select-none ${
-              reviewing || drawing || editing ? "opacity-90" : "opacity-60"
+              reviewing || drawing || editing ? "opacity-90" : "opacity-80"
             }`}
             draggable={false}
           />
