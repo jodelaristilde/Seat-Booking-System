@@ -53,6 +53,9 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
+// Tabletop size as a share of a drawn outline (chairs included). The seat
+// ring spans 90% of a table's box and the top 66%, so 0.66 / 0.9.
+const DRAWN_TOP = 0.66 / 0.9;
 
 const readStored = (key: string) => {
   try {
@@ -694,7 +697,19 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tables: [{ name, x: b.x, y: b.y, w: b.w, h: b.h, shape: drawShape, seats: drawSeats }],
+          // What you draw is the whole table, chairs included: the seats sit
+          // just inside your outline and the tabletop inside them.
+          tables: [
+            {
+              name,
+              x: b.x,
+              y: b.y,
+              w: b.w * DRAWN_TOP,
+              h: b.h * DRAWN_TOP,
+              shape: drawShape,
+              seats: drawSeats,
+            },
+          ],
         }),
       });
       const json = await res.json();
@@ -959,7 +974,7 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
           {drawing
             ? drawBusy
               ? "Adding the table..."
-              : `Drawing ${drawShape} tables with ${drawSeats} seats. Press on the picture where the table starts, drag to its size, and let go. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
+              : `Drawing ${drawShape} tables with ${drawSeats} seats. Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
             : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
