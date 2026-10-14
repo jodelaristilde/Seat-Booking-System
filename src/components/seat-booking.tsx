@@ -543,8 +543,10 @@ const renderCircularTable = (
         };
       }
       // Walk around a box, starting top-left, clockwise
-      const x0 = -extra;
-      const x1 = 90 + extra;
+      // The table top spans 12%–78% both ways; seats sit the same real
+      // distance outside every edge, however long the table is.
+      const x0 = 12 - (12 + extra) / ratio;
+      const x1 = 78 + (12 + extra) / ratio;
       const y0 = -extra;
       const y1 = 90 + extra;
       const w = x1 - x0;
@@ -706,7 +708,7 @@ const handleTableClick = () => {
                 top: `${top}%`,
                 transform: "translate(-50%, -50%)",
                 // on a rectangle, seats are about 15% of the table's height
-                ...(isRect ? { width: `${Math.max(3, 15 / ratio)}%` } : {}),
+                ...(isRect ? { width: `${Math.min(8, 28 / ratio)}%` } : {}),
               }}
             >
               <TooltipProvider>

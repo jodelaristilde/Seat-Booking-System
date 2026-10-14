@@ -904,7 +904,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
                   width: `${tableBox(table).width}%`,
-                  transform: "translate(-50%, -50%)",
+                  // the table top is centred at 45% of this box
+                  transform: "translate(-45%, -45%)",
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}
               >
