@@ -1184,7 +1184,7 @@ const handleTableClick = () => {
         <motion.div
           layout
           className={`w-full ${
-            isFullScreen ? "" : "lg:w-full xl:w-3/4"
+            isFullScreen ? (viewMode === "plan" ? "xl:w-4/5" : "") : "lg:w-full xl:w-3/4"
           } bg-zinc-50 overflow-hidden`}
           transition={{ duration: 0.5 }}
         >
@@ -1197,35 +1197,35 @@ const handleTableClick = () => {
                   y: -50,
                 }}
                 transition={{ duration: 0.5 }}
-                className="sticky top-0 z-40 bg-white border-b border-zinc-200 px-4 py-2 md:px-6 md:py-4"
+                className="sticky top-0 z-40 bg-white border-b border-zinc-200 px-4 py-1.5 md:px-6 md:py-2"
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="w-full md:w-auto">
-                    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
-                      <div className="bg-zinc-50 rounded-lg border border-zinc-200 p-2 text-center hover:shadow-sm transition-all">
-                        <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">
+                    <div className="grid grid-cols-5 gap-1.5 md:gap-2">
+                      <div className="bg-zinc-50 rounded-md border border-zinc-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
+                        <div className="text-[10px] leading-tight uppercase tracking-wider text-zinc-500">
                           Seats
                         </div>
-                        <div className="text-lg font-bold text-zinc-800">
+                        <div className="text-sm leading-tight font-bold text-zinc-800 tabular-nums">
                           {tables.reduce(
                             (total, table) => total + table.seats.length,
                             0
                           )}
                         </div>
                       </div>
-                      <div className="bg-cyan-50 rounded-lg border border-cyan-200 p-2 text-center hover:shadow-sm transition-all">
-                        <div className="text-xs uppercase tracking-wider text-cyan-600 mb-1">
+                      <div className="bg-cyan-50 rounded-md border border-cyan-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
+                        <div className="text-[10px] leading-tight uppercase tracking-wider text-cyan-600">
                           Invited
                         </div>
-                        <div className="text-lg font-bold text-cyan-800">
+                        <div className="text-sm leading-tight font-bold text-cyan-800 tabular-nums">
                           {totalGuests}
                         </div>
                       </div>
-                      <div className="bg-red-50 rounded-lg border border-red-200 p-2 text-center hover:shadow-sm transition-all">
-                        <div className="text-xs uppercase tracking-wider text-red-600 mb-1">
+                      <div className="bg-red-50 rounded-md border border-red-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
+                        <div className="text-[10px] leading-tight uppercase tracking-wider text-red-600">
                           Assigned
                         </div>
-                        <div className="text-lg font-bold text-red-800">
+                        <div className="text-sm leading-tight font-bold text-red-800 tabular-nums">
                           {tables.reduce(
                             (booked, table) =>
                               booked +
@@ -1235,11 +1235,11 @@ const handleTableClick = () => {
                           )}
                         </div>
                       </div>
-                      <div className="bg-green-50 rounded-lg border border-green-200 p-2 text-center hover:shadow-sm transition-all">
-                        <div className="text-xs uppercase tracking-wider text-green-600 mb-1">
+                      <div className="bg-green-50 rounded-md border border-green-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
+                        <div className="text-[10px] leading-tight uppercase tracking-wider text-green-600">
                           Available
                         </div>
-                        <div className="text-lg font-bold text-green-800">
+                        <div className="text-sm leading-tight font-bold text-green-800 tabular-nums">
                           {tables.reduce(
                             (available, table) =>
                               available +
@@ -1249,11 +1249,11 @@ const handleTableClick = () => {
                           )}
                         </div>
                       </div>
-                      <div className="bg-blue-50 rounded-lg border border-blue-200 p-2 text-center hover:shadow-sm transition-all">
-                        <div className="text-xs uppercase tracking-wider text-blue-600 mb-1">
+                      <div className="bg-blue-50 rounded-md border border-blue-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
+                        <div className="text-[10px] leading-tight uppercase tracking-wider text-blue-600">
                           Arrived
                         </div>
-                        <div className="text-lg font-bold text-blue-800">
+                        <div className="text-sm leading-tight font-bold text-blue-800 tabular-nums">
                           {tables.reduce(
                             (arrived, table) =>
                               arrived +
@@ -1324,13 +1324,13 @@ const handleTableClick = () => {
         </motion.div>
 
         <AnimatePresence>
-          {!isFullScreen && (
+          {(!isFullScreen || viewMode === "plan") && (
             <motion.div
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
               transition={{ duration: 0.3 }}
-              className="hidden xl:block w-1/4 bg-white overflow-hidden my-2 lg:my-0 lg:ml-2"
+              className={`hidden xl:block ${isFullScreen ? "w-1/5" : "w-1/4"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
             >
               <BookingSidebar
                 bookedSeats={bookedSeats}

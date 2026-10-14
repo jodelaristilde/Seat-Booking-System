@@ -61,7 +61,6 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture";
 const SEATS_KEY = "floorPlanShowSeats";
-const MENU_KEY = "floorPlanMenu";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
 // ring spans 90% of a table's box and the top 66%, so 0.66 / 0.9.
@@ -146,8 +145,6 @@ export function FloorPlanCanvas({
   const [showPicture, setShowPicture] = useState(false);
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
-  // The side menu can be tucked away once the room is set up
-  const [menuHidden, setMenuHidden] = useState(false);
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
@@ -189,7 +186,6 @@ export function FloorPlanCanvas({
     if (s >= 6 && s <= 30) setTableSize(s);
     if (readStored(PICTURE_KEY) === "on") setShowPicture(true);
     if (readStored(SEATS_KEY) === "on") setShowSeats(true);
-    if (readStored(MENU_KEY) === "hidden") setMenuHidden(true);
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -864,16 +860,13 @@ export function FloorPlanCanvas({
   return (
     <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
       {/* Floor plan controls: a column down the left side on bigger screens */}
-      {menuHidden && !working ? (
+      {/* Full screen ("Hide menu"): just a small Menu button */}
+      {roomOnly && !working ? (
         <div className="lg:self-start">
           <Button
             size="sm"
             variant="outline"
-            onClick={() => {
-              setMenuHidden(false);
-              writeStored(MENU_KEY, "shown");
-              onRoomOnlyChange?.(false);
-            }}
+            onClick={() => onRoomOnlyChange?.(false)}
             title="Show the floor plan menu"
           >
             <PanelLeftOpen className="w-4 h-4 mr-2" /> Menu
@@ -887,12 +880,8 @@ export function FloorPlanCanvas({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => {
-              setMenuHidden(true);
-              writeStored(MENU_KEY, "hidden");
-              // hiding the menu also hides the rest of the dashboard
-              onRoomOnlyChange?.(true);
-            }}
+            // hiding the menu also hides the rest of the dashboard
+            onClick={() => onRoomOnlyChange?.(true)}
             title="Hide this menu and everything else, so the room is as big as possible"
           >
             <PanelLeftClose className="w-4 h-4 mr-2" /> Hide menu
@@ -1047,17 +1036,6 @@ export function FloorPlanCanvas({
             onChange={(e) => changeTableSize(Number(e.target.value))}
           />
         </label>
-
-        {!working && onRoomOnlyChange && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onRoomOnlyChange(!roomOnly)}
-            title="Hide everything except the room (Esc to go back)"
-          >
-            {roomOnly ? "Show everything" : "Room only"}
-          </Button>
-        )}
 
         {!working && onGuestNamesChange && (
           <Button
