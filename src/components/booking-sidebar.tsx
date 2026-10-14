@@ -170,10 +170,11 @@ export function BookingSidebar({
   const SidebarContent = useMemo(
     () => (
       <div className="flex flex-col h-full w-full bg-white">
-        <div className="p-4 bg-white shadow-sm space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap">Guest Names</h2>
-            <div className="flex gap-2">
+        <div className="px-2 py-3 bg-white shadow-sm space-y-2">
+          {/* Title centred; search box and list share the same edges */}
+          <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap text-center">Guest Names</h2>
+          <div className="flex flex-col gap-2">
+            <div className={`flex gap-2 justify-center ${bookedSeats.length > 0 && !compact ? "" : "hidden"}`}>
               {bookedSeats.length > 0 && !compact && (
                 <>
                   <Button
@@ -200,7 +201,7 @@ export function BookingSidebar({
           </div>
 
           <div className="flex gap-2">
-            <div className="relative flex-1">
+            <div className="relative w-full">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search name or table..."
@@ -217,7 +218,7 @@ export function BookingSidebar({
           <div>
             {filteredBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
-              <table className="w-auto ml-auto text-sm border-collapse">
+              <table className="w-full text-sm border-collapse">
                 <tbody>
                   {filteredBookings.map((seat) => (
                     <tr
@@ -246,6 +247,8 @@ export function BookingSidebar({
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
                       </td>
+                      {/* empty space, so name and table stay close together */}
+                      <td className="w-full" />
                       <td className="py-0.5 align-middle">
                         <button
                           type="button"
