@@ -606,13 +606,18 @@ const handleTableClick = () => {
         {/* Center Table Label */}
         <div
           className={`absolute items-center flex flex-col z-10 transform -translate-x-1/2 -translate-y-1/2 ${
-            inFloorPlan ? "gap-1" : "gap-2 top-1/2 left-1/2"
+            inFloorPlan ? "gap-0.5" : "gap-2 top-1/2 left-1/2"
           }`}
-          style={inFloorPlan ? { left: "45%", top: "45%" } : undefined}
+          // On the floor plan the name stays inside the tabletop, clear of the seats
+          style={
+            inFloorPlan
+              ? { left: "45%", top: "45%", maxWidth: hideSeats ? "76%" : "58%" }
+              : undefined
+          }
         >
           <div
             className={`relative ${tableColor} rounded-full transition-all duration-200 ease-in-out cursor-pointer hover:shadow-lg ${
-              inFloorPlan ? "px-2 py-0.5" : "px-4 py-2 mt-5 ml-5"
+              inFloorPlan ? "px-1.5 py-0 max-w-full" : "px-4 py-2 mt-5 ml-5"
             }`}
             onClick={handleTableClick}
           >
@@ -620,7 +625,7 @@ const handleTableClick = () => {
               <span
                 className={`font-semibold text-center ${
                   inFloorPlan
-                    ? "text-[11px] sm:text-xs whitespace-nowrap max-w-[9rem] overflow-hidden text-ellipsis block"
+                    ? "text-[10px] leading-4 whitespace-nowrap overflow-hidden text-ellipsis block max-w-full"
                     : "text-lg"
                 }`}
                 title={displayName}
@@ -695,11 +700,22 @@ const handleTableClick = () => {
               {table.seats.filter((s) => s.isBooked).length}/{table.seats.length}
             </span>
           )}
-          <TableNotes
-            tableId={String(table.seats[0]?.table?.id || tableId)}
-            initialNotes={table.seats[0]?.table?.notes}
-          />
+          {!inFloorPlan && (
+            <TableNotes
+              tableId={String(table.seats[0]?.table?.id || tableId)}
+              initialNotes={table.seats[0]?.table?.notes}
+            />
+          )}
         </div>
+        {/* On the floor plan, the note button sits in the table's corner */}
+        {inFloorPlan && (
+          <div className="absolute z-20 scale-75 origin-top-right" style={{ right: "-2%", top: "-2%" }}>
+            <TableNotes
+              tableId={String(table.seats[0]?.table?.id || tableId)}
+              initialNotes={table.seats[0]?.table?.notes}
+            />
+          </div>
+        )}
 
         {/* Circular Seats (hidden on the floor plan unless "Show seats" is on) */}
         {!hideSeats && table.seats.map((seat, seatIndex) => {

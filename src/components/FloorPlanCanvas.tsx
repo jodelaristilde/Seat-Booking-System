@@ -11,6 +11,8 @@ import {
   LayoutGrid,
   ScanSearch,
   PenLine,
+  PanelLeftClose,
+  PanelLeftOpen,
   Undo2,
   Type,
   Circle,
@@ -56,6 +58,7 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture";
 const SEATS_KEY = "floorPlanShowSeats";
+const MENU_KEY = "floorPlanMenu";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
 // ring spans 90% of a table's box and the top 66%, so 0.66 / 0.9.
@@ -138,6 +141,8 @@ export function FloorPlanCanvas({
   const [showPicture, setShowPicture] = useState(false);
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
+  // The side menu can be tucked away once the room is set up
+  const [menuHidden, setMenuHidden] = useState(false);
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
@@ -179,6 +184,7 @@ export function FloorPlanCanvas({
     if (s >= 6 && s <= 30) setTableSize(s);
     if (readStored(PICTURE_KEY) === "on") setShowPicture(true);
     if (readStored(SEATS_KEY) === "on") setShowSeats(true);
+    if (readStored(MENU_KEY) === "hidden") setMenuHidden(true);
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -824,9 +830,37 @@ export function FloorPlanCanvas({
   return (
     <div className="px-4 sm:px-6 py-4 sm:pb-[3rem] pb-[9rem] flex flex-col lg:flex-row gap-4">
       {/* Floor plan controls: a column down the left side on bigger screens */}
+      {menuHidden && !working ? (
+        <div className="lg:self-start">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setMenuHidden(false);
+              writeStored(MENU_KEY, "shown");
+            }}
+            title="Show the floor plan menu"
+          >
+            <PanelLeftOpen className="w-4 h-4 mr-2" /> Menu
+          </Button>
+        </div>
+      ) : (
       <div
         className="flex flex-wrap items-center gap-2 lg:flex-col lg:flex-nowrap lg:items-stretch lg:w-52 lg:shrink-0 lg:sticky lg:top-2 lg:self-start lg:max-h-[calc(100vh-1rem)] lg:overflow-y-auto [&>button]:lg:justify-start [&>label]:lg:justify-between [&>span]:lg:mt-2"
       >
+        {!working && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setMenuHidden(true);
+              writeStored(MENU_KEY, "hidden");
+            }}
+            title="Hide this menu (the Menu button brings it back)"
+          >
+            <PanelLeftClose className="w-4 h-4 mr-2" /> Hide menu
+          </Button>
+        )}
         {drawing ? (
           <>
             <Button onClick={finishDrawing} size="sm" disabled={drawBusy || saving}>
@@ -1021,6 +1055,8 @@ export function FloorPlanCanvas({
         )}
       </div>
 
+      )}
+
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0">
       {(editing || reviewing || drawing) && (
@@ -1059,7 +1095,7 @@ export function FloorPlanCanvas({
             src={picture}
             alt="Floor plan"
             className={`absolute inset-0 w-full h-full object-fill pointer-events-none select-none ${
-              reviewing ? "opacity-70" : drawing || editing ? "opacity-50" : "opacity-40"
+              reviewing || drawing || editing ? "opacity-90" : "opacity-60"
             }`}
             draggable={false}
           />

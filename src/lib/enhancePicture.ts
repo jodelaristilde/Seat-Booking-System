@@ -15,6 +15,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 const clamp = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
 
+// Curve that pulls every shade towards black while leaving white alone
+const DARKEN = new Uint8ClampedArray(256).map((_, v) => Math.round(255 * Math.pow(v / 255, 2.2)));
+
 function flattenLighting(ctx: CanvasRenderingContext2D, W: number, H: number) {
   const k = Math.min(1, 160 / Math.max(W, H));
   const sw = Math.max(8, Math.round(W * k));
@@ -153,11 +156,48 @@ export async function enhancePicture(
     const min = Math.min(r, g, b);
     const l = (r * 299 + g * 587 + b * 114) / 1000;
     // Grey, speckled paper -> clean white
-    if (max - min < 40 && l > 175) {
+    if (max - min < 40 && l > 200) {
       px[o] = px[o + 1] = px[o + 2] = 255;
+    } else {
+      // Darken everything that is drawn, so thin or light lines (pale grey,
+      // light purple...) come out strong. White stays white.
+      for (let c = 0; c < 3; c++) px[o + c] = DARKEN[px[o + c]];
     }
-    if (l > 205 || l < 60) plain++;
+    const l2 = (px[o] * 299 + px[o + 1] * 587 + px[o + 2] * 114) / 1000;
+    if (l2 > 205 || l2 < 60) plain++;
     px[o + 3] = 255;
+  }
+  // Remove specks: tiny separate dots are noise from the camera or scanner.
+  // Real lines, chairs and letters are much bigger, so they stay.
+  {
+    const inked = new Uint8Array(N);
+    for (let i = 0; i < N; i++) {
+      const o = i * 4;
+      inked[i] = px[o] > 245 && px[o + 1] > 245 && px[o + 2] > 245 ? 0 : 1;
+    }
+    const seen = new Uint8Array(N);
+    const stack = new Int32Array(N);
+    const blob: number[] = [];
+    const minArea = Math.max(6, Math.round(((W / 1800) * 5) ** 2));
+    for (let start = 0; start < N; start++) {
+      if (!inked[start] || seen[start]) continue;
+      blob.length = 0;
+      let top = 0;
+      stack[top++] = start;
+      seen[start] = 1;
+      while (top > 0) {
+        const p = stack[--top];
+        blob.push(p);
+        const x = p % W;
+        if (x > 0 && inked[p - 1] && !seen[p - 1]) { seen[p - 1] = 1; stack[top++] = p - 1; }
+        if (x < W - 1 && inked[p + 1] && !seen[p + 1]) { seen[p + 1] = 1; stack[top++] = p + 1; }
+        if (p >= W && inked[p - W] && !seen[p - W]) { seen[p - W] = 1; stack[top++] = p - W; }
+        if (p < N - W && inked[p + W] && !seen[p + W]) { seen[p + W] = 1; stack[top++] = p + W; }
+      }
+      if (blob.length < minArea) {
+        for (const q of blob) px[q * 4] = px[q * 4 + 1] = px[q * 4 + 2] = 255;
+      }
+    }
   }
   ctx.putImageData(image, 0, 0);
 
