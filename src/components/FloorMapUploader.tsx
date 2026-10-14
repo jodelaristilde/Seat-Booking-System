@@ -105,6 +105,10 @@ export function FloorMapUploader() {
           setFile(null);
           setPreview(null);
           fetchFloorMap();
+          // Tell the floor plan view to read the tables from the new picture
+          setOpen(false);
+          (window as unknown as { __floorMapPending?: boolean }).__floorMapPending = true;
+          window.dispatchEvent(new Event("floor-map-uploaded"));
         } else {
           toast.error(result.error || "Failed to upload floor map");
         }
@@ -129,6 +133,7 @@ export function FloorMapUploader() {
 
       if (response.ok) {
         toast.success("Floor map deleted successfully");
+        window.dispatchEvent(new Event("floor-map-deleted"));
         setCurrentImage(null);
       } else {
         toast.error("Failed to delete floor map");

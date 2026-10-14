@@ -108,6 +108,12 @@ const SeatBooking = () => {
       /* ignore */
     }
   }, []);
+  // A new floor plan picture switches to the floor plan view
+  useEffect(() => {
+    const show = () => setViewMode("plan");
+    window.addEventListener("floor-map-uploaded", show);
+    return () => window.removeEventListener("floor-map-uploaded", show);
+  }, []);
   const toggleViewMode = () => {
     setViewMode((m) => {
       const next = m === "plan" ? "grid" : "plan";
@@ -520,6 +526,36 @@ const renderCircularTable = (
     const displayName = tableName || `Table ${tableNumber}`;
     const tableColor = getTableColor(index);
     const isHovered = hoveredTable === tableId;
+    // round / square / rectangle (the floor plan view draws the table's outline)
+    const shape = inFloorPlan ? table.seats[0]?.table?.shape ?? "round" : "round";
+    const isRect = shape === "rectangle";
+    // Where seat number i goes, in % of the table area (centre is 45%, like before)
+    const seatSpot = (i: number, count: number, extra = 0) => {
+      if (shape === "round") {
+        const angle = ((i - 2.5) * 2 * Math.PI) / count;
+        return {
+          left: 45 + Math.cos(angle) * (45 + extra),
+          top: 45 + Math.sin(angle) * (45 + extra),
+        };
+      }
+      // Walk around a box, starting top-left, clockwise
+      const x0 = -extra;
+      const x1 = 90 + extra;
+      const y0 = -extra;
+      const y1 = 90 + extra;
+      const w = x1 - x0;
+      const h = y1 - y0;
+      const realW = isRect ? w * 2 : w; // a rectangle is twice as wide as tall
+      const perim = 2 * (realW + h);
+      let d = ((i + 0.5) / count) * perim;
+      if (d < realW) return { left: x0 + (d / realW) * w, top: y0 };
+      d -= realW;
+      if (d < h) return { left: x1, top: y0 + d };
+      d -= h;
+      if (d < realW) return { left: x1 - (d / realW) * w, top: y1 };
+      d -= realW;
+      return { left: x0, top: y1 - d };
+    };
 
 const handleTableClick = () => {
       const bookedGuests = table.seats.filter(seat => seat.isBooked);
@@ -534,8 +570,10 @@ const handleTableClick = () => {
     return (
       <motion.div
         key={tableId}
-        className={`relative w-full aspect-square mx-auto ${
-          isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
+        className={`relative w-full mx-auto ${
+          isRect ? "aspect-[2/1]" : "aspect-square"
+        } ${
+          inFloorPlan ? "" : isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
         } ${showNames ? "p-8" : ""}`} // Add padding when names are shown
         onMouseEnter={() => setHoveredTable(tableId)}
         onMouseLeave={() => setHoveredTable(null)}
@@ -545,6 +583,14 @@ const handleTableClick = () => {
         exit={{ opacity: 0, scale: 0.8 }}
         transition={{ duration: 0.5 }}
       >
+        {inFloorPlan && (
+          <div
+            className={`absolute border-2 border-zinc-300 bg-white/70 pointer-events-none ${
+              shape === "round" ? "rounded-full" : "rounded-md"
+            }`}
+            style={{ left: "12%", top: "12%", width: "66%", height: "66%" }}
+          />
+        )}
         {/* Center Table Label */}
         <div className="absolute items-center flex flex-col gap-2 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
           <div
@@ -624,10 +670,8 @@ const handleTableClick = () => {
         {/* Circular Seats */}
         {table.seats.map((seat, seatIndex) => {
           const countofseats = table.seats.length;
-          const angle = ((seatIndex - 2.5) * 2 * Math.PI) / countofseats;
-          const radius = 45;
-          const left = 45 + Math.cos(angle) * radius;
-          const top = 45 + Math.sin(angle) * radius;
+          const { left, top } = seatSpot(seatIndex, countofseats);
+          const nameSpot = seatSpot(seatIndex, countofseats, 12);
 
           return (
             <motion.div
@@ -636,7 +680,7 @@ const handleTableClick = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: seatIndex * 0.05 }}
               className={`absolute ${
-                isFullScreen ? "w-[20%]" : "w-[15%]"
+                isRect ? "w-[8%]" : isFullScreen ? "w-[20%]" : "w-[15%]"
               } aspect-square`}
               style={{
                 left: `${left}%`,
@@ -715,8 +759,8 @@ const handleTableClick = () => {
                   className="absolute whitespace-nowrap pointer-events-none z-20"
                   style={{
                     // Calculate position further out from the seat position
-                    left: `${45 + Math.cos(angle) * (radius + 12)}%`,
-                    top: `${45 + Math.sin(angle) * (radius + 12)}%`,
+                    left: `${nameSpot.left}%`,
+                    top: `${nameSpot.top}%`,
                     transform: "translate(-50%, -50%)",
                   }}
                 >
@@ -1171,6 +1215,7 @@ const handleTableClick = () => {
                 renderTable={(table, index) =>
                   renderCircularTable(table, index, true)
                 }
+                onTablesChanged={refreshSeats}
               />
             ) : (
             <motion.div

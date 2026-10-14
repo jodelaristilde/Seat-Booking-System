@@ -35,6 +35,8 @@ model Table {
   // Empty means "not placed yet" (the floor plan view lines it up automatically).
   posX      Float?
   posY      Float?
+  // "round", "square" or "rectangle"
+  shape     String   @default("round")
 }
 
 model Password {

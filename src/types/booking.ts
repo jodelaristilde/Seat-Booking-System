@@ -3,6 +3,9 @@ export interface Table {
   id: number
   name: string
   notes: string
+  shape?: string
+  posX?: number | null
+  posY?: number | null
   Seat: Seat[]
 }
 
