@@ -1230,7 +1230,7 @@ export function FloorPlanCanvas({
       {/* Arrived guests, newest first (left of the room) */}
       {arrivals.length > 0 && !working && (
         <div className="lg:w-56 lg:shrink-0 lg:self-start lg:sticky lg:top-2 rounded-lg border border-green-200 bg-green-50/60 overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-green-200 bg-green-100/70">
+          <div className="flex items-center justify-between px-3 py-1 border-b border-green-200 bg-green-100/70">
             <span className="font-semibold text-green-900">Arrived</span>
             <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
           </div>
@@ -1250,7 +1250,7 @@ export function FloorPlanCanvas({
                   animate={{ opacity: 1, x: 0, backgroundColor: "rgba(255,255,255,0)" }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
-                  className="px-3 py-1.5 flex items-baseline justify-between gap-2"
+                  className="px-3 py-1 flex items-baseline justify-between gap-2 text-sm"
                 >
                   <span className="font-medium text-zinc-900 leading-tight truncate" title={a.name}>
                     {a.name}

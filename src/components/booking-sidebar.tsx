@@ -10,7 +10,6 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import PasswordVerificationDialog from "./password-verification-dialog";
-import PrintableBooking from "./single-seat-pdf";
 
 interface BookingSidebarProps {
   bookedSeats: Seat[];
@@ -216,69 +215,47 @@ export function BookingSidebar({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-4 py-2">
-          <div className="space-y-3">
+        <ScrollArea className="flex-1 px-3 py-1">
+          <div className="divide-y divide-gray-100">
             {filteredBookings.length > 0 ? (
               filteredBookings.map((seat) => (
+                // One tight line: [arrived] Name ........ Table 1  #4  [delete]
                 <div
                   key={seat.id}
-                  className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md"
+                  className={`flex items-center gap-2 py-1.5 ${seat.isReceived ? "bg-green-50/70" : ""}`}
                 >
-                  <div className="p-4 flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white font-bold text-lg truncate">
-                        {seat.user?.firstname[0]}
-                        {seat.user?.lastname[0]}
-                      </div>
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h3
-                        className="text-sm font-semibold text-gray-900"
-                        title={`${seat.user?.firstname} ${seat.user?.lastname}`}
-                      >
-                        {seat.user?.firstname} {seat.user?.lastname}
-                      </h3>
-                      <p className="text-xs text-gray-500">{seat.table.name}</p>
-                    </div>
-                    <div className="flex-shrink-0 text-2xl font-bold text-lime-400">
-                      #{seat.seat}
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 px-4 py-2 flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`received-${seat.id}`}
-                        checked={seat.isReceived}
-                        onCheckedChange={(checked) =>
-                          onToggleReceived(seat.id, checked as boolean)
-                        }
-                      />
-                      <label
-                        htmlFor={`received-${seat.id}`}
-                        className="text-sm text-gray-700 cursor-pointer"
-                      >
-                        Arrived
-                      </label>
-                      <PrintableBooking
-                        firstName={seat.user?.firstname || ""}
-                        lastName={seat.user?.lastname || ""}
-                        seats={[seat]}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSeatToDelete(seat.id);
-                          setIsDeleteBookingDialogOpen(true);
-                        }}
-                        className="text-gray-600 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  <Checkbox
+                    id={`received-${seat.id}`}
+                    checked={seat.isReceived}
+                    onCheckedChange={(checked) =>
+                      onToggleReceived(seat.id, checked as boolean)
+                    }
+                    aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
+                    title="Arrived"
+                  />
+                  <label
+                    htmlFor={`received-${seat.id}`}
+                    className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 cursor-pointer"
+                    title={`${seat.user?.firstname} ${seat.user?.lastname}`}
+                  >
+                    {seat.user?.firstname} {seat.user?.lastname}
+                  </label>
+                  <span className="shrink-0 text-xs text-gray-500 whitespace-nowrap">{seat.table.name}</span>
+                  <span className="shrink-0 w-8 text-right text-sm font-bold text-lime-600 tabular-nums">
+                    #{seat.seat}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSeatToDelete(seat.id);
+                      setIsDeleteBookingDialogOpen(true);
+                    }}
+                    className="shrink-0 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    title="Remove from this seat"
+                    aria-label="Remove from this seat"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))
             ) : (
