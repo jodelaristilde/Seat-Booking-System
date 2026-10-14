@@ -43,7 +43,9 @@ export async function PUT(req: Request) {
         typeof p?.y === "number" &&
         Number.isFinite(p.x) &&
         Number.isFinite(p.y)
-    ) as { id: string; x: number; y: number; shape?: unknown }[]
+    ) as { id: string; x: number; y: number; shape?: unknown; sizeW?: unknown; sizeH?: unknown }[]
+    const size = (v: unknown) =>
+      typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.min(100, v) : undefined
 
     await prisma.$transaction(
       valid.map((p) =>
@@ -53,6 +55,7 @@ export async function PUT(req: Request) {
             posX: clamp(p.x),
             posY: clamp(p.y),
             ...(typeof p.shape === "string" && SHAPES.includes(p.shape) ? { shape: p.shape } : {}),
+            ...(size(p.sizeW) && size(p.sizeH) ? { sizeW: size(p.sizeW), sizeH: size(p.sizeH) } : {}),
           },
         })
       )

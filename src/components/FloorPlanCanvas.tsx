@@ -150,6 +150,9 @@ export function FloorPlanCanvas({
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  // Resizing one table (Move tables mode): drag its corner handle
+  const resizing = useRef<{ id: string; cx: number; startW: number; startX: number } | null>(null);
+  const [draftWidths, setDraftWidths] = useState<Record<string, number>>({});
 
   // "Read tables from picture" state
   const [review, setReview] = useState<ReviewItem[] | null>(null);
@@ -567,10 +570,12 @@ export function FloorPlanCanvas({
 
   const startEditing = () => {
     setDraftShapes({});
+    setDraftWidths({});
     setDraft({ ...positions });
   };
   const cancelEditing = () => {
     setDraftShapes({});
+    setDraftWidths({});
     setDraft(null);
   };
   const shapeOf = (t: TableData): Shape =>
@@ -578,6 +583,11 @@ export function FloorPlanCanvas({
   // How big a table is drawn: its size traced from the picture when known,
   // otherwise the standard size. The Table size slider zooms all of them.
   const tableBox = (t: TableData): { width: number; ratio: number } => {
+    const box = baseTableBox(t);
+    const w = draftWidths[tableIdOf(t)];
+    return w ? { ...box, width: w } : box;
+  };
+  const baseTableBox = (t: TableData): { width: number; ratio: number } => {
     const shape = shapeOf(t);
     const zoom = tableSize / 12;
     const sw = Number(t.seats[0]?.table?.sizeW) || 0;
@@ -625,7 +635,15 @@ export function FloorPlanCanvas({
         positions: tables.map((t) => {
           const id = tableIdOf(t);
           const p = draft[id] ?? positions[id];
-          return { id, x: p.x, y: p.y, ...(draftShapes[id] ? { shape: draftShapes[id] } : {}) };
+          // A resized table: save its new size the same way a traced one is stored
+          let sizes = {};
+          if (draftWidths[id]) {
+            const { ratio } = tableBox(t);
+            const top = (draftWidths[id] * 0.66) / (tableSize / 12);
+            const isRect = shapeOf(t) === "rectangle";
+            sizes = { sizeW: top, sizeH: (isRect ? top / ratio : top) * aspect };
+          }
+          return { id, x: p.x, y: p.y, ...(draftShapes[id] ? { shape: draftShapes[id] } : {}), ...sizes };
         }),
       };
       const res = await fetch("/api/table-positions", {
@@ -637,7 +655,9 @@ export function FloorPlanCanvas({
       if (!json.success) throw new Error(json.message);
       setSaved((prev) => ({ ...prev, ...draft }));
       const moved = { ...positions, ...draft };
-      const shapesChanged = Object.keys(draftShapes).length > 0;
+      const shapesChanged =
+        Object.keys(draftShapes).length > 0 || Object.keys(draftWidths).length > 0;
+      setDraftWidths({});
       setDraft(null);
       setDraftShapes({});
       if (shapesChanged) await onTablesChanged();
@@ -814,7 +834,24 @@ export function FloorPlanCanvas({
       dragging.current = { id, dx: cur.x - p.x, dy: cur.y - p.y };
     };
 
+  const onResizeDown =
+    (id: string, cx: number, startW: number) => (e: ReactPointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const p = pointToPercent(e.clientX, e.clientY);
+      resizing.current = { id, cx, startW, startX: p.x };
+    };
+
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const r = resizing.current;
+    if (r && editing) {
+      const p = pointToPercent(e.clientX, e.clientY);
+      // the table grows on both sides, so twice the mouse movement
+      const w = Math.min(60, Math.max(2, r.startW + (p.x - r.startX) * 2));
+      setDraftWidths((prev) => ({ ...prev, [r.id]: w }));
+      return;
+    }
     const d = dragging.current;
     if (!d) return;
     const p = pointToPercent(e.clientX, e.clientY);
@@ -825,6 +862,7 @@ export function FloorPlanCanvas({
   };
 
   const onPointerUp = () => {
+    resizing.current = null;
     dragging.current = null;
   };
 
@@ -864,7 +902,7 @@ export function FloorPlanCanvas({
       {/* Floor plan controls: a column down the left side on bigger screens */}
       {/* Full screen ("Hide menu"): a slim column of icons on the right */}
       {roomOnly && !working ? (
-        <div className="flex flex-wrap gap-2 lg:flex-col lg:order-last lg:self-start lg:sticky lg:top-2">
+        <div className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2">
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
             <PanelRightOpen className="w-4 h-4" />
           </Button>
@@ -1150,7 +1188,7 @@ export function FloorPlanCanvas({
             : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
-            : "Drag each table to its spot. Click a table's Shape button to switch round / square / rectangle. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
+            : "Drag each table to its spot. Drag the blue dot at a table's corner to make it bigger or smaller. Click a table's Shape button to switch round / square / rectangle. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
           {reviewBusy && <Loader2 className="inline w-4 h-4 ml-2 animate-spin" />}
         </p>
       )}
@@ -1328,6 +1366,13 @@ export function FloorPlanCanvas({
                       } cursor-grab active:cursor-grabbing bg-blue-500/10 ring-2 ring-blue-400/60 touch-none`}
                       onPointerDown={onPointerDown(id, pos)}
                       title="Drag to move"
+                    />
+                    <button
+                      type="button"
+                      className="absolute -bottom-2 -right-2 z-40 w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow cursor-nwse-resize touch-none"
+                      title="Drag to make this table bigger or smaller"
+                      aria-label="Resize table"
+                      onPointerDown={onResizeDown(id, pos.x, tableBox(table).width)}
                     />
                     <button
                       type="button"
