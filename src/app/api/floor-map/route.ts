@@ -33,6 +33,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { filename, data, mimeType, size } = body;
+    // Optional: the clean picture, kept so names can be rewritten later
+    const original =
+      typeof body.original === 'string' && body.original.startsWith('data:image/')
+        ? body.original
+        : null;
 
     // Validate required fields
     if (!filename || !data || !mimeType || !size) {
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
         data,
         mimeType,
         size,
+        original,
       },
     });
 

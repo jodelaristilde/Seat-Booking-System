@@ -10,6 +10,7 @@ import {
   ImageIcon,
   LayoutGrid,
   ScanSearch,
+  Type,
   Circle,
   Square,
   RectangleHorizontal,
@@ -25,6 +26,7 @@ import {
   type DetectedShape,
   type Shape,
 } from "@/lib/detectTables";
+import { stampNames } from "@/lib/stampNames";
 
 type Pos = { x: number; y: number };
 
@@ -125,6 +127,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
   const [seatsPerTable, setSeatsPerTable] = useState(10);
   // New venue = new tables: remove old tables that are not in the picture
   const [replaceOld, setReplaceOld] = useState(true);
+  // Write the table names onto the floor plan picture itself
+  const [writeNames, setWriteNames] = useState(true);
 
   const editing = draft !== null;
   const reviewing = review !== null;
@@ -172,7 +176,8 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
     try {
       const res = await fetch("/api/floor-map");
       const json = await res.json();
-      const src: string | undefined = json?.image?.data;
+      // Use the clean picture (without names written on it) when we have it
+      const src: string | undefined = json?.image?.original || json?.image?.data;
       if (!src) {
         setPicture(null);
         return null;
@@ -344,6 +349,44 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       ];
     });
 
+  // Save a copy of the picture with every table's name written on it.
+  // Guests who open the floor map then see the numbers too.
+  const writeNamesOnPicture = async (
+    list: { name: string; x: number; y: number }[],
+    quiet = false
+  ) => {
+    if (!picture || !list.length) return;
+    try {
+      const { data, mimeType, size } = await stampNames(picture, list, tableSize);
+      if (size > 10 * 1024 * 1024) throw new Error("The picture is too big to save with names (over 10 MB).");
+      const res = await fetch("/api/floor-map", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: "floor-plan-with-table-names." + (mimeType === "image/png" ? "png" : "jpg"),
+          data,
+          mimeType,
+          size,
+          original: picture,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Upload failed");
+      }
+      if (!quiet) toast.success("Table names written on the floor plan picture");
+    } catch (e) {
+      toast.error("Could not write the names on the picture", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    }
+  };
+
+  const currentStamps = (pos: Record<string, Pos>) =>
+    tables
+      .map((t) => ({ name: tableNameOf(t), ...pos[tableIdOf(t)] }))
+      .filter((s) => typeof s.x === "number" && typeof s.y === "number");
+
   const applyReview = async () => {
     if (!review) return;
     const picked = review.filter((r) => r.picked);
@@ -402,6 +445,11 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       if (json.moved) parts.push(`${json.moved} existing table${json.moved === 1 ? "" : "s"} moved into place`);
       if (json.removed) parts.push(`${json.removed} old table${json.removed === 1 ? "" : "s"} removed`);
       toast.success(parts.join(", ") || "Floor plan saved");
+      if (writeNames) {
+        await writeNamesOnPicture(
+          picked.map((p) => ({ name: p.name.trim(), x: p.x, y: p.y }))
+        );
+      }
     } catch (e) {
       toast.error("Could not save the tables", {
         description: e instanceof Error ? e.message : undefined,
@@ -455,8 +503,11 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
       setSaved((prev) => ({ ...prev, ...draft }));
+      const moved = { ...positions, ...draft };
       setDraft(null);
       toast.success("Floor plan saved");
+      // Keep the names on the picture in step with where the tables are now
+      if (picture) await writeNamesOnPicture(currentStamps(moved), true);
     } catch (e) {
       toast.error("Could not save the floor plan", {
         description: e instanceof Error ? e.message : undefined,
@@ -562,6 +613,14 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
               />
               Remove old tables not in this picture
             </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <input
+                type="checkbox"
+                checked={writeNames}
+                onChange={(e) => setWriteNames(e.target.checked)}
+              />
+              Write table names on the picture
+            </label>
           </>
         ) : !editing ? (
           <>
@@ -571,6 +630,21 @@ export function FloorPlanCanvas({ tables, renderTable, onTablesChanged }: FloorP
             {picture && (
               <Button onClick={() => startReview()} size="sm" variant="outline">
                 <ScanSearch className="w-4 h-4 mr-2" /> Read tables from picture
+              </Button>
+            )}
+            {picture && tables.length > 0 && (
+              <Button
+                onClick={async () => {
+                  setSaving(true);
+                  await writeNamesOnPicture(currentStamps(positions));
+                  setSaving(false);
+                }}
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                title="Write each table's current name onto the floor plan picture"
+              >
+                <Type className="w-4 h-4 mr-2" /> Write names on picture
               </Button>
             )}
           </>

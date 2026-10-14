@@ -58,6 +58,8 @@ model Image {
   filename  String
   data      String
   mimeType  String // Multipurpose Internet Mail Extensions type
+  // The clean picture as uploaded, before table names were written on it
+  original  String?
   size      Int
   createdAt DateTime @default(now())
 }
