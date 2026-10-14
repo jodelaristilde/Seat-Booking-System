@@ -15,6 +15,81 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 const clamp = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
 
+function flattenLighting(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const k = Math.min(1, 160 / Math.max(W, H));
+  const sw = Math.max(8, Math.round(W * k));
+  const sh = Math.max(8, Math.round(H * k));
+  const small = document.createElement("canvas");
+  small.width = sw;
+  small.height = sh;
+  const sctx = small.getContext("2d", { willReadFrequently: true })!;
+  sctx.imageSmoothingEnabled = true;
+  sctx.drawImage(ctx.canvas, 0, 0, sw, sh);
+  // Paper brightness: the brightest value nearby (so dark lines don't count),
+  // then smoothed so it changes gently across the page
+  const shot = sctx.getImageData(0, 0, sw, sh);
+  const sp = shot.data;
+  const R = Math.max(2, Math.round(Math.max(sw, sh) / 25));
+  const tmp = new Uint8ClampedArray(sp.length);
+  const pass = (src: Uint8ClampedArray, dst: Uint8ClampedArray, dx: number, dy: number) => {
+    for (let y = 0; y < sh; y++)
+      for (let x = 0; x < sw; x++)
+        for (let c = 0; c < 3; c++) {
+          let m = 0;
+          for (let k = -R; k <= R; k++) {
+            const xx = Math.min(sw - 1, Math.max(0, x + k * dx));
+            const yy = Math.min(sh - 1, Math.max(0, y + k * dy));
+            const v = src[(yy * sw + xx) * 4 + c];
+            if (v > m) m = v;
+          }
+          dst[(y * sw + x) * 4 + c] = m;
+        }
+  };
+  pass(sp, tmp, 1, 0);
+  pass(tmp, sp, 0, 1);
+  for (let i = 3; i < sp.length; i += 4) sp[i] = 255;
+  sctx.putImageData(shot, 0, 0);
+  const soft = document.createElement("canvas");
+  soft.width = sw;
+  soft.height = sh;
+  const softCtx = soft.getContext("2d")!;
+  softCtx.filter = `blur(${R}px)`;
+  softCtx.drawImage(small, 0, 0);
+  sctx.clearRect(0, 0, sw, sh);
+  sctx.drawImage(soft, 0, 0);
+  const smooth = sctx.getImageData(0, 0, sw, sh).data;
+  for (let i = 0; i < sp.length; i++) sp[i] = smooth[i];
+  const lums: number[] = [];
+  for (let i = 0; i < sw * sh; i++) {
+    lums.push((sp[i * 4] * 299 + sp[i * 4 + 1] * 587 + sp[i * 4 + 2] * 114) / 1000);
+  }
+  lums.sort((a, b) => a - b);
+  const p5 = lums[Math.floor(lums.length * 0.05)];
+  const p95 = lums[Math.floor(lums.length * 0.95)];
+  const median = lums[Math.floor(lums.length / 2)];
+  // Even light already (a clean drawing or screenshot), or a dark/colour-filled
+  // plan where this would wash out real colours: leave it alone.
+  if (p95 - p5 < 25 || median < 120) return;
+
+  const bg = document.createElement("canvas");
+  bg.width = W;
+  bg.height = H;
+  const bctx = bg.getContext("2d", { willReadFrequently: true })!;
+  bctx.imageSmoothingEnabled = true;
+  bctx.imageSmoothingQuality = "high";
+  bctx.drawImage(small, 0, 0, W, H);
+  const b = bctx.getImageData(0, 0, W, H).data;
+  const image = ctx.getImageData(0, 0, W, H);
+  const px = image.data;
+  for (let i = 0; i < W * H * 4; i += 4) {
+    for (let c = 0; c < 3; c++) {
+      const base = Math.max(40, b[i + c]);
+      px[i + c] = clamp((px[i + c] * 255) / base);
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
 export async function enhancePicture(
   src: string
 ): Promise<{ data: string; mimeType: string; size: number; width: number; height: number }> {
@@ -34,6 +109,10 @@ export async function enhancePicture(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, W, H);
+
+  // Phone photos of paper have shadows and uneven light. Estimate the paper's
+  // brightness everywhere (a very blurred, tiny copy) and divide it out.
+  flattenLighting(ctx, W, H);
 
   // Blurred copy for sharpening (unsharp mask)
   const blur = document.createElement("canvas");
@@ -74,7 +153,7 @@ export async function enhancePicture(
     const min = Math.min(r, g, b);
     const l = (r * 299 + g * 587 + b * 114) / 1000;
     // Grey, speckled paper -> clean white
-    if (max - min < 40 && l > 205) {
+    if (max - min < 40 && l > 175) {
       px[o] = px[o + 1] = px[o + 2] = 255;
     }
     if (l > 205 || l < 60) plain++;

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { enhancePicture } from "@/lib/enhancePicture";
+import { isPdf, pdfToImage } from "@/lib/pdfToImage";
 import {
   Sheet,
   SheetContent,
@@ -60,28 +61,52 @@ export function FloorMapUploader() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (!selectedFile.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
+  // The cleaned-up picture that will be saved (made once, when a file is chosen)
+  const [prepared, setPrepared] = useState<{ data: string; mimeType: string; size: number } | null>(null);
+  const [preparing, setPreparing] = useState(false);
 
-      setFile(selectedFile);
+  const readAsDataUrl = (f: File) =>
+    new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const raw = reader.result as string;
-        setPreview(raw);
-        // Show the cleaned-up, sharpened version that will be saved
-        try {
-          const better = await enhancePicture(raw);
-          setPreview(better.data);
-        } catch {
-          /* keep the original preview */
-        }
-      };
-      reader.readAsDataURL(selectedFile);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Could not read the file"));
+      reader.readAsDataURL(f);
+    });
+
+  // Any picture or PDF -> a clean, sharp picture
+  const prepare = async (f: File) => {
+    const raw = isPdf(f) ? await pdfToImage(f) : await readAsDataUrl(f);
+    try {
+      return await enhancePicture(raw);
+    } catch (e) {
+      console.warn("Picture clean-up skipped:", e);
+      const mime = raw.slice(5, raw.indexOf(";"));
+      return { data: raw, mimeType: mime, size: Math.round(((raw.length - raw.indexOf(",") - 1) * 3) / 4) };
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    if (!selectedFile.type.startsWith("image/") && !isPdf(selectedFile)) {
+      toast.error("Please choose a picture (JPG, PNG) or a PDF of the floor plan");
+      return;
+    }
+    setFile(selectedFile);
+    setPrepared(null);
+    setPreview(null);
+    setPreparing(true);
+    try {
+      const ready = await prepare(selectedFile);
+      setPrepared(ready);
+      setPreview(ready.data);
+    } catch (err) {
+      setFile(null);
+      toast.error("Could not open that file", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setPreparing(false);
     }
   };
 
@@ -90,19 +115,14 @@ export function FloorMapUploader() {
 
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        let picture = reader.result as string;
-        let mimeType = file.type;
-        let size = file.size;
-        // Clean up and sharpen the picture before saving it
-        try {
-          const better = await enhancePicture(picture);
-          picture = better.data;
-          mimeType = better.mimeType;
-          size = better.size;
-        } catch (e) {
-          console.warn("Picture clean-up skipped:", e);
+      {
+        const ready = prepared ?? (await prepare(file));
+        const picture = ready.data;
+        const mimeType = ready.mimeType;
+        const size = ready.size;
+        if (size > 10 * 1024 * 1024) {
+          toast.error("That floor plan is too big to save (over 10 MB). Try a smaller picture.");
+          return;
         }
 
         const response = await fetch("/api/floor-map", {
@@ -125,6 +145,7 @@ export function FloorMapUploader() {
           toast.success("Floor map uploaded successfully");
           setFile(null);
           setPreview(null);
+          setPrepared(null);
           fetchFloorMap();
           // Tell the floor plan view to read the tables from the new picture
           setOpen(false);
@@ -133,9 +154,7 @@ export function FloorMapUploader() {
         } else {
           toast.error(result.error || "Failed to upload floor map");
         }
-      };
-
-      reader.readAsDataURL(file);
+      }
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload floor map");
@@ -243,7 +262,7 @@ export function FloorMapUploader() {
                         <label className="block">
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,application/pdf,.pdf"
                             onChange={handleFileChange}
                             className="hidden"
                             id="floor-map-input"
@@ -289,7 +308,7 @@ export function FloorMapUploader() {
                     {file && (
                       <Button
                         onClick={handleUpload}
-                        disabled={uploading}
+                        disabled={uploading || preparing}
                         className="w-full"
                       >
                         {uploading ? (
@@ -311,7 +330,7 @@ export function FloorMapUploader() {
                       <label className="block">
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/*,application/pdf,.pdf"
                           onChange={handleFileChange}
                           className="hidden"
                           id="floor-map-input-replace"
