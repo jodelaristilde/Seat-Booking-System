@@ -218,7 +218,7 @@ export function BookingSidebar({
         <ScrollArea className="flex-1 px-2 py-0.5">
           <div>
             {filteredBookings.length > 0 ? (
-              // A table so the columns line up: [arrived] Name   Table 1  #4  [delete]
+              // A table so the columns line up: [arrived] Name   Table 1  [delete]
               <table className="w-auto text-sm border-collapse">
                 <tbody>
                   {filteredBookings.map((seat) => (
@@ -247,9 +247,6 @@ export function BookingSidebar({
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
-                      </td>
-                      <td className="py-0.5 pr-1 align-middle font-bold text-lime-600 tabular-nums whitespace-nowrap">
-                        #{seat.seat}
                       </td>
                       <td className="py-0.5 align-middle">
                         <button
