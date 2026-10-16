@@ -1052,7 +1052,8 @@ export function FloorPlanCanvas({
   const view = (() => {
     const whole = { x: 0, y: 0, w: 100, h: 100, aspect };
     // With the picture on, always show the whole picture (stage, dance floor...)
-    if (working || !tables.length || (picture && showPicture)) return whole;
+    // (in full screen: zoom in on the tables so they are as big as possible)
+    if (working || !tables.length || (picture && showPicture && !roomOnly)) return whole;
     let x0 = 100, y0 = 100, x1 = 0, y1 = 0;
     for (const t of tables) {
       const p = positions[tableIdOf(t)];
@@ -1066,7 +1067,7 @@ export function FloorPlanCanvas({
       y1 = Math.max(y1, p.y + halfH);
     }
     if (x1 <= x0 || y1 <= y0) return whole;
-    const m = 2;
+    const m = roomOnly ? 3 : 2;
     x0 = Math.max(0, x0 - m);
     y0 = Math.max(0, y0 - m * aspect);
     x1 = Math.min(100, x1 + m);
@@ -1103,7 +1104,7 @@ export function FloorPlanCanvas({
     const roomPx = (avail.w * 100) / show.w;
     const widths = tables.map((t) => tableBox(t).width).sort((a, b) => a - b);
     const typical = widths[Math.floor(widths.length / 2)];
-    return Math.round(Math.min(64, Math.max(14, ((typical * roomPx) / 100) * 0.2)));
+    return Math.round(Math.min(72, Math.max(11, ((typical * roomPx) / 100) * 0.42)));
   })();
 
   // The Arrived list. On smaller screens (phones) it goes under the Guest

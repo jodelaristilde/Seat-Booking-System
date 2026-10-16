@@ -545,6 +545,8 @@ const renderCircularTable = (
     const tableName = table.seats[0]?.table?.name;
     const tableNumber = table.tableNumber;
     const displayName = tableName || `Table ${tableNumber}`;
+    // "Table 12" or "12": shown big on the floor plan as just the number
+    const shortName = displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "").length <= 3;
     const tableColor = getTableColor(index);
     const isHovered = hoveredTable === tableId;
     // round / square / rectangle (the floor plan view draws the table's outline)
@@ -635,7 +637,12 @@ const handleTableClick = () => {
           // On the floor plan the name stays inside the tabletop, clear of the seats
           style={
             inFloorPlan
-              ? { left: "45%", top: "45%", maxWidth: hideSeats ? "76%" : "58%" }
+              ? {
+                  left: "45%",
+                  top: "45%",
+                  // a short name (a number) may be as wide as it needs
+                  maxWidth: shortName ? "none" : hideSeats ? "76%" : "58%",
+                }
               : undefined
           }
         >
@@ -649,7 +656,7 @@ const handleTableClick = () => {
               <span
                 className={`font-semibold text-center ${
                   inFloorPlan
-                    ? "leading-tight whitespace-nowrap overflow-hidden text-ellipsis block max-w-full"
+                    ? `leading-tight whitespace-nowrap block ${shortName ? "" : "overflow-hidden text-ellipsis max-w-full"}`
                     : "text-lg"
                 }`}
                 title={displayName}
@@ -658,7 +665,7 @@ const handleTableClick = () => {
                     ? {
                         // short names (just a number) get a much bigger font
                         fontSize:
-                          displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "").length <= 3
+                          shortName
                             ? `var(--table-num, ${isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"})`
                             : isRect ? "clamp(10px, 7cqw, 30px)" : "clamp(10px, 13cqw, 32px)",
                       }
@@ -730,15 +737,7 @@ const handleTableClick = () => {
               </motion.div>
             )}
           </div>
-          {inFloorPlan && hideSeats && (
-            <span
-              className="font-medium text-zinc-600 bg-white/80 rounded px-1 tabular-nums"
-              style={{ fontSize: isRect ? "clamp(10px, 6cqw, 24px)" : "clamp(10px, 11cqw, 26px)" }}
-              title="Guests seated / seats at this table"
-            >
-              {table.seats.filter((s) => s.isBooked).length}/{table.seats.length}
-            </span>
-          )}
+          {/* the floor plan shows only the table number; counts are in the zoom card */}
           {!inFloorPlan && (
             <TableNotes
               tableId={String(table.seats[0]?.table?.id || tableId)}
@@ -747,7 +746,7 @@ const handleTableClick = () => {
           )}
         </div>
         {/* On the floor plan, the note button sits in the table's corner */}
-        {inFloorPlan && (
+        {inFloorPlan && isHovered && !isFullScreen && (
           <div className="absolute z-20 scale-75 origin-top-right" style={{ right: "-2%", top: "-2%" }}>
             <TableNotes
               tableId={String(table.seats[0]?.table?.id || tableId)}
