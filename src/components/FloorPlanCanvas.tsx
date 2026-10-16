@@ -1054,8 +1054,9 @@ export function FloorPlanCanvas({
   const view = (() => {
     const whole = { x: 0, y: 0, w: 100, h: 100, aspect };
     // With the picture on, always show the whole picture (stage, dance floor...)
-    // (in full screen: zoom in on the tables so they are as big as possible)
-    if (working || !tables.length || (picture && showPicture && !roomOnly)) return whole;
+    // With the picture on, the whole picture is always shown (never cut off),
+    // as big as the screen allows
+    if (working || !tables.length || (picture && showPicture)) return whole;
     let x0 = 100, y0 = 100, x1 = 0, y1 = 0;
     for (const t of tables) {
       const p = positions[tableIdOf(t)];
