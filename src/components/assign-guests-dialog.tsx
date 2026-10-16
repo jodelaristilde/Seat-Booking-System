@@ -43,7 +43,12 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
   const [isAssigning, setIsAssigning] = useState(false)
   const [searchValue, setSearchValue] = useState("")
 
-  const availableGuests = guests.filter((guest) => guest.seat.length === 0)
+  // guests without a seat, A–Z by last name
+  const availableGuests = guests
+    .filter((guest) => guest.seat.length === 0)
+    .sort((a, b) =>
+      `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`, undefined, { sensitivity: "base" }),
+    )
   const availableTables = tables.filter((table) => table.seats.some((seat) => !seat.isBooked))
 
   // Filter guests by search
@@ -57,6 +62,21 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
         `${g.firstname} ${g.lastname}`.toLowerCase().includes(term),
     )
   }, [searchValue, availableGuests])
+
+  // Empty seats at the chosen table
+  const freeSeats = (() => {
+    const t = tables.find((x) => x.id === selectedTable)
+    return t ? t.seats.filter((s) => !s.isBooked).length : 0
+  })()
+  // One click: pick as many guests (from the list shown) as the table has empty seats
+  const fillTable = () => {
+    const picked = [...selectedGuests]
+    for (const g of filteredGuests) {
+      if (picked.length >= freeSeats) break
+      if (!picked.includes(g.id)) picked.push(g.id)
+    }
+    setSelectedGuests(picked.slice(0, freeSeats))
+  }
 
   const handleGuestToggle = (guestId: string) => {
     setSelectedGuests((prev) =>
@@ -156,7 +176,27 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
               )}
             </ScrollArea>
 
-            <div className="text-sm text-muted-foreground">{selectedGuests.length} guests selected</div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {selectedGuests.length} guests selected
+                {selectedTable ? ` · ${freeSeats} empty seats at this table` : ""}
+              </span>
+              {selectedTable && freeSeats > 0 && (
+                <Button
+                  size="sm"
+                  onClick={fillTable}
+                  disabled={selectedGuests.length >= freeSeats || filteredGuests.length === 0}
+                  title="Select the next guests in the list, as many as the table has empty seats"
+                >
+                  Select {freeSeats} guests for this table
+                </Button>
+              )}
+              {selectedGuests.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setSelectedGuests([])}>
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Right side - Table selection */}
