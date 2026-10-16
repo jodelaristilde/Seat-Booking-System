@@ -24,6 +24,7 @@ import {
   Loader2,
   ZoomIn,
   Check,
+  Search,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -164,13 +165,61 @@ export function FloorPlanCanvas({
   const [railOpen, setRailOpen] = useState(false);
   const [zoomId, setZoomId] = useState<string | null>(null);
   const zoomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // While adding guests in the zoom card, it stays open until closed with X
+  const zoomPinned = useRef(false);
   const zoomOpenSoon = (id: string) => {
+    if (zoomPinned.current) return; // busy adding guests: keep this table
     if (zoomTimer.current) clearTimeout(zoomTimer.current);
     zoomTimer.current = setTimeout(() => setZoomId(id), 350);
   };
   const zoomCloseSoon = () => {
     if (zoomTimer.current) clearTimeout(zoomTimer.current);
+    if (zoomPinned.current) return;
     zoomTimer.current = setTimeout(() => setZoomId(null), 300);
+  };
+  const closeZoom = () => {
+    zoomPinned.current = false;
+    setZoomId(null);
+    setAddQuery("");
+    setAddPicked([]);
+  };
+
+  // ---- Zoom card: add several guests to the table at once ----
+  type GuestRow = { id: string; firstname: string; lastname: string; seat: { table?: { name?: string } }[] };
+  const [allGuests, setAllGuests] = useState<GuestRow[] | null>(null);
+  const [addQuery, setAddQuery] = useState("");
+  const [addPicked, setAddPicked] = useState<string[]>([]);
+  const [addBusy, setAddBusy] = useState(false);
+  const loadGuests = async () => {
+    try {
+      const res = await fetch("/api/get-guests");
+      const json = await res.json();
+      if (json.success) setAllGuests(json.data);
+    } catch {
+      /* the list just stays empty */
+    }
+  };
+  const seatPicked = async (tableId: string) => {
+    if (!addPicked.length) return;
+    setAddBusy(true);
+    try {
+      const res = await fetch("/api/assign-guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestIds: addPicked, tableId }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      toast.success(`${addPicked.length} guest${addPicked.length === 1 ? "" : "s"} seated`);
+      setAddPicked([]);
+      setAddQuery("");
+      await onTablesChanged();
+      await loadGuests();
+    } catch (e) {
+      toast.error("Could not seat the guests", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setAddBusy(false);
+    }
   };
   const zoomKeepOpen = () => {
     if (zoomTimer.current) clearTimeout(zoomTimer.current);
@@ -1841,7 +1890,7 @@ export function FloorPlanCanvas({
               <button
                 type="button"
                 className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100"
-                onClick={() => setZoomId(null)}
+                onClick={closeZoom}
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -1903,6 +1952,82 @@ export function FloorPlanCanvas({
                   {seats.length - booked.length} empty seat{seats.length - booked.length === 1 ? "" : "s"}
                 </p>
               )}
+
+              {/* Add several guests to this table at once */}
+              {seats.length > booked.length && (() => {
+                const free = seats.length - booked.length;
+                const q = addQuery.trim().toLowerCase();
+                const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);
+                const matches = unseated
+                  .filter((g) => !q || `${g.firstname} ${g.lastname}`.toLowerCase().includes(q))
+                  .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                  .slice(0, 50);
+                const full = addPicked.length >= free;
+                return (
+                  <div className="mt-3 rounded-lg border border-zinc-200 p-2">
+                    <p className="mb-1 text-sm font-semibold text-zinc-700">Add guests to this table</p>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                      <input
+                        value={addQuery}
+                        onChange={(e) => setAddQuery(e.target.value)}
+                        onFocus={() => {
+                          zoomPinned.current = true;
+                          if (!allGuests) loadGuests();
+                        }}
+                        placeholder={allGuests ? "Type a name..." : "Click to load guests..."}
+                        className="w-full rounded-md border px-7 py-1.5 text-sm"
+                      />
+                    </div>
+                    {allGuests && (
+                      <div className="mt-1 max-h-48 overflow-y-auto">
+                        {matches.length === 0 ? (
+                          <p className="py-2 text-center text-xs text-zinc-500">
+                            {unseated.length === 0 ? "Every guest already has a seat." : "No unseated guest with that name."}
+                          </p>
+                        ) : (
+                          matches.map((g) => {
+                            const on = addPicked.includes(g.id);
+                            return (
+                              <label
+                                key={g.id}
+                                className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-zinc-50 ${
+                                  !on && full ? "opacity-40" : ""
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  disabled={!on && full}
+                                  onChange={() => {
+                                    zoomPinned.current = true;
+                                    setAddPicked((p) => (on ? p.filter((x) => x !== g.id) : [...p, g.id]));
+                                  }}
+                                />
+                                {g.firstname} {g.lastname}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                    {allGuests && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          disabled={!addPicked.length || addBusy}
+                          onClick={() => seatPicked(tableIdOf(table))}
+                        >
+                          {addBusy ? "Seating..." : `Seat ${addPicked.length || ""} guest${addPicked.length === 1 ? "" : "s"}`.replace("  ", " ")}
+                        </Button>
+                        <span className="text-xs text-zinc-500">
+                          {addPicked.length}/{free} empty seats picked
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               </div>
             </div>
           </div>,
