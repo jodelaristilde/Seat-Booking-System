@@ -653,7 +653,7 @@ const handleTableClick = () => {
             </span>
 
             {/* Action Buttons - Shows on Hover */}
-            {isHovered && (!isFullScreen || inFloorPlan) && (
+            {isHovered && !isFullScreen && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
