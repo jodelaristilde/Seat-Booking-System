@@ -47,15 +47,6 @@ const Footer = () => {
               </p>
             </div>
 
-            <Link
-              href="https://devkins.dev/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-center text-sm text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 underline underline-offset-2"
-            >
-              Design by: Devkins Private Limited Pakistan
-            </Link>
-
             <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
               © 2025
             </p>
@@ -64,14 +55,6 @@ const Footer = () => {
 
         {/* Desktop Layout - Unchanged */}
         <div className="hidden sm:flex flex-row items-center justify-between gap-6">
-          <Link
-            href="https://devkins.dev/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 underline underline-offset-2"
-          >
-            Design by: Devkins Private Limited Pakistan
-          </Link>
 
           <div className="flex items-center text-left">
             <Link

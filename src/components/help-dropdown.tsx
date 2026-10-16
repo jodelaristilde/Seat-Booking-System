@@ -106,27 +106,6 @@ export function HelpButton() {
               </div>
             </div>
           </div>
-
-          {/* Devkins Attribution */}
-          <div className="border-t pt-4 flex items-center justify-between text-sm">
-            <p className="text-muted-foreground">
-              Created by{' '}
-              <a 
-                href="https://devkins.dev/contact"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline font-medium"
-              >
-                Devkins
-              </a>
-            </p>
-            <a 
-              href="mailto:devkins.dev@gmail.com"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              Need a custom app?
-            </a>
-          </div>
         </DialogContent>
       </Dialog>
     </>
