@@ -1,9 +1,8 @@
 "use client";
 
-import QRCodeGenerator from "@/components/qr-code-generator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -11,7 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, HelpCircle, QrCode, Search, MapPin, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface User {
@@ -21,6 +20,7 @@ interface User {
   seat: Array<{
     id: string;
     seat: number;
+    isReceived?: boolean;
     table: {
       id: string;
       name: string;
@@ -57,6 +57,91 @@ export default function SeatScanning() {
   );
   const [loadingFloorMap, setLoadingFloorMap] = useState(false);
   const [tableNotes, setTableNotes] = useState<string | null>(null);
+
+  // Checking in a group: after "Arrived", ask if more guests came along
+  type Arrived = { seatId: string; name: string; table: string };
+  const [askMore, setAskMore] = useState(false);
+  const [groupMode, setGroupMode] = useState<null | "adding" | "done">(null);
+  const [group, setGroup] = useState<Arrived[]>([]);
+  const [groupQuery, setGroupQuery] = useState("");
+  const [groupResults, setGroupResults] = useState<User[]>([]);
+  const [groupBusy, setGroupBusy] = useState<string | null>(null);
+  const groupInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const q = groupQuery.trim();
+    if (q.length < 2) {
+      setGroupResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}`);
+        const data = await response.json();
+        if (!cancelled && data.success) setGroupResults(data.data);
+      } catch (error) {
+        console.error("Error searching guests:", error);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [groupQuery]);
+
+  const tableNumber = (t: string) => {
+    const m = t.match(/\d+/);
+    return m ? Number(m[0]) : Number.MAX_SAFE_INTEGER;
+  };
+  const sortedGroup = useMemo(
+    () =>
+      [...group].sort(
+        (a, b) =>
+          tableNumber(a.table) - tableNumber(b.table) ||
+          a.table.localeCompare(b.table) ||
+          a.name.localeCompare(b.name)
+      ),
+    [group]
+  );
+
+  // Check in one more guest from the group search
+  const addToGroup = async (user: User) => {
+    const name = `${user.firstname} ${user.lastname}`;
+    const seat = user.seat?.[0];
+    if (!seat) {
+      toast.error(`${name} has no seat yet. Please see the front desk.`);
+      return;
+    }
+    if (group.some((g) => g.seatId === seat.id)) {
+      toast(`${name} is already on your list`);
+      setGroupQuery("");
+      groupInputRef.current?.focus();
+      return;
+    }
+    setGroupBusy(user.id);
+    try {
+      const response = await fetch("/api/seat-checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatId: seat.id }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setGroup((g) => [...g, { seatId: seat.id, name, table: seat.table.name }]);
+        toast.success(`${name} arrived`);
+        setGroupQuery("");
+        groupInputRef.current?.focus();
+      } else {
+        toast.error(data.message || "Could not check in");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error checking in");
+    } finally {
+      setGroupBusy(null);
+    }
+  };
 
   // Search guests as the person types. This page is used by guests on their
   // own phones (not logged in), so it uses the public search, which returns at
@@ -130,6 +215,9 @@ export default function SeatScanning() {
     setNoSeatFound(false);
     setSeatIsReceived(false);
     setTableNotes(null); // Reset notes
+    setGroupMode(null);
+    setGroup([]);
+    setAskMore(false);
 
     if (user.seat && user.seat.length > 0) {
       const seat = user.seat[0];
@@ -162,19 +250,6 @@ export default function SeatScanning() {
       setNoSeatFound(true);
       toast.error("No seat booking found for this guest");
     }
-  };
-
-  // Generate QR code content
-  const generateQrContent = () => {
-    if (!searchResult) return "";
-
-    // Create a URL with parameters that can be parsed when scanned
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/check-in?seatId=${
-      searchResult.seatId
-    }&name=${encodeURIComponent(searchResult.name)}&table=${encodeURIComponent(
-      searchResult.table
-    )}&seat=${searchResult.seat}`;
   };
 
   return (
@@ -334,7 +409,84 @@ export default function SeatScanning() {
         </span>
         </div>
       
-      {seatIsReceived ? (
+      {seatIsReceived && groupMode === "adding" ? (
+        // Checking in the rest of the group: the search stays up
+        <div className="space-y-4">
+          <p className="text-center text-lg font-semibold text-zinc-700">
+            Find each guest who came with you
+          </p>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
+            <Input
+              ref={groupInputRef}
+              autoFocus
+              placeholder="Type a guest's name..."
+              value={groupQuery}
+              onChange={(e) => setGroupQuery(e.target.value)}
+              className="pl-10 h-14 text-lg rounded-xl"
+            />
+          </div>
+          {groupQuery.trim().length >= 2 && (
+            <div className="rounded-xl border bg-white p-1">
+              {groupResults.length === 0 ? (
+                <p className="p-3 text-center text-zinc-500">No matching names found</p>
+              ) : (
+                groupResults.map((u) => {
+                  const seat = u.seat?.[0];
+                  const done = !!seat && group.some((g) => g.seatId === seat.id);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      disabled={!!groupBusy || done}
+                      onClick={() => addToGroup(u)}
+                      className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-left text-lg hover:bg-lime-50 disabled:opacity-60"
+                    >
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded border",
+                          done ? "border-green-600 bg-green-600 text-white" : "border-zinc-300"
+                        )}
+                      >
+                        {done && <Check className="h-4 w-4" />}
+                      </span>
+                      <span className="flex-1 font-medium">
+                        {u.firstname} {u.lastname}
+                      </span>
+                      <span className="text-sm text-zinc-500">
+                        {groupBusy === u.id ? "..." : seat ? seat.table.name : "No seat"}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+          <ArrivedList items={sortedGroup} />
+          <Button
+            onClick={() => {
+              setGroupMode("done");
+              setGroupQuery("");
+            }}
+            className="w-full h-16 text-2xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700"
+          >
+            Done
+          </Button>
+        </div>
+      ) : seatIsReceived && groupMode === "done" ? (
+        // The whole group, with their tables
+        <div className="space-y-4">
+          <ArrivedList items={sortedGroup} />
+          <Button
+            onClick={fetchFloorMap}
+            disabled={loadingFloorMap}
+            className="w-full h-16 text-xl rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+          >
+            {loadingFloorMap ? "Loading..." : (<><MapPin className="mr-3 h-6 w-6" />View Table Locations</>)}
+          </Button>
+          <p className="text-center text-base text-green-700">Welcome! Enjoy the event!</p>
+        </div>
+      ) : seatIsReceived ? (
         // Show seat details after check-in
         <>
           <div className="flex justify-center items-center gap-3 flex-col pb-4">
@@ -374,9 +526,6 @@ export default function SeatScanning() {
               You have checked in successfully. Enjoy the event!
             </p>
           </div>
-          
-          {/* QR Code */}
-          <QRCodeGenerator value={generateQrContent()} />
         </>
       ) : (
         <div className="space-y-6">
@@ -413,6 +562,14 @@ export default function SeatScanning() {
                   toast.success(
                     `Welcome ${searchResult.name}!`
                   );
+                  setGroup([
+                    {
+                      seatId: searchResult.seatId,
+                      name: searchResult.name,
+                      table: searchResult.table,
+                    },
+                  ]);
+                  setAskMore(true);
                 } else {
                   toast.error(
                     data.message || "Failed to check in"
@@ -473,6 +630,31 @@ export default function SeatScanning() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* After "Arrived": did more guests come along? */}
+      <Dialog open={askMore} onOpenChange={setAskMore}>
+        <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
+          <DialogTitle className="text-center text-2xl">Arrived with more guests?</DialogTitle>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Button
+              className="h-14 text-xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700"
+              onClick={() => {
+                setAskMore(false);
+                setGroupMode("adding");
+              }}
+            >
+              Yes
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 text-xl font-bold rounded-xl"
+              onClick={() => setAskMore(false)}
+            >
+              No
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* QR Code Dialog */}
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
@@ -537,6 +719,30 @@ export default function SeatScanning() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// The list of everyone checked in together: name and table, sorted by table
+function ArrivedList({ items }: { items: { seatId: string; name: string; table: string }[] }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-green-200 bg-white">
+      <div className="flex items-center justify-between bg-green-50 px-4 py-2">
+        <span className="text-xl font-bold text-green-800">Arrived</span>
+        <span className="text-xl font-bold text-green-800 tabular-nums">{items.length}</span>
+      </div>
+      <table className="w-full">
+        <tbody>
+          {items.map((g) => (
+            <tr key={g.seatId} className="border-t border-green-100">
+              <td className="px-4 py-2 text-lg text-zinc-800">{g.name}</td>
+              <td className="px-4 py-2 text-right text-base font-bold text-green-800 whitespace-nowrap">
+                {g.table}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
