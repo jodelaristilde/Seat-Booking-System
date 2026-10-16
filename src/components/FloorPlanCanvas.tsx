@@ -51,6 +51,8 @@ interface FloorPlanCanvasProps {
   onGuestNamesChange?: (on: boolean) => void;
   // Number of guests in the guest list (for the totals shown in full screen)
   invited?: number;
+  /** tick / untick a guest as arrived */
+  onToggleArrived?: (seatId: string, arrived: boolean) => void;
 }
 
 // One table while checking the picture
@@ -141,6 +143,7 @@ export function FloorPlanCanvas({
   guestNames = false,
   onGuestNamesChange,
   invited,
+  onToggleArrived,
 }: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
@@ -1673,30 +1676,57 @@ export function FloorPlanCanvas({
               </button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3">
-              <div className="relative mx-auto w-[min(100%,18rem)]">
+              {/* Everyone registered at this table. Click a name to mark them arrived. */}
+              {booked.length === 0 ? (
+                <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet.</p>
+              ) : (
+                <>
+                  <p className="mb-1 text-[11px] text-zinc-500">Click a name to mark them arrived (click again to undo).</p>
+                  <ul className="space-y-1">
+                    {[...booked]
+                      .sort((a, b) =>
+                        `${a.user?.firstname ?? ""} ${a.user?.lastname ?? ""}`.localeCompare(
+                          `${b.user?.firstname ?? ""} ${b.user?.lastname ?? ""}`
+                        )
+                      )
+                      .map((s) => {
+                        const name = `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest";
+                        return (
+                          <li key={s.id}>
+                            <button
+                              type="button"
+                              disabled={!onToggleArrived}
+                              onClick={() => onToggleArrived?.(s.id, !s.isReceived)}
+                              className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm transition-colors ${
+                                s.isReceived
+                                  ? "border-green-300 bg-green-50 text-green-900"
+                                  : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50"
+                              }`}
+                            >
+                              <span
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                                  s.isReceived ? "border-green-600 bg-green-600 text-white" : "border-zinc-300"
+                                }`}
+                              >
+                                {s.isReceived && <Check className="h-3.5 w-3.5" />}
+                              </span>
+                              <span className="flex-1 font-medium">{name}</span>
+                              <span className="text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </>
+              )}
+              {seats.length > booked.length && (
+                <p className="mt-2 text-xs text-zinc-500">
+                  {seats.length - booked.length} empty seat{seats.length - booked.length === 1 ? "" : "s"}
+                </p>
+              )}
+              <div className="relative mx-auto mt-3 w-[min(100%,14rem)]">
                 {renderTable(withShape(table), index, false)}
               </div>
-              <table className="mt-2 w-full text-sm">
-                <tbody>
-                  {seats.map((s) => (
-                    <tr key={s.id} className="border-t border-zinc-100">
-                      <td className="w-8 py-1 text-zinc-400 tabular-nums">{s.seat}</td>
-                      <td className={`py-1 ${s.isBooked ? "text-zinc-800" : "text-zinc-400 italic"}`}>
-                        {s.isBooked
-                          ? `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"
-                          : "Empty"}
-                      </td>
-                      <td className="w-20 py-1 text-right">
-                        {s.isBooked && s.isReceived && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
-                            <Check className="w-3.5 h-3.5" /> Arrived
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         );
