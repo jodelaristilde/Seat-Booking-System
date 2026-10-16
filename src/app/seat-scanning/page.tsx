@@ -287,7 +287,8 @@ export default function SeatScanning() {
             </div>
           </motion.div>
 
-          {/* Search Form */}
+          {/* Search Form (hidden while checking in a group) */}
+          {!groupMode && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -369,6 +370,7 @@ export default function SeatScanning() {
               </CardContent>
             </Card>
           </motion.div>
+          )}
 
           {/* Search Result or No Seat Message */}
           <AnimatePresence mode="wait">
@@ -384,7 +386,7 @@ export default function SeatScanning() {
     <div className="space-y-6">
 
       {/* Table Notes - Show if available */}
-      {tableNotes && (
+      {tableNotes && groupMode !== "done" && (
         <div className="p-4 rounded-xl bg-yellow-50/50 dark:bg-yellow-900/20 border-l-4 border-yellow-400">
           <div className="flex items-start gap-2">
             <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">
@@ -477,14 +479,6 @@ export default function SeatScanning() {
         // The whole group, with their tables
         <div className="space-y-4">
           <ArrivedList items={sortedGroup} />
-          <Button
-            onClick={fetchFloorMap}
-            disabled={loadingFloorMap}
-            className="w-full h-16 text-xl rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {loadingFloorMap ? "Loading..." : (<><MapPin className="mr-3 h-6 w-6" />View Table Locations</>)}
-          </Button>
-          <p className="text-center text-base text-green-700">Welcome! Enjoy the event!</p>
         </div>
       ) : seatIsReceived ? (
         // Show seat details after check-in
