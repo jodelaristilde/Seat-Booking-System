@@ -25,6 +25,7 @@ import {
   ZoomIn,
   Check,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import type { TableData } from "@/types/booking";
 import {
@@ -1653,10 +1654,12 @@ export function FloorPlanCanvas({
         const seats = [...table.seats].sort((a, b) => a.seat - b.seat);
         const booked = seats.filter((s) => s.isBooked);
         const arrived = booked.filter((s) => s.isReceived).length;
-        return (
+        // Shown over the whole screen (not boxed in the floor plan) so the
+        // full table and every name fit
+        return createPortal(
           <div
-            className={`absolute top-2 bottom-2 z-40 flex flex-col w-[min(26rem,48%)] rounded-xl border border-zinc-200 bg-white/95 shadow-2xl backdrop-blur-sm ${
-              onLeft ? "left-2" : "right-2"
+            className={`fixed top-1/2 -translate-y-1/2 z-[100] flex flex-col w-[min(52rem,94vw)] max-h-[92vh] rounded-xl border border-zinc-200 bg-white shadow-2xl ${
+              onLeft ? "left-3" : "right-3"
             }`}
             onMouseEnter={zoomKeepOpen}
             onMouseLeave={zoomCloseSoon}
@@ -1675,7 +1678,14 @@ export function FloorPlanCanvas({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-3">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col-reverse md:flex-row gap-4">
+              {/* The whole table, big */}
+              <div className="md:w-1/2 shrink-0 flex items-center justify-center">
+                <div className="relative w-full max-w-[24rem] p-[4%]">
+                  {renderTable(withShape(table), index, false)}
+                </div>
+              </div>
+              <div className="md:w-1/2 min-w-0">
               {/* Everyone registered at this table. Click a name to mark them arrived. */}
               {booked.length === 0 ? (
                 <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet.</p>
@@ -1724,11 +1734,10 @@ export function FloorPlanCanvas({
                   {seats.length - booked.length} empty seat{seats.length - booked.length === 1 ? "" : "s"}
                 </p>
               )}
-              <div className="relative mx-auto mt-3 w-[min(100%,14rem)]">
-                {renderTable(withShape(table), index, false)}
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
       </div>
