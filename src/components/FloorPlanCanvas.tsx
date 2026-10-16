@@ -160,6 +160,7 @@ export function FloorPlanCanvas({
   const [showSeats, setShowSeats] = useState(false);
   // Hover a table to see it big (seats, guests, who arrived). Can be turned off.
   const [hoverZoom, setHoverZoom] = useState(true);
+  const [railOpen, setRailOpen] = useState(false);
   const [zoomId, setZoomId] = useState<string | null>(null);
   const zoomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoomOpenSoon = (id: string) => {
@@ -1031,9 +1032,23 @@ export function FloorPlanCanvas({
       {/* Floor plan controls: a column down the left side on bigger screens */}
       {/* Full screen ("Hide menu"): a slim column of icons on the right */}
       {roomOnly && !working ? (
-        <div className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="Seating4U" className="w-16 h-auto mb-1 select-none" draggable={false} />
+        <div
+          className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2 items-center"
+          // Full screen: only the logo shows. Point at it (or tap it) for the buttons.
+          onMouseEnter={() => setRailOpen(true)}
+          onMouseLeave={() => setRailOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setRailOpen((v) => !v)}
+            title="Show the buttons"
+            aria-label="Show the buttons"
+            aria-expanded={railOpen}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="Seating4U" className="w-20 h-auto mb-1 select-none" draggable={false} />
+          </button>
+          {railOpen && (<>
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
             <PanelRightOpen className="w-4 h-4" />
           </Button>
@@ -1106,6 +1121,7 @@ export function FloorPlanCanvas({
               <ImageIcon className="w-4 h-4" />
             </Button>
           )}
+          </>)}
         </div>
       ) : (
       <div

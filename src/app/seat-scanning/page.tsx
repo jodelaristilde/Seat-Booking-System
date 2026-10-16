@@ -269,7 +269,8 @@ export default function SeatScanning() {
               className="flex justify-center items-center space-x-2"
             >
               <Image
-                src="/logo.jpg"
+                src="/logo.svg"
+                unoptimized
                 alt="Seating4U Logo"
                 width={150}
                 height={200}

@@ -15,7 +15,8 @@ const Footer = () => {
               className="flex justify-center items-center space-x-2"
             >
               <Image
-                src="/logo.jpg"
+                src="/logo.svg"
+                unoptimized
                 alt="Seating4U Logo"
                 width={150}
                 height={80}
@@ -78,7 +79,8 @@ const Footer = () => {
               className="flex justify-center items-center space-x-2"
             >
               <Image
-                src="/logo.jpg"
+                src="/logo.svg"
+                unoptimized
                 alt="Seating4U Logo"
                 width={180}
                 height={100}
