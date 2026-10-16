@@ -31,7 +31,9 @@ export async function DELETE(req: Request) {
     });
 
     // Delete the table itself
-    await db.table.delete({
+    // deleteMany: if the table was already deleted (double click, another
+    // screen), this is not an error - the table is gone either way
+    await db.table.deleteMany({
       where: {
         id: tableId,
       },

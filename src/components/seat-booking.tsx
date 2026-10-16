@@ -91,7 +91,7 @@ const SeatBooking = () => {
     null
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [tableToDelete, setTableToDelete] = useState<number | null>(null);
+  const [tableToDelete, setTableToDelete] = useState<string | number | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -484,7 +484,7 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
     return colors[index % colors.length];
   };
 
-  const handleDeleteTable = async (tableId: number) => {
+  const handleDeleteTable = async (tableId: string | number) => {
     try {
       const response = await fetch(`/api/delete-table`, {
         method: "DELETE",
@@ -498,10 +498,14 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
 
       if (result.success) {
         toast.success("Table deleted successfully");
-        setTables(tables.filter((t) => t.tableNumber !== tableId));
-        setBookedSeats(
-          bookedSeats.filter((seat) => seat.table.name !== `Table ${tableId}`)
+        // take the deleted table off the screen right away
+        setTables(
+          tables.filter(
+            (t) => (t.seats[0]?.table?.id || t.tableNumber) !== tableId
+          )
         );
+        setBookedSeats(bookedSeats.filter((seat) => seat.tableId !== tableId));
+        refreshSeats();
         router.refresh();
         setIsDeleteDialogOpen(false);
       } else {
