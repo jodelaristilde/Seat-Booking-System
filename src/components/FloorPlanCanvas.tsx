@@ -1023,6 +1023,50 @@ export function FloorPlanCanvas({
   })();
   const show = fitted ?? { ...view, width: undefined, height: undefined };
 
+  // The Arrived list. On smaller screens (phones) it goes under the Guest
+  // Names list instead of next to the room.
+  const arrivedList = (cls: string, mobile = false) => (
+        <div className={`${cls} rounded-lg border border-green-200 bg-green-50/60 overflow-hidden`}>
+          <div className="flex items-center justify-between gap-3 px-2 py-0.5 border-b border-green-200 bg-green-100/70">
+            <span className="font-semibold text-green-900">Arrived</span>
+            <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
+          </div>
+          <div className={`${mobile ? "max-h-72" : "max-h-40 lg:max-h-[calc(100vh-6rem)]"} overflow-y-auto`}>
+            {/* A table so the table names line up a few spaces after the longest name */}
+            <table className="text-sm border-collapse">
+              <tbody>
+                <AnimatePresence initial={false}>
+                  {[...arrivals]
+                    .sort((a, b) => {
+                      // by table (Table 2 before Table 10), then by name
+                      const t = a.table.localeCompare(b.table, undefined, { numeric: true, sensitivity: "base" });
+                      return t !== 0 ? t : a.name.localeCompare(b.name);
+                    })
+                    .map((a) => (
+                      <motion.tr
+                        key={a.seatId}
+                        initial={{ opacity: 0, backgroundColor: "rgba(134,239,172,0.9)" }}
+                        animate={{ opacity: 1, backgroundColor: "rgba(255,255,255,0)" }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
+                        className="border-b border-green-100 last:border-b-0"
+                      >
+                        <td className="pl-2 pr-6 py-0.5 font-medium text-zinc-900 whitespace-nowrap">{a.name}</td>
+                        <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">{a.table}</td>
+                      </motion.tr>
+                    ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+        </div>
+  );
+  const [arrivedSlot, setArrivedSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setArrivedSlot(roomOnly ? null : document.getElementById("arrived-under-guests"));
+  }, [roomOnly]);
+  const showArrived = arrivals.length > 0 && !working;
+
   return (
     <div
       className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
@@ -1346,43 +1390,12 @@ export function FloorPlanCanvas({
 
       )}
 
-      {/* Arrived guests, newest first (left of the room) */}
-      {arrivals.length > 0 && !working && (
-        <div className="w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 rounded-lg border border-green-200 bg-green-50/60 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-2 py-0.5 border-b border-green-200 bg-green-100/70">
-            <span className="font-semibold text-green-900">Arrived</span>
-            <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
-          </div>
-          <div className="max-h-40 lg:max-h-[calc(100vh-6rem)] overflow-y-auto">
-            {/* A table so the table names line up a few spaces after the longest name */}
-            <table className="text-sm border-collapse">
-              <tbody>
-                <AnimatePresence initial={false}>
-                  {[...arrivals]
-                    .sort((a, b) => {
-                      // by table (Table 2 before Table 10), then by name
-                      const t = a.table.localeCompare(b.table, undefined, { numeric: true, sensitivity: "base" });
-                      return t !== 0 ? t : a.name.localeCompare(b.name);
-                    })
-                    .map((a) => (
-                      <motion.tr
-                        key={a.seatId}
-                        initial={{ opacity: 0, backgroundColor: "rgba(134,239,172,0.9)" }}
-                        animate={{ opacity: 1, backgroundColor: "rgba(255,255,255,0)" }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
-                        className="border-b border-green-100 last:border-b-0"
-                      >
-                        <td className="pl-2 pr-6 py-0.5 font-medium text-zinc-900 whitespace-nowrap">{a.name}</td>
-                        <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">{a.table}</td>
-                      </motion.tr>
-                    ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Arrived guests (left of the room on big screens) */}
+      {showArrived &&
+        arrivedList(
+          `w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 ${arrivedSlot ? "hidden xl:block" : ""}`
+        )}
+      {showArrived && arrivedSlot && createPortal(arrivedList("w-full xl:hidden mt-3", true), arrivedSlot)}
 
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0" ref={roomColRef}>

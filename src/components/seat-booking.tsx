@@ -1368,6 +1368,8 @@ const handleTableClick = () => {
             onToggleReceived={handleToggleReceived}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
           />
+          {/* the floor plan puts the Arrived list here on phones */}
+          <div id="arrived-under-guests" className="px-2" />
         </div>
       )}
 
