@@ -7,7 +7,6 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Seat } from "@/types/booking";
 import { ChevronLeft, ChevronRight, Download, Search, Trash2, User } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import PasswordVerificationDialog from "./password-verification-dialog";
@@ -162,17 +161,9 @@ export function BookingSidebar({
     [filteredBookings, searchQueries]
   );
   const searchRef = useRef<HTMLInputElement>(null);
-  // Pop-ups: "arrived with more guests?" and "already arrived, undo?"
-  const [askMore, setAskMore] = useState(false);
-  const [undoSeat, setUndoSeat] = useState<Seat | null>(null);
-  const markArrived = (seat: Seat) => {
-    if (seat.isReceived) {
-      setUndoSeat(seat);
-      return;
-    }
-    onToggleReceived(seat.id, true);
-    setAskMore(true);
-  };
+  // Ticking a guest marks them arrived: their name pops out on the floor
+  // plan and moves to the Arrived list on the left (and leaves this list)
+  const markArrived = (seat: Seat) => onToggleReceived(seat.id, true);
 
   // Memoized search input handlers
   const handleSearchChange =
@@ -238,7 +229,28 @@ export function BookingSidebar({
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
               <table className="w-auto text-sm border-collapse">
                 <tbody>
-                  {visibleBookings.map((seat) => (
+                  {visibleBookings.map((seat) =>
+                    seat.isReceived ? (
+                      // Searched for someone who already arrived: a small note
+                      <tr key={seat.id}>
+                        <td colSpan={4} className="py-1">
+                          <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-2 py-1.5 shadow-sm">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">✓</span>
+                            <span className="text-sm text-green-900">
+                              <b>{seat.user?.firstname} {seat.user?.lastname}</b> arrived · {seat.table.name}
+                            </span>
+                            <button
+                              type="button"
+                              className="ml-auto text-[11px] text-green-800 underline hover:text-red-600"
+                              onClick={() => onToggleReceived(seat.id, false)}
+                              title="Marked by mistake? Put them back on the guest list"
+                            >
+                              undo
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
                     <tr
                       key={seat.id}
                       className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""}`}
@@ -259,9 +271,7 @@ export function BookingSidebar({
                         >
                           {seat.user?.firstname} {seat.user?.lastname}
                         </label>
-                        {seat.isReceived && (
-                          <span className="ml-2 text-[11px] font-semibold text-green-700">Arrived</span>
-                        )}
+
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
@@ -281,7 +291,8 @@ export function BookingSidebar({
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  )}
                 </tbody>
               </table>
             ) : (
@@ -301,61 +312,6 @@ export function BookingSidebar({
             )}
           </div>
         </ScrollArea>
-
-        {/* After ticking a guest: did more guests arrive with them? */}
-        <Dialog open={askMore} onOpenChange={setAskMore}>
-          <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
-            <DialogTitle className="text-center text-2xl">Arrived with more guests?</DialogTitle>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button
-                className="h-12 text-lg font-bold bg-green-600 text-white hover:bg-green-700"
-                onClick={() => {
-                  setAskMore(false);
-                  setSearchQueries((p) => ({ ...p, name: "" }));
-                  setTimeout(() => searchRef.current?.focus(), 50);
-                }}
-              >
-                Yes
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 text-lg font-bold"
-                onClick={() => {
-                  setAskMore(false);
-                  setSearchQueries((p) => ({ ...p, name: "" }));
-                }}
-              >
-                No
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Ticking someone who already arrived: undo? */}
-        <Dialog open={!!undoSeat} onOpenChange={(o) => !o && setUndoSeat(null)}>
-          <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
-            <DialogTitle className="text-center text-xl">
-              {undoSeat?.user?.firstname} {undoSeat?.user?.lastname} already arrived
-              {undoSeat?.table?.name ? ` (${undoSeat.table.name})` : ""}
-            </DialogTitle>
-            <p className="text-center text-sm text-zinc-600">Was this a mistake?</p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button
-                variant="destructive"
-                className="h-12 text-base font-bold"
-                onClick={() => {
-                  if (undoSeat) onToggleReceived(undoSeat.id, false);
-                  setUndoSeat(null);
-                }}
-              >
-                Undo arrival
-              </Button>
-              <Button variant="outline" className="h-12 text-base font-bold" onClick={() => setUndoSeat(null)}>
-                Keep arrived
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         <PasswordVerificationDialog
           open={isDeleteBookingDialogOpen}
@@ -385,8 +341,6 @@ export function BookingSidebar({
       compact,
       filteredBookings,
       visibleBookings,
-      askMore,
-      undoSeat,
       isDeleteBookingDialogOpen,
       deleteBookingConfirmText,
       deleteBookingPassword,
