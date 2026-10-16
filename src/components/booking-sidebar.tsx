@@ -6,7 +6,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Seat } from "@/types/booking";
 import { ChevronLeft, ChevronRight, Download, Search, Trash2, User } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import PasswordVerificationDialog from "./password-verification-dialog";
@@ -147,17 +148,31 @@ export function BookingSidebar({
           fullName(seat).toLowerCase().includes(q) ||
           (seat.table?.name ?? "").toLowerCase().includes(q)
       )
-      // by table first (Table 2 before Table 10), then by last name
+      // by last name, then first name
       .sort((a, b) => {
-        const t = (a.table?.name ?? "").localeCompare(b.table?.name ?? "", undefined, {
-          numeric: true,
-          sensitivity: "base",
-        });
-        // same table: by last name, then first name
         const last = (x: Seat) => `${x.user?.lastname ?? ""} ${x.user?.firstname ?? ""}`;
-        return t !== 0 ? t : last(a).localeCompare(last(b));
+        return last(a).localeCompare(last(b), undefined, { sensitivity: "base" });
       });
   }, [bookedSeats, searchQueries]);
+
+  // On screen: guests who have not arrived yet. Arrived guests only show
+  // when searched for (to undo a mistake).
+  const visibleBookings = useMemo(
+    () => (searchQueries.name.trim() ? filteredBookings : filteredBookings.filter((s) => !s.isReceived)),
+    [filteredBookings, searchQueries]
+  );
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Pop-ups: "arrived with more guests?" and "already arrived, undo?"
+  const [askMore, setAskMore] = useState(false);
+  const [undoSeat, setUndoSeat] = useState<Seat | null>(null);
+  const markArrived = (seat: Seat) => {
+    if (seat.isReceived) {
+      setUndoSeat(seat);
+      return;
+    }
+    onToggleReceived(seat.id, true);
+    setAskMore(true);
+  };
 
   // Memoized search input handlers
   const handleSearchChange =
@@ -206,6 +221,7 @@ export function BookingSidebar({
             <div className="relative w-full">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchRef}
                 placeholder="Search name or table..."
                 value={searchQueries.name}
                 onChange={handleSearchChange("name")}
@@ -218,11 +234,11 @@ export function BookingSidebar({
 
         <ScrollArea className="flex-1 px-2 py-0.5">
           <div>
-            {filteredBookings.length > 0 ? (
+            {visibleBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
               <table className="w-auto text-sm border-collapse">
                 <tbody>
-                  {filteredBookings.map((seat) => (
+                  {visibleBookings.map((seat) => (
                     <tr
                       key={seat.id}
                       className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""}`}
@@ -231,9 +247,7 @@ export function BookingSidebar({
                         <Checkbox
                           id={`received-${seat.id}`}
                           checked={seat.isReceived}
-                          onCheckedChange={(checked) =>
-                            onToggleReceived(seat.id, checked as boolean)
-                          }
+                          onCheckedChange={() => markArrived(seat)}
                           aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
                           title="Arrived"
                         />
@@ -245,6 +259,9 @@ export function BookingSidebar({
                         >
                           {seat.user?.firstname} {seat.user?.lastname}
                         </label>
+                        {seat.isReceived && (
+                          <span className="ml-2 text-[11px] font-semibold text-green-700">Arrived</span>
+                        )}
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
@@ -270,7 +287,11 @@ export function BookingSidebar({
             ) : (
               <div className="text-center text-gray-500 py-8">
                 <User className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                <p className="text-sm font-medium">No bookings found</p>
+                <p className="text-sm font-medium">
+                  {!searchQueries.name.trim() && filteredBookings.length > 0
+                    ? "Everyone has arrived ✓"
+                    : "No bookings found"}
+                </p>
                 {(searchQueries.name || searchQueries.seat) && (
                   <p className="text-xs text-gray-400 mt-1">
                     Try adjusting your search criteria
@@ -280,6 +301,61 @@ export function BookingSidebar({
             )}
           </div>
         </ScrollArea>
+
+        {/* After ticking a guest: did more guests arrive with them? */}
+        <Dialog open={askMore} onOpenChange={setAskMore}>
+          <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
+            <DialogTitle className="text-center text-2xl">Arrived with more guests?</DialogTitle>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button
+                className="h-12 text-lg font-bold bg-green-600 text-white hover:bg-green-700"
+                onClick={() => {
+                  setAskMore(false);
+                  setSearchQueries((p) => ({ ...p, name: "" }));
+                  setTimeout(() => searchRef.current?.focus(), 50);
+                }}
+              >
+                Yes
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 text-lg font-bold"
+                onClick={() => {
+                  setAskMore(false);
+                  setSearchQueries((p) => ({ ...p, name: "" }));
+                }}
+              >
+                No
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Ticking someone who already arrived: undo? */}
+        <Dialog open={!!undoSeat} onOpenChange={(o) => !o && setUndoSeat(null)}>
+          <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
+            <DialogTitle className="text-center text-xl">
+              {undoSeat?.user?.firstname} {undoSeat?.user?.lastname} already arrived
+              {undoSeat?.table?.name ? ` (${undoSeat.table.name})` : ""}
+            </DialogTitle>
+            <p className="text-center text-sm text-zinc-600">Was this a mistake?</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button
+                variant="destructive"
+                className="h-12 text-base font-bold"
+                onClick={() => {
+                  if (undoSeat) onToggleReceived(undoSeat.id, false);
+                  setUndoSeat(null);
+                }}
+              >
+                Undo arrival
+              </Button>
+              <Button variant="outline" className="h-12 text-base font-bold" onClick={() => setUndoSeat(null)}>
+                Keep arrived
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <PasswordVerificationDialog
           open={isDeleteBookingDialogOpen}
@@ -308,6 +384,9 @@ export function BookingSidebar({
       onDeleteAll,
       compact,
       filteredBookings,
+      visibleBookings,
+      askMore,
+      undoSeat,
       isDeleteBookingDialogOpen,
       deleteBookingConfirmText,
       deleteBookingPassword,
