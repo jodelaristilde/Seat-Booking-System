@@ -22,6 +22,8 @@ import {
   Square,
   RectangleHorizontal,
   Loader2,
+  ZoomIn,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TableData } from "@/types/booking";
@@ -66,6 +68,7 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
+const ZOOM_KEY = "floorPlanHoverZoom";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
 // ring spans 90% of a table's box and the top 66%, so 0.66 / 0.9.
@@ -151,6 +154,27 @@ export function FloorPlanCanvas({
   const [showPicture, setShowPicture] = useState(true);
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
+  // Hover a table to see it big (seats, guests, who arrived). Can be turned off.
+  const [hoverZoom, setHoverZoom] = useState(true);
+  const [zoomId, setZoomId] = useState<string | null>(null);
+  const zoomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomOpenSoon = (id: string) => {
+    if (zoomTimer.current) clearTimeout(zoomTimer.current);
+    zoomTimer.current = setTimeout(() => setZoomId(id), 350);
+  };
+  const zoomCloseSoon = () => {
+    if (zoomTimer.current) clearTimeout(zoomTimer.current);
+    zoomTimer.current = setTimeout(() => setZoomId(null), 300);
+  };
+  const zoomKeepOpen = () => {
+    if (zoomTimer.current) clearTimeout(zoomTimer.current);
+  };
+  const toggleHoverZoom = () =>
+    setHoverZoom((v) => {
+      writeStored(ZOOM_KEY, v ? "off" : "on");
+      if (v) setZoomId(null);
+      return !v;
+    });
   const [tableSize, setTableSize] = useState(12);
   const [saving, setSaving] = useState(false);
   const dragging = useRef<{ id: string; dx: number; dy: number } | null>(null);
@@ -195,6 +219,7 @@ export function FloorPlanCanvas({
     if (s >= 6 && s <= 30) setTableSize(s);
     if (readStored(PICTURE_KEY) === "off") setShowPicture(false);
     if (readStored(SEATS_KEY) === "on") setShowSeats(true);
+    if (readStored(ZOOM_KEY) === "off") setHoverZoom(false);
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -1050,6 +1075,16 @@ export function FloorPlanCanvas({
           >
             <Armchair className="w-4 h-4" />
           </Button>
+          <Button
+            size="icon"
+            variant={hoverZoom ? "default" : "outline"}
+            onClick={toggleHoverZoom}
+            title={hoverZoom ? "Turn off zoom on hover" : "Turn on zoom on hover"}
+            aria-label="Zoom on hover"
+            aria-pressed={hoverZoom}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </Button>
           {picture && (
             <Button
               size="icon"
@@ -1257,6 +1292,18 @@ export function FloorPlanCanvas({
             title="Show or hide the numbered seats around each table"
           >
             {showSeats ? "Hide seats" : "Show seats"}
+          </Button>
+        )}
+
+        {!reviewing && !drawing && !editing && (
+          <Button
+            size="sm"
+            variant={hoverZoom ? "default" : "outline"}
+            onClick={toggleHoverZoom}
+            title="Point at a table to see it big, with its guests and who has arrived"
+          >
+            <ZoomIn className="w-4 h-4 mr-1" />
+            {hoverZoom ? "Zoom on hover: On" : "Zoom on hover: Off"}
           </Button>
         )}
 
@@ -1550,6 +1597,8 @@ export function FloorPlanCanvas({
                   transform: "translate(-45%, -45%)",
                   zIndex: dragging.current?.id === id ? 30 : 10,
                 }}
+                onMouseEnter={hoverZoom && !working ? () => zoomOpenSoon(id) : undefined}
+                onMouseLeave={hoverZoom && !working ? zoomCloseSoon : undefined}
               >
                 {renderTable(withShape(table), index, !showSeats && !guestNames)}
                 {editing && (
@@ -1589,6 +1638,69 @@ export function FloorPlanCanvas({
             );
           })}
       </div>
+
+      {/* Zoom on hover: the table big, with its guests */}
+      {hoverZoom && !working && zoomId && (() => {
+        const index = tables.findIndex((t) => tableIdOf(t) === zoomId);
+        const table = tables[index];
+        const pos = table && positions[zoomId];
+        if (!table || !pos) return null;
+        // show the card on the side away from the table, so it stays visible
+        const onLeft = (pos.x - show.x) / show.w > 0.5;
+        const seats = [...table.seats].sort((a, b) => a.seat - b.seat);
+        const booked = seats.filter((s) => s.isBooked);
+        const arrived = booked.filter((s) => s.isReceived).length;
+        return (
+          <div
+            className={`absolute top-2 bottom-2 z-40 flex flex-col w-[min(26rem,48%)] rounded-xl border border-zinc-200 bg-white/95 shadow-2xl backdrop-blur-sm ${
+              onLeft ? "left-2" : "right-2"
+            }`}
+            onMouseEnter={zoomKeepOpen}
+            onMouseLeave={zoomCloseSoon}
+          >
+            <div className="flex items-center gap-2 border-b px-3 py-2">
+              <span className="text-lg font-bold">{tableNameOf(table)}</span>
+              <span className="text-xs text-zinc-500 tabular-nums">
+                {booked.length}/{seats.length} seated · {arrived} arrived
+              </span>
+              <button
+                type="button"
+                className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100"
+                onClick={() => setZoomId(null)}
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3">
+              <div className="relative mx-auto w-[min(100%,18rem)]">
+                {renderTable(withShape(table), index, false)}
+              </div>
+              <table className="mt-2 w-full text-sm">
+                <tbody>
+                  {seats.map((s) => (
+                    <tr key={s.id} className="border-t border-zinc-100">
+                      <td className="w-8 py-1 text-zinc-400 tabular-nums">{s.seat}</td>
+                      <td className={`py-1 ${s.isBooked ? "text-zinc-800" : "text-zinc-400 italic"}`}>
+                        {s.isBooked
+                          ? `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"
+                          : "Empty"}
+                      </td>
+                      <td className="w-20 py-1 text-right">
+                        {s.isBooked && s.isReceived && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+                            <Check className="w-3.5 h-3.5" /> Arrived
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
       </div>
       </div>
     </div>
