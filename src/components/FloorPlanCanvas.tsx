@@ -200,7 +200,38 @@ export function FloorPlanCanvas({
   // "Draw tables": pick a shape and seats, then drag on the picture
   const [drawing, setDrawing] = useState(false);
   const [drawShape, setDrawShape] = useState<Shape>("round");
-  const [drawSeats, setDrawSeats] = useState(10);
+  const [drawSeats, setDrawSeatsRaw] = useState(10);
+  // "Seats per table": one preset for every new table, remembered
+  const setDrawSeats = (n: number) => {
+    setDrawSeatsRaw(n);
+    setSeatsPerTable(n);
+    writeStored("floorPlanSeats", String(n));
+  };
+  const [settingSeats, setSettingSeats] = useState(false);
+  const setAllSeats = async () => {
+    if (!window.confirm(`Give every table ${drawSeats} seats? Seats with a guest on them are never removed.`)) return;
+    setSettingSeats(true);
+    try {
+      const res = await fetch("/api/set-seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seats: drawSeats }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      await onTablesChanged();
+      toast.success(
+        json.changed ? `${json.changed} table${json.changed === 1 ? "" : "s"} now have ${drawSeats} seats` : `Every table already has ${drawSeats} seats`,
+        json.keptExtra?.length
+          ? { description: `Kept extra seats with guests on them at: ${json.keptExtra.join(", ")}` }
+          : undefined
+      );
+    } catch (e) {
+      toast.error("Could not change the seats", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setSettingSeats(false);
+    }
+  };
   const [drawBox, setDrawBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const drawStart = useRef<{ x: number; y: number } | null>(null);
   const [drawnIds, setDrawnIds] = useState<string[]>([]);
@@ -226,6 +257,11 @@ export function FloorPlanCanvas({
     if (readStored(PICTURE_KEY) === "off") setShowPicture(false);
     if (readStored(SEATS_KEY) === "on") setShowSeats(true);
     if (readStored(ZOOM_KEY) === "off") setHoverZoom(false);
+    const presetSeats = Number(readStored("floorPlanSeats"));
+    if (presetSeats >= 1 && presetSeats <= 40) {
+      setDrawSeatsRaw(presetSeats);
+      setSeatsPerTable(presetSeats);
+    }
   }, []);
 
   const changeTableSize = (v: number) => {
@@ -853,7 +889,8 @@ export function FloorPlanCanvas({
       if (!name || taken.has(name.toLowerCase())) {
         name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
       }
-      const seats = found.chairs >= 2 && found.chairs <= 40 ? found.chairs : drawSeats;
+      // every new table gets the preset number of seats (Seats per table)
+      const seats = drawSeats;
       const res = await fetch("/api/floor-plan-apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1384,6 +1421,23 @@ export function FloorPlanCanvas({
                 <Type className="w-4 h-4 mr-2" /> Write names on picture
               </Button>
             )}
+            <div className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5 text-sm text-zinc-700">
+              <label htmlFor="seats-per-table">Seats per table</label>
+              <input
+                id="seats-per-table"
+                type="number"
+                min={1}
+                max={40}
+                value={drawSeats}
+                onChange={(e) => setDrawSeats(Math.min(40, Math.max(1, Number(e.target.value) || 1)))}
+                className="w-14 border rounded px-2 py-0.5"
+              />
+              {tables.length > 0 && (
+                <Button size="sm" variant="outline" onClick={setAllSeats} disabled={settingSeats} title="Give every table this many seats">
+                  {settingSeats ? "Setting..." : "Set all tables"}
+                </Button>
+              )}
+            </div>
           </>
         ) : (
           <>
