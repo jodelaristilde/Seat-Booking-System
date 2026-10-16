@@ -638,6 +638,8 @@ export function FloorPlanCanvas({
         // traced as round/square but switched to rectangle: make it long
         return { width: ((short * 1.8) / 0.66) * zoom, ratio: 2 };
       }
+      // a tall table (standing up) stays tall
+      if (shW > sw) return { width: (sw / 0.66) * zoom, ratio: sw / shW };
       return { width: (long / 0.66) * zoom, ratio: long / short };
     }
     return shape === "rectangle"

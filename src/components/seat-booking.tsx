@@ -553,9 +553,13 @@ const renderCircularTable = (
     const shape = inFloorPlan ? table.seats[0]?.table?.shape ?? "round" : "round";
     const isRect = shape === "rectangle";
     // Rectangle width ÷ height (from the picture when known)
-    const ratio = isRect
-      ? Math.min(6, Math.max(1.2, Number(table.seats[0]?.table?.ratio) || 2))
-      : 1;
+    // (below 1 = a tall table, standing up)
+    const rawRatio = Number(table.seats[0]?.table?.ratio) || 2;
+    const ratio = !isRect
+      ? 1
+      : rawRatio >= 1
+      ? Math.min(6, Math.max(1.2, rawRatio))
+      : Math.max(1 / 6, Math.min(1 / 1.2, rawRatio));
     // Where seat number i goes, in % of the table area (centre is 45%, like before)
     const seatSpot = (i: number, count: number, extra = 0) => {
       if (shape === "round") {
@@ -568,22 +572,27 @@ const renderCircularTable = (
       // Walk around a box, starting top-left, clockwise
       // The table top spans 12%–78% both ways; seats sit the same real
       // distance outside every edge, however long the table is.
-      const x0 = 12 - (12 + extra) / ratio;
-      const x1 = 78 + (12 + extra) / ratio;
-      const y0 = -extra;
-      const y1 = 90 + extra;
+      // Real sizes: the box is `ratio` wide and 1 tall (works for wide and tall tables)
+      const Wr = ratio;
+      const Hr = 1;
+      const off = ((12 + extra) / 100) * Math.min(Wr, Hr);
+      const x0 = 12 - (off / Wr) * 100;
+      const x1 = 78 + (off / Wr) * 100;
+      const y0 = 12 - (off / Hr) * 100;
+      const y1 = 78 + (off / Hr) * 100;
       const w = x1 - x0;
       const h = y1 - y0;
-      const realW = w * ratio; // a rectangle is wider than tall
-      const perim = 2 * (realW + h);
+      const realW = (w / 100) * Wr;
+      const realH = (h / 100) * Hr;
+      const perim = 2 * (realW + realH);
       let d = ((i + 0.5) / count) * perim;
       if (d < realW) return { left: x0 + (d / realW) * w, top: y0 };
       d -= realW;
-      if (d < h) return { left: x1, top: y0 + d };
-      d -= h;
+      if (d < realH) return { left: x1, top: y0 + (d / realH) * h };
+      d -= realH;
       if (d < realW) return { left: x1 - (d / realW) * w, top: y1 };
       d -= realW;
-      return { left: x0, top: y1 - d };
+      return { left: x0, top: y1 - (d / realH) * h };
     };
 
 const handleTableClick = () => {
@@ -760,7 +769,7 @@ const handleTableClick = () => {
           const countofseats = table.seats.length;
           const { left, top } = seatSpot(seatIndex, countofseats);
           // seat width in % of the table's width
-          const seatW = isRect ? Math.min(8, 28 / ratio) : isFullScreen && !inFloorPlan ? 20 : 15;
+          const seatW = isRect ? (Math.min(0.08 * Math.max(ratio, 1), 0.28 * Math.min(ratio, 1)) / ratio) * 100 : isFullScreen && !inFloorPlan ? 20 : 15;
           const nameSpot = seatSpot(seatIndex, countofseats, 12);
 
           return (
@@ -779,7 +788,7 @@ const handleTableClick = () => {
                 x: "-50%",
                 y: "-50%",
                 // on a rectangle, seats are about 15% of the table's height
-                ...(isRect ? { width: `${Math.min(8, 28 / ratio)}%` } : {}),
+                ...(isRect ? { width: `${seatW}%` } : {}),
               }}
             >
               <TooltipProvider>
