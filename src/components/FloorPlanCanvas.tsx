@@ -35,6 +35,7 @@ import {
   readingOrder,
   type DetectedShape,
   type Shape,
+  shapeAtPoint,
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
 
@@ -774,7 +775,8 @@ export function FloorPlanCanvas({
     if (!box) return;
     const b = shapedBox(box);
     if (b.w < 1.5 || b.h < 1.5) {
-      toast.message("Drag to draw the table: press, hold and move, then let go.");
+      // A click (no drag): find the table under the mouse on the picture
+      await addClickedTable(box.x0, box.y0);
       return;
     }
     setDrawBusy(true);
@@ -805,6 +807,74 @@ export function FloorPlanCanvas({
       await onTablesChanged();
       await loadPositions();
       toast.success(`${name} added with ${drawSeats} seats`);
+    } catch (e) {
+      toast.error("Could not add the table", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setDrawBusy(false);
+    }
+  };
+
+  // Click on a table in the picture: its outline, shape, chairs and number are
+  // read from the picture and the table is added there.
+  const addClickedTable = async (x: number, y: number) => {
+    if (!picture) {
+      toast.message("Upload a floor plan picture first, or drag to draw the table.");
+      return;
+    }
+    const hit = tables.find((t) => {
+      const p = positions[tableIdOf(t)];
+      if (!p) return false;
+      const half = tableBox(t).width * 0.35;
+      return Math.abs(p.x - x) < half && Math.abs(p.y - y) < half * aspect;
+    });
+    if (hit) {
+      toast.message(`${tableNameOf(hit)} is already there.`);
+      return;
+    }
+    setDrawBusy(true);
+    try {
+      const found = await shapeAtPoint(picture, x, y);
+      if (!found) {
+        toast.error("No table found there. Click inside a table, or drag to draw it.");
+        return;
+      }
+      const taken = new Set(tables.map((t) => tableNameOf(t).trim().toLowerCase()));
+      let name = "";
+      try {
+        const [read] = await readTextInShapes(found.canvas, [found.shape]);
+        name = nameFromText(read?.text ?? "");
+      } catch {
+        name = "";
+      }
+      if (!name || taken.has(name.toLowerCase())) {
+        name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
+      }
+      const seats = found.chairs >= 2 && found.chairs <= 40 ? found.chairs : drawSeats;
+      const res = await fetch("/api/floor-plan-apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tables: [
+            {
+              name,
+              x: found.shape.x,
+              y: found.shape.y,
+              w: found.shape.w,
+              h: found.shape.h,
+              shape: found.shape.shape,
+              seats,
+            },
+          ],
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      setDrawnIds((prev) => [...prev, ...(json.createdIds ?? [])]);
+      await onTablesChanged();
+      await loadPositions();
+      toast.success(`${name} added: ${found.shape.shape}, ${seats} seats`);
     } catch (e) {
       toast.error("Could not add the table", {
         description: e instanceof Error ? e.message : undefined,
@@ -912,7 +982,10 @@ export function FloorPlanCanvas({
       const r = el.getBoundingClientRect();
       // instructions above the room take some height while editing
       const note = working ? 44 : roomOnly ? 46 : 0; // instructions, or the totals heading
-      const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - 12);
+      // leave room for the footer (logo) at the bottom, except in full screen
+      const footer = !roomOnly && window.innerWidth >= 1024 ? document.querySelector("footer") : null;
+      const footerH = footer ? footer.getBoundingClientRect().height : 0;
+      const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - footerH - 12);
       setAvail({ w: r.width, h });
     };
     measure();
@@ -1023,6 +1096,16 @@ export function FloorPlanCanvas({
   })();
   const show = fitted ?? { ...view, width: undefined, height: undefined };
 
+  // One number size for every table (based on the typical table size), so a
+  // smaller table does not get a smaller number
+  const tableNumPx = (() => {
+    if (!avail || !tables.length) return undefined;
+    const roomPx = (avail.w * 100) / show.w;
+    const widths = tables.map((t) => tableBox(t).width).sort((a, b) => a - b);
+    const typical = widths[Math.floor(widths.length / 2)];
+    return Math.round(Math.min(64, Math.max(14, ((typical * roomPx) / 100) * 0.2)));
+  })();
+
   // The Arrived list. On smaller screens (phones) it goes under the Guest
   // Names list instead of next to the room.
   const arrivedList = (cls: string, mobile = false) => (
@@ -1077,21 +1160,19 @@ export function FloorPlanCanvas({
       {/* Full screen ("Hide menu"): a slim column of icons on the right */}
       {roomOnly && !working ? (
         <div
-          className="flex flex-wrap gap-2 lg:flex-col lg:self-start lg:sticky lg:top-2 items-center"
-          // Full screen: only the logo shows. Point at it (or tap it) for the buttons.
+          // Full screen: nothing shows on the left, so the room gets the whole
+          // width. Move the mouse to the left edge (or tap it) for the buttons.
+          className={`fixed left-0 top-0 h-full z-[60] flex flex-col gap-2 items-center ${
+            railOpen ? "w-24 bg-white/95 shadow-xl border-r pt-2" : "w-3"
+          }`}
           onMouseEnter={() => setRailOpen(true)}
           onMouseLeave={() => setRailOpen(false)}
+          onClick={() => !railOpen && setRailOpen(true)}
         >
-          <button
-            type="button"
-            onClick={() => setRailOpen((v) => !v)}
-            title="Show the buttons"
-            aria-label="Show the buttons"
-            aria-expanded={railOpen}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+          {railOpen && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src="/logo.svg" alt="Seating4U" className="w-20 h-auto mb-1 select-none" draggable={false} />
-          </button>
+          )}
           {railOpen && (<>
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
             <PanelRightOpen className="w-4 h-4" />
@@ -1214,13 +1295,13 @@ export function FloorPlanCanvas({
                 id="draw-seats"
                 type="number"
                 min={1}
-                max={20}
+                max={40}
                 value={drawSeats}
-                onChange={(e) => setDrawSeats(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                onChange={(e) => setDrawSeats(Math.min(40, Math.max(1, Number(e.target.value) || 1)))}
                 className="w-16 border rounded px-2 py-1"
               />
             </label>
-            <span className="text-sm text-zinc-600 ml-1">3. Drag on the picture to draw it.</span>
+            <span className="text-sm text-zinc-600 ml-1">3. Click a table on the picture to add it (or drag to draw one).</span>
           </>
         ) : reviewing ? (
           <>
@@ -1403,8 +1484,8 @@ export function FloorPlanCanvas({
         <p className="text-sm text-blue-800 bg-blue-50 rounded px-3 py-2 mb-3">
           {drawing
             ? drawBusy
-              ? "Adding the table..."
-              : `Drawing ${drawShape} tables with ${drawSeats} seats. Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
+              ? "Finding the table..."
+              : `Easy way: click inside any table on the picture. Its shape, chairs and number are copied and it is added there. Or draw ${drawShape} tables with ${drawSeats} seats yourself: Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
             : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
@@ -1457,6 +1538,7 @@ export function FloorPlanCanvas({
         style={{
           width: `${10000 / show.w}%`,
           aspectRatio: String(aspect),
+          ...(tableNumPx ? ({ "--table-num": `${tableNumPx}px` } as React.CSSProperties) : {}),
           left: `${(-show.x / show.w) * 100}%`,
           top: `${(-show.y / show.h) * 100}%`,
         }}

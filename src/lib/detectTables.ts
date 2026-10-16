@@ -275,3 +275,175 @@ export function readingOrder<T extends { x: number; y: number; h: number }>(item
   }
   return rows.flatMap((r) => r.sort((a, b) => a.x - b.x));
 }
+
+// ---- Click a table on the picture to add it ----
+// The picture is split into closed areas once (and remembered). A click
+// finds the closed area under the mouse: that is the tabletop. Chairs are the
+// small closed areas just around it, so they are counted for the seats.
+
+interface AreaMap {
+  W: number;
+  H: number;
+  label: Int32Array;
+  areas: { area: number; minX: number; minY: number; maxX: number; maxY: number; sx: number; sy: number; edge: boolean }[];
+  canvas: HTMLCanvasElement;
+}
+let areaCache: { src: string; map: AreaMap } | null = null;
+
+async function areaMap(src: string): Promise<AreaMap> {
+  if (areaCache && areaCache.src === src) return areaCache.map;
+  const img = await loadImage(src);
+  const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(1, Math.round(img.naturalWidth * scale));
+  const H = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+  const px = ctx.getImageData(0, 0, W, H).data;
+  let lo = 255;
+  let hi = 0;
+  const lum = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    const l = (px[i * 4] * 299 + px[i * 4 + 1] * 587 + px[i * 4 + 2] * 114) / 1000;
+    lum[i] = l;
+    if (l < lo) lo = l;
+    if (l > hi) hi = l;
+  }
+  // Anything clearly darker than the paper is a line (thin grey lines too),
+  // and lines are thickened by 1 pixel so small gaps in an outline close.
+  const cut = lo + (hi - lo) * 0.78;
+  const line = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      if (lum[y * W + x] >= cut) continue;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx >= 0 && yy >= 0 && xx < W && yy < H) line[yy * W + xx] = 1;
+        }
+    }
+  const label = new Int32Array(W * H).fill(-1);
+  const areas: AreaMap["areas"] = [];
+  const stack = new Int32Array(W * H);
+  for (let start = 0; start < W * H; start++) {
+    if (line[start] || label[start] !== -1) continue;
+    const id = areas.length;
+    const r = { area: 0, minX: W, minY: H, maxX: 0, maxY: 0, sx: 0, sy: 0, edge: false };
+    let top = 0;
+    stack[top++] = start;
+    label[start] = id;
+    while (top > 0) {
+      const p = stack[--top];
+      const x = p % W;
+      const y = (p - x) / W;
+      r.area++;
+      r.sx += x;
+      r.sy += y;
+      if (x < r.minX) r.minX = x;
+      if (x > r.maxX) r.maxX = x;
+      if (y < r.minY) r.minY = y;
+      if (y > r.maxY) r.maxY = y;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) r.edge = true;
+      if (x > 0 && !line[p - 1] && label[p - 1] === -1) { label[p - 1] = id; stack[top++] = p - 1; }
+      if (x < W - 1 && !line[p + 1] && label[p + 1] === -1) { label[p + 1] = id; stack[top++] = p + 1; }
+      if (y > 0 && !line[p - W] && label[p - W] === -1) { label[p - W] = id; stack[top++] = p - W; }
+      if (y < H - 1 && !line[p + W] && label[p + W] === -1) { label[p + W] = id; stack[top++] = p + W; }
+    }
+    areas.push(r);
+  }
+  const map = { W, H, label, areas, canvas };
+  areaCache = { src, map };
+  return map;
+}
+
+export async function shapeAtPoint(
+  src: string,
+  xPct: number,
+  yPct: number
+): Promise<{ shape: DetectedShape; chairs: number; canvas: HTMLCanvasElement } | null> {
+  const m = await areaMap(src);
+  const { W, H, label, areas } = m;
+  const total = W * H;
+  const cx = Math.round((xPct / 100) * (W - 1));
+  const cy = Math.round((yPct / 100) * (H - 1));
+  const ok = (id: number) => {
+    if (id < 0) return false;
+    const a = areas[id];
+    // not a letter hole, not a dance floor / stage / room
+    return !a.edge && a.area > total * 0.0004 && a.area < total * 0.05;
+  };
+  // The area right under the click; if that is a line, a letter or the hole
+  // of a "0"/"8", look around the click and take the smallest proper area.
+  let best = label[cy * W + cx];
+  if (!ok(best)) {
+    best = -1;
+    for (let r = 2; r <= 40 && best === -1; r += 2) {
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const x = Math.round(cx + Math.cos(a) * r);
+        const y = Math.round(cy + Math.sin(a) * r);
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const id = label[y * W + x];
+        if (ok(id) && (best === -1 || areas[id].area < areas[best].area)) best = id;
+      }
+    }
+  }
+  if (best === -1) return null;
+  const t = areas[best];
+  const bw = t.maxX - t.minX + 1;
+  const bh = t.maxY - t.minY + 1;
+  const fill = t.area / (bw * bh);
+  const aspect = bw / bh;
+  const squareish = aspect > 0.8 && aspect < 1.25;
+  const long = aspect > 1.6 || aspect < 0.625;
+  const shape: Shape = long ? "rectangle" : fill < 0.86 ? "round" : squareish ? "square" : "rectangle";
+
+  // Chairs: small closed areas whose middle is in a narrow band around the
+  // table. Odd-sized bits (gaps between lines) are left out.
+  const tcx = t.minX + bw / 2;
+  const tcy = t.minY + bh / 2;
+  const near: number[] = [];
+  for (let i = 0; i < areas.length; i++) {
+    if (i === best) continue;
+    const a = areas[i];
+    if (a.edge || a.area < 6 || a.area > t.area * 0.35) continue;
+    const ax = a.sx / a.area;
+    const ay = a.sy / a.area;
+    const inside = Math.abs(ax - tcx) < bw / 2 && Math.abs(ay - tcy) < bh / 2;
+    if (inside) continue;
+    let d: number;
+    if (shape === "round") {
+      // distance from the circle's edge
+      d = Math.hypot((ax - tcx) / (bw / 2), (ay - tcy) / (bh / 2)) - 1;
+      d = d * (Math.min(bw, bh) / 2) / Math.min(bw, bh);
+    } else {
+      const dx = Math.max(0, Math.abs(ax - tcx) - bw / 2);
+      const dy = Math.max(0, Math.abs(ay - tcy) - bh / 2);
+      d = Math.hypot(dx, dy) / Math.min(bw, bh);
+    }
+    if (d > 0 && d < 0.6) near.push(a.area);
+  }
+  near.sort((a, b) => a - b);
+  const typical = near.length ? near[Math.floor(near.length / 2)] : 0;
+  const chairs = near.filter((a) => a >= typical * 0.45 && a <= typical * 2.2).length;
+
+  return {
+    shape: {
+      key: `c${best}`,
+      x: (tcx / W) * 100,
+      y: (tcy / H) * 100,
+      w: (bw / W) * 100,
+      h: (bh / H) * 100,
+      shape,
+      likelyTable: true,
+      text: "",
+    },
+    chairs,
+    canvas: m.canvas,
+  };
+}

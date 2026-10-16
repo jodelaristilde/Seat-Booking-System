@@ -93,6 +93,22 @@ const SeatBooking = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tableToDelete, setTableToDelete] = useState<string | number | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  // On computers, leave room for the footer (with the logo) so the whole
+  // page fits on the screen without scrolling, on any monitor size
+  const [footerH, setFooterH] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const f = document.querySelector("footer");
+      setFooterH(f && window.innerWidth >= 1024 ? f.getBoundingClientRect().height : 0);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const t = setTimeout(measure, 500);
+    return () => {
+      window.removeEventListener("resize", measure);
+      clearTimeout(t);
+    };
+  }, []);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [isAddGuestOpen, setIsAddGuestOpen] = useState(false);
@@ -643,7 +659,7 @@ const handleTableClick = () => {
                         // short names (just a number) get a much bigger font
                         fontSize:
                           displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "").length <= 3
-                            ? isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"
+                            ? `var(--table-num, ${isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"})`
                             : isRect ? "clamp(10px, 7cqw, 30px)" : "clamp(10px, 13cqw, 32px)",
                       }
                     : undefined
@@ -1194,9 +1210,8 @@ const handleTableClick = () => {
 
       {/* Main Content */}
       <div
-        className={`flex flex-col lg:flex-row ${
-          isFullScreen ? "h-screen" : "h-[calc(100vh-64px)]"
-        }`}
+        className={`flex flex-col lg:flex-row ${isFullScreen ? "h-screen" : ""}`}
+        style={isFullScreen ? undefined : { height: `calc(100vh - 64px - ${footerH}px)` }}
       >
         {/* Main Content - Tables */}
         <motion.div
@@ -1308,7 +1323,8 @@ const handleTableClick = () => {
 
           {/* Scrollable Table Grid */}
           <ScrollArea
-            className={`${isFullScreen ? "h-screen" : "h-[calc(100vh-144px)]"}`}
+            className={isFullScreen ? "h-screen" : ""}
+            style={isFullScreen ? undefined : { height: `calc(100vh - 144px - ${footerH}px)` }}
           >
             {viewMode === "plan" ? (
               <FloorPlanCanvas

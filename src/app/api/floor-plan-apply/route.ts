@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       seen.add(name.toLowerCase())
       const seats =
         typeof t.seats === "number" && Number.isFinite(t.seats)
-          ? Math.min(20, Math.max(1, Math.round(t.seats)))
+          ? Math.min(40, Math.max(1, Math.round(t.seats)))
           : 10
       const shape =
         typeof t.shape === "string" && SHAPES.includes(t.shape) ? t.shape : "round"

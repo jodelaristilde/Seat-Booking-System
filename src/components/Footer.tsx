@@ -4,7 +4,7 @@ import Image from "next/image";
 
 const Footer = () => {
   return (
-    <footer className="bg-white dark:bg-zinc-900 py-6 sm:py-8 border-t border-zinc-100 dark:border-zinc-800">
+    <footer className="bg-white dark:bg-zinc-900 py-6 sm:py-2 border-t border-zinc-100 dark:border-zinc-800">
       <div className="mx-4 sm:mx-16">
         {/* Mobile Layout - Modern, Card-like Design */}
         <div className="sm:hidden flex flex-col gap-8">
@@ -65,7 +65,7 @@ const Footer = () => {
                 src="/logo.svg"
                 unoptimized
                 alt="Seating4U Logo"
-                width={180}
+                width={130}
                 height={100}
               />
             </Link>
