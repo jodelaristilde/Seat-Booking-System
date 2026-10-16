@@ -147,13 +147,15 @@ export function BookingSidebar({
           fullName(seat).toLowerCase().includes(q) ||
           (seat.table?.name ?? "").toLowerCase().includes(q)
       )
-      // by table first (Table 2 before Table 10), then by name
+      // by table first (Table 2 before Table 10), then by last name
       .sort((a, b) => {
         const t = (a.table?.name ?? "").localeCompare(b.table?.name ?? "", undefined, {
           numeric: true,
           sensitivity: "base",
         });
-        return t !== 0 ? t : fullName(a).localeCompare(fullName(b));
+        // same table: by last name, then first name
+        const last = (x: Seat) => `${x.user?.lastname ?? ""} ${x.user?.firstname ?? ""}`;
+        return t !== 0 ? t : last(a).localeCompare(last(b));
       });
   }, [bookedSeats, searchQueries]);
 

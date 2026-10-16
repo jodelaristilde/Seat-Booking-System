@@ -1913,8 +1913,9 @@ export function FloorPlanCanvas({
                   <ul className="space-y-1">
                     {[...booked]
                       .sort((a, b) =>
-                        `${a.user?.firstname ?? ""} ${a.user?.lastname ?? ""}`.localeCompare(
-                          `${b.user?.firstname ?? ""} ${b.user?.lastname ?? ""}`
+                        // by last name, then first name
+                        `${a.user?.lastname ?? ""} ${a.user?.firstname ?? ""}`.localeCompare(
+                          `${b.user?.lastname ?? ""} ${b.user?.firstname ?? ""}`
                         )
                       )
                       .map((s) => {
@@ -1960,7 +1961,7 @@ export function FloorPlanCanvas({
                 const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);
                 const matches = unseated
                   .filter((g) => !q || `${g.firstname} ${g.lastname}`.toLowerCase().includes(q))
-                  .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                  .sort((a, b) => `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`)) // by last name
                   .slice(0, 50);
                 const full = addPicked.length >= free;
                 return (
