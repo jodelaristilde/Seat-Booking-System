@@ -1900,8 +1900,9 @@ export function FloorPlanCanvas({
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col-reverse md:flex-row gap-4">
               {/* The whole table, big */}
-              <div className="md:w-1/2 shrink-0 flex items-center justify-center">
-                <div className="relative w-full max-w-[24rem] p-[4%]">
+              {/* room around the table so guest names next to the seats are not cut off */}
+              <div className="md:w-1/2 shrink-0 flex items-center justify-center px-24 py-10">
+                <div className="relative w-full max-w-[15rem]">
                   {renderTable(withShape(table), index, false)}
                 </div>
               </div>
