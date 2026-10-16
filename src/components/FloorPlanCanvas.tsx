@@ -182,12 +182,14 @@ export function FloorPlanCanvas({
     setZoomId(null);
     setAddQuery("");
     setAddPicked([]);
+    setTableQuery("");
   };
 
   // ---- Zoom card: add several guests to the table at once ----
   type GuestRow = { id: string; firstname: string; lastname: string; seat: { table?: { name?: string } }[] };
   const [allGuests, setAllGuests] = useState<GuestRow[] | null>(null);
   const [addQuery, setAddQuery] = useState("");
+  const [tableQuery, setTableQuery] = useState("");
   const [addPicked, setAddPicked] = useState<string[]>([]);
   const [addBusy, setAddBusy] = useState(false);
   const loadGuests = async () => {
@@ -1909,9 +1911,30 @@ export function FloorPlanCanvas({
                 <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet.</p>
               ) : (
                 <>
-                  <p className="mb-1 text-[11px] text-zinc-500">Click a name to mark them arrived (click again to undo).</p>
+                  <p className="mb-1 text-[11px] text-zinc-500">
+                    Click a name to mark them arrived; they then leave this list. Marked by mistake? Search the name and click it to undo.
+                  </p>
+                  <div className="relative mb-1.5">
+                    <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      value={tableQuery}
+                      onChange={(e) => setTableQuery(e.target.value)}
+                      onFocus={() => (zoomPinned.current = true)}
+                      placeholder="Search a guest at this table (arrived too)..."
+                      className="w-full rounded-md border px-7 py-1.5 text-sm"
+                    />
+                  </div>
+                  {!tableQuery.trim() && booked.every((s) => s.isReceived) && (
+                    <p className="py-2 text-center text-sm text-green-700">Everyone at this table has arrived ✓</p>
+                  )}
                   <ul className="space-y-1">
                     {[...booked]
+                      // arrived guests are hidden, unless searched for (to undo a mistake)
+                      .filter((s) => {
+                        const q = tableQuery.trim().toLowerCase();
+                        if (!q) return !s.isReceived;
+                        return `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.toLowerCase().includes(q);
+                      })
                       .sort((a, b) =>
                         // by last name, then first name
                         `${a.user?.lastname ?? ""} ${a.user?.firstname ?? ""}`.localeCompare(
@@ -1940,6 +1963,9 @@ export function FloorPlanCanvas({
                                 {s.isReceived && <Check className="h-3.5 w-3.5" />}
                               </span>
                               <span className="flex-1 font-medium">{name}</span>
+                              {s.isReceived && (
+                                <span className="text-xs font-semibold text-green-700">Arrived · click to undo</span>
+                              )}
                               <span className="text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
                             </button>
                           </li>
