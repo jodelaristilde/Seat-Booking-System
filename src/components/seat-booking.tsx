@@ -667,7 +667,7 @@ const handleTableClick = () => {
               <span
                 className={`font-semibold text-center ${
                   inFloorPlan
-                    ? `leading-tight whitespace-nowrap block ${shortName ? "" : "overflow-hidden text-ellipsis max-w-full"}`
+                    ? `block ${shortName ? "leading-tight whitespace-nowrap" : "leading-none whitespace-normal break-words max-w-full"}`
                     : "text-lg"
                 }`}
                 title={displayName}
@@ -678,7 +678,11 @@ const handleTableClick = () => {
                         fontSize:
                           shortName
                             ? `var(--table-num, ${isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"})`
-                            : isRect ? "clamp(10px, 7cqw, 30px)" : "clamp(10px, 13cqw, 32px)",
+                            : fitNameFont(
+                                displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "") || displayName,
+                                hideSeats ? 76 : 58,
+                                isRect,
+                              ),
                       }
                     : undefined
                 }
@@ -695,7 +699,12 @@ const handleTableClick = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute -top-2 -right-2 flex gap-1"
+                // On the floor plan the buttons sit ABOVE the name so it stays readable
+                className={
+                  inFloorPlan
+                    ? "absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex gap-1"
+                    : "absolute -top-2 -right-2 flex gap-1"
+                }
               >
                 <TooltipProvider>
                   <Tooltip>
@@ -1656,5 +1665,18 @@ const handleTableClick = () => {
     </div>
   );
 };
+
+
+// Font size so a table name (like "JODEL" or "Head Table") fits inside the
+// tabletop instead of being cut to "J...". Long names may use two lines.
+function fitNameFont(name: string, maxWidthPct: number, isRect: boolean) {
+  const n = name.trim().length || 1;
+  const words = name.trim().split(/\s+/);
+  const longestWord = Math.max(...words.map((w) => w.length));
+  const perLine = words.length > 1 && n > 8 ? Math.max(longestWord, Math.ceil(n / 2)) : n;
+  // a bold capital letter is about 0.75 of the font size wide; 12px is the pill's padding
+  const width = isRect ? maxWidthPct * 0.55 : maxWidthPct;
+  return `clamp(6px, calc((${width}cqw - 12px) / ${(perLine * 0.75).toFixed(2)}), ${isRect ? 30 : 32}px)`;
+}
 
 export default SeatBooking;
