@@ -1405,9 +1405,9 @@ export function FloorPlanCanvas({
   }, [roomOnly]);
   const showArrived = arrivals.length > 0 && !working;
   // Full screen: the Arrived list is tucked into a button so the map gets the room
-  const [fsArrivedOpen, setFsArrivedOpen] = useState(false);
+  const [fsArrivedOpen, setFsArrivedOpen] = useState(true);
   useEffect(() => {
-    if (readStored(FS_ARRIVED_KEY) === "on") setFsArrivedOpen(true);
+    if (readStored(FS_ARRIVED_KEY) === "off") setFsArrivedOpen(false);
   }, []);
   const toggleFsArrived = () =>
     setFsArrivedOpen((v) => {
@@ -1791,7 +1791,7 @@ export function FloorPlanCanvas({
       )}
 
       {/* Arrived guests (left of the room on big screens) */}
-      {showArrived && !roomOnly &&
+      {showArrived && (!roomOnly || fsArrivedOpen) &&
         arrivedList(
           `w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 ${arrivedSlot ? "hidden xl:block" : ""}`
         )}
@@ -1799,12 +1799,6 @@ export function FloorPlanCanvas({
 
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0 relative" ref={roomColRef}>
-      {roomOnly && showArrived && fsArrivedOpen && (
-        // Full screen: the Arrived list floats over the left of the map
-        <div className="absolute left-2 z-[65] shadow-xl rounded-lg bg-white" style={{ top: (fsHeaderRef.current?.offsetHeight ?? 40) + 8 }}>
-          {arrivedList("w-fit")}
-        </div>
-      )}
       {settingEntrance && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-green-50 px-3 py-2 text-sm text-green-900">
           <DoorOpen className="h-4 w-4" />
@@ -1887,7 +1881,7 @@ export function FloorPlanCanvas({
               variant={fsArrivedOpen ? "default" : "outline"}
               className="h-7 border-green-300 px-2 text-xs"
               onClick={toggleFsArrived}
-              title={fsArrivedOpen ? "Hide the Arrived list" : "Show the Arrived list over the map"}
+              title={fsArrivedOpen ? "Hide the Arrived list" : "Show the Arrived list on the left"}
               aria-pressed={fsArrivedOpen}
             >
               ✓ Arrived list ({arrivals.length})
