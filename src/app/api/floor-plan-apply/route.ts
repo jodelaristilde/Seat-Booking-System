@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -55,7 +56,8 @@ export async function POST(req: Request) {
       )
     }
 
-    const existing = await prisma.table.findMany({ select: { id: true, name: true } })
+    const eventId = await activeEventId()
+    const existing = await prisma.table.findMany({ where: { eventId }, select: { id: true, name: true } })
     const byName = new Map(existing.map((t: { id: string; name: string }) => [t.name.trim().toLowerCase(), t.id] as const))
 
     let removed = 0
@@ -87,6 +89,7 @@ export async function POST(req: Request) {
       } else {
         const made = await prisma.table.create({
           data: {
+            eventId,
             name: it.name,
             posX: it.x,
             posY: it.y,

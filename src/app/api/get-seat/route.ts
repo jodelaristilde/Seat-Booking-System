@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { activeEventId } from "@/lib/event";
 import { authOptions } from "@/lib/auth.config";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
@@ -9,7 +10,9 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
+    const eventId = await activeEventId();
     const allUnits = await db.seat.findMany({
+      where: { table: { is: { eventId } } },
       include: {
         table: true,
         user: true,

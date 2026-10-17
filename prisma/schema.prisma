@@ -24,6 +24,8 @@ model Users {
   firstname String
   lastname  String
   seat      Seat[]
+  // Which event this guest belongs to (empty = not sorted yet)
+  eventId   String?
 }
 
 model Table {
@@ -40,6 +42,8 @@ model Table {
   // Size traced from the floor plan picture (% of picture width / height)
   sizeW     Float?
   sizeH     Float?
+  // Which event this table belongs to
+  eventId   String?
 }
 
 model Password {
@@ -65,4 +69,20 @@ model Image {
   original  String?
   size      Int
   createdAt DateTime @default(now())
+  // Which event this floor plan belongs to
+  eventId   String?
+}
+
+// One event (a wedding, a gala...): its own floor plan, tables and guests
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  date      String?
+  createdAt DateTime @default(now())
+}
+
+// Small app-wide settings, e.g. which event is open right now
+model Setting {
+  key   String @id
+  value String
 }

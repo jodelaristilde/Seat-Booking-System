@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -5,11 +6,10 @@ const prisma = new PrismaClient()
 
 export async function DELETE() {
   try {
-    // Delete all seats first
-    await prisma.seat.deleteMany()
-
-    // Then delete all tables
-    await prisma.table.deleteMany()
+    // Only the open event's tables (other events are not touched)
+    const eventId = await activeEventId()
+    await prisma.seat.deleteMany({ where: { table: { is: { eventId } } } })
+    await prisma.table.deleteMany({ where: { eventId } })
 
     return NextResponse.json({ success: true, message: "All tables and seats deleted successfully" })
   } catch (error) {

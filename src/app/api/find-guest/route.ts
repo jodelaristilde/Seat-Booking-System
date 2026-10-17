@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
@@ -15,8 +16,10 @@ export async function GET(request: Request) {
 
     const terms = q.split(/\s+/).filter(Boolean).slice(0, 4);
 
+    const eventId = await activeEventId();
     const guests = await db.users.findMany({
       where: {
+        eventId,
         AND: terms.map((t) => ({
           OR: [
             { firstname: { contains: t, mode: "insensitive" as const } },

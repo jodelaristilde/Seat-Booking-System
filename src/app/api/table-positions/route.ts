@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -8,6 +9,7 @@ const prisma = new PrismaClient()
 export async function GET() {
   try {
     const tables = await prisma.table.findMany({
+      where: { eventId: await activeEventId() },
       select: { id: true, name: true, posX: true, posY: true },
     })
     return NextResponse.json({ success: true, data: tables })

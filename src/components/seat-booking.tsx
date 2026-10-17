@@ -42,6 +42,7 @@ import {
   Settings,
   Grid3x3,
   Map as MapIcon,
+  Printer,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -67,6 +68,7 @@ import { EditTableDialog } from "./edit-table-dialog";
 import WashupButton from "./washup";
 import { FloorMapUploader } from "./FloorMapUploader";
 import TableNotes from "./TableNotes";
+import { EventSwitcher } from "./EventSwitcher";
 import { FloorPlanCanvas } from "./FloorPlanCanvas";
 
 const SeatBooking = () => {
@@ -1015,19 +1017,22 @@ const handleTableClick = () => {
             className="z-50 bg-white border-b border-zinc-200 px-2 sm:px-4"
           >
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-0 sm:justify-between h-auto min-h-14 py-2">
-              {/* Logo */}
-              <Link
-                href="/"
-                className="flex justify-center items-center space-x-2"
-              >
-                <Image
-                  src="/logo.svg"
-                unoptimized
-                  alt="Seating4U Logo"
-                  width={150}
-                  height={80}
-                />
-              </Link>
+              {/* Logo, then the open event (click to switch / start a new one) */}
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/"
+                  className="flex justify-center items-center space-x-2"
+                >
+                  <Image
+                    src="/logo.svg"
+                    unoptimized
+                    alt="Seating4U Logo"
+                    width={150}
+                    height={80}
+                  />
+                </Link>
+                <EventSwitcher />
+              </div>
 
               {/* Right Section - Now with better mobile layout */}
               <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-4">
@@ -1137,6 +1142,11 @@ const handleTableClick = () => {
                         <Link href="/client-view" className="flex items-center">
                           <PersonStandingIcon className="mr-2 w-4 h-4" /> Client
                           View
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/seating-chart">
+                          <Printer className="mr-2 w-4 h-4" /> Seating chart &amp; report
                         </Link>
                       </DropdownMenuItem>
                       {session?.user?.email === "admin" && (

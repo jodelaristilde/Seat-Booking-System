@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     const table = await prisma.table.create({
       data: {
         name,
+        eventId: await activeEventId(),
         Seat: {
           create: seats.map((seatNumber: number) => ({
             seat: seatNumber,

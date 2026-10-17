@@ -18,6 +18,8 @@ import { FileUpload } from "./ui/file-upload";
 interface Guest {
   firstname: string;
   lastname: string;
+  // optional: seat the guest at this table on import ("Table 5" or "5")
+  table?: string;
 }
 
 export function ImportGuestsforWeb() {
@@ -144,13 +146,16 @@ export function ImportGuestsforWeb() {
 
             if (!firstname || !lastname) {
               throw new Error(
-                "Invalid file format. Please use the correct column names: firstname, lastname"
+                "Invalid file format. Please use the column names First Name and Last Name (and Table, optional)"
               );
             }
 
+            const table =
+              row.table ?? row.Table ?? row["Table Name"] ?? row["Table Number"] ?? row["TABLE"];
             return {
               firstname: String(firstname).trim(),
               lastname: String(lastname).trim(),
+              ...(table !== undefined && String(table).trim() ? { table: String(table).trim() } : {}),
             };
           });
 
@@ -165,9 +170,12 @@ export function ImportGuestsforWeb() {
   };
 
   const downloadSampleFile = (fileType: "xlsx" | "csv") => {
+    // "Table" is optional: fill it in and guests are seated on import
     const data = [
-      { firstname: "John", lastname: "Doe" },
-      { firstname: "Jane", lastname: "Smith" },
+      { firstname: "John", lastname: "Doe", Table: "1" },
+      { firstname: "Jane", lastname: "Smith", Table: "1" },
+      { firstname: "Ana", lastname: "Silva", Table: "Head Table" },
+      { firstname: "Paul", lastname: "Murphy", Table: "" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -217,6 +225,11 @@ export function ImportGuestsforWeb() {
           <DialogTitle>Import Guests</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          <p className="text-sm text-zinc-600">
+            Your Excel file needs the columns <b>First Name</b> and <b>Last Name</b>. Add a <b>Table</b> column
+            (like <i>5</i> or <i>Head Table</i>) and each guest is seated at that table right away; missing tables
+            are created. Leave it empty to seat them later.
+          </p>
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />
           </div>

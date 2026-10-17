@@ -1,4 +1,5 @@
 // app/api/floor-map/route.ts
+import { activeEventId } from "@/lib/event";
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -9,6 +10,7 @@ export async function GET() {
   try {
     // Get the most recent image (assuming floor map is the latest uploaded)
     const image = await prisma.image.findFirst({
+      where: { eventId: await activeEventId() },
       orderBy: {
         createdAt: 'desc',
       },
@@ -64,11 +66,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete existing floor map(s) if any
-    await prisma.image.deleteMany({});
+    const eventId = await activeEventId();
+    await prisma.image.deleteMany({ where: { eventId } });
 
     // Create new floor map
     const image = await prisma.image.create({
       data: {
+        eventId,
         filename,
         data,
         mimeType,

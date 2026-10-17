@@ -1,11 +1,14 @@
 export const dynamic = "force-dynamic";
 
+import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const eventId = await activeEventId();
     const guests = await db.users.findMany({
+      where: { eventId },
       include: {
         seat: {
           include: {

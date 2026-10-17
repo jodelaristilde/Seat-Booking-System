@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -5,7 +6,9 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
+    const eventId = await activeEventId()
     const tables = await prisma.table.findMany({
+      where: { eventId },
       include: {
         Seat: {
           include: {

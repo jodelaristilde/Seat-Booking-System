@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
     const table = await prisma.table.create({
       data: {
         name: `Table ${tableNumber}`,
+        eventId: await activeEventId(),
         Seat: {
           create: Array.from({ length: seats }, (_, index) => ({
             seat: index + 1,

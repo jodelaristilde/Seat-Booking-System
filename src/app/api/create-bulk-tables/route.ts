@@ -1,4 +1,5 @@
 // app/api/create-bulk-tables/route.ts
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
     const createdTable = await prisma.table.create({
       data: {
         name: body.name,
+        eventId: await activeEventId(),
         Seat: {
           create: body.seats.map((seatNumber) => ({
             seat: seatNumber,

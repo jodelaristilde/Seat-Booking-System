@@ -1,9 +1,11 @@
+import { activeEventId } from "@/lib/event";
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 
 export async function GET() {
   try {
     const tables = await db.table.findMany({
+      where: { eventId: await activeEventId() },
       orderBy: {
         name: "desc",
       },

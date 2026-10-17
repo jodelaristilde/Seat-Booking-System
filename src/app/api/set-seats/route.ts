@@ -1,3 +1,4 @@
+import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
       : null;
 
     const tables = await db.table.findMany({
-      where: ids ? { id: { in: ids } } : undefined,
+      where: ids ? { id: { in: ids }, eventId: await activeEventId() } : { eventId: await activeEventId() },
       include: { Seat: { orderBy: { seat: "asc" } } },
     });
 
