@@ -189,6 +189,36 @@ export function FloorPlanCanvas({
   const [allGuests, setAllGuests] = useState<GuestRow[] | null>(null);
   const [addQuery, setAddQuery] = useState("");
   const [tableQuery, setTableQuery] = useState("");
+  // Zoom card mode: "seat" = set up the table (add / remove guests),
+  // "checkin" = event day (tick who arrived). Remembered per computer.
+  const [cardMode, setCardModeRaw] = useState<"seat" | "checkin">("seat");
+  useEffect(() => {
+    if (readStored("floorPlanCardMode") === "checkin") setCardModeRaw("checkin");
+  }, []);
+  const setCardMode = (m: "seat" | "checkin") => {
+    setCardModeRaw(m);
+    writeStored("floorPlanCardMode", m);
+  };
+  // Seat guests mode: have the guest list ready as soon as a table opens
+  useEffect(() => {
+    if (zoomId && cardMode === "seat" && !allGuests) loadGuests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoomId, cardMode]);
+  const removeFromSeat = async (seatId: string) => {
+    try {
+      const res = await fetch("/api/delete-booking", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatId }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      await onTablesChanged();
+      if (allGuests) await loadGuests();
+    } catch (e) {
+      toast.error("Could not remove the guest", { description: e instanceof Error ? e.message : undefined });
+    }
+  };
   const [addPicked, setAddPicked] = useState<string[]>([]);
   const [addBusy, setAddBusy] = useState(false);
   const loadGuests = async () => {
@@ -1884,6 +1914,26 @@ export function FloorPlanCanvas({
               <span className="text-xs text-zinc-500 tabular-nums">
                 {booked.length}/{seats.length} seated · {arrived} arrived
               </span>
+              {/* Two clear jobs: setting up the table, or checking guests in */}
+              <div className="ml-3 inline-flex rounded-lg border bg-zinc-50 p-0.5 text-sm">
+                {(
+                  [
+                    ["seat", "Seat guests"],
+                    ["checkin", "Check in"],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setCardMode(m)}
+                    className={`rounded-md px-3 py-1 font-medium ${
+                      cardMode === m ? "bg-white shadow text-zinc-900" : "text-zinc-500 hover:text-zinc-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100"
@@ -1902,8 +1952,44 @@ export function FloorPlanCanvas({
                 </div>
               </div>
               <div className="md:w-1/2 min-w-0">
-              {/* Everyone registered at this table. Click a name to mark them arrived. */}
-              {booked.length === 0 ? (
+              {/* SEAT GUESTS: who sits here (remove with ×), then add more below */}
+              {cardMode === "seat" && (
+                booked.length === 0 ? (
+                  <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet. Add them below.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {[...booked]
+                      .sort((a, b) =>
+                        `${a.user?.lastname ?? ""} ${a.user?.firstname ?? ""}`.localeCompare(
+                          `${b.user?.lastname ?? ""} ${b.user?.firstname ?? ""}`
+                        )
+                      )
+                      .map((s) => (
+                        <li
+                          key={s.id}
+                          className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
+                        >
+                          <span className="w-12 text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
+                          <span className="flex-1 font-medium text-zinc-800">
+                            {`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFromSeat(s.id)}
+                            className="rounded p-0.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                            title="Take this guest off the table (they stay in your guest list)"
+                            aria-label="Remove from table"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                )
+              )}
+
+              {/* CHECK IN: everyone registered here. Click a name to mark them arrived. */}
+              {cardMode === "checkin" && (booked.length === 0 ? (
                 <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet.</p>
               ) : (
                 <>
@@ -1969,15 +2055,15 @@ export function FloorPlanCanvas({
                       })}
                   </ul>
                 </>
-              )}
+              ))}
               {seats.length > booked.length && (
                 <p className="mt-2 text-xs text-zinc-500">
                   {seats.length - booked.length} empty seat{seats.length - booked.length === 1 ? "" : "s"}
                 </p>
               )}
 
-              {/* Add several guests to this table at once */}
-              {seats.length > booked.length && (() => {
+              {/* Add several guests to this table at once (Seat guests mode) */}
+              {cardMode === "seat" && seats.length > booked.length && (() => {
                 const free = seats.length - booked.length;
                 const q = addQuery.trim().toLowerCase();
                 const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);
