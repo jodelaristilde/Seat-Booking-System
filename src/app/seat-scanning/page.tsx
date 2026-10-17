@@ -852,23 +852,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         @keyframes wayPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 50% { transform: translate(-50%,-50%) scale(1.25); opacity: .6 } }
         .way-pulse { animation: wayPulse 1.2s ease-in-out infinite }
       `}</style>
-      {door && (
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <line x1={door.x} y1={door.y} x2={t.x} y2={t.y} stroke="white" strokeWidth={10} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          <line
-            x1={door.x}
-            y1={door.y}
-            x2={t.x}
-            y2={t.y}
-            stroke="#16a34a"
-            strokeWidth={6}
-            strokeLinecap="round"
-            strokeDasharray="14 10"
-            vectorEffect="non-scaling-stroke"
-            className="way-dash"
-          />
-        </svg>
-      )}
+      {door && <WayLine door={door} table={t} halfW={ringW / 2} />}
       {/* the guest's table: a pulsing ring with a label above it */}
       <div
         className="absolute"
@@ -903,5 +887,78 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         </>
       )}
     </div>
+  );
+}
+
+// The green line: straight in from the door, then a turn toward the table
+// (like walking it). It draws itself in, then keeps flowing.
+function WayLine({
+  door,
+  table,
+  halfW,
+}: {
+  door: { x: number; y: number };
+  table: { x: number; y: number };
+  halfW: number;
+}) {
+  // which wall is the door on? Walk straight in from that wall first.
+  const dist = [door.x, 100 - door.x, door.y, 100 - door.y];
+  const sideWall = Math.min(dist[0], dist[1]) < Math.min(dist[2], dist[3]); // left/right wall
+  const pts: [number, number][] = [[door.x, door.y]];
+  if (sideWall) {
+    // across first, then up/down to the table
+    const dy = table.y - door.y;
+    if (Math.abs(dy) < halfW) pts.push([table.x - Math.sign(table.x - door.x) * halfW, door.y]);
+    else {
+      pts.push([table.x, door.y]);
+      pts.push([table.x, table.y - Math.sign(dy) * halfW]);
+    }
+  } else {
+    // up/down first, then across to the table
+    const dx = table.x - door.x;
+    if (Math.abs(dx) < halfW) pts.push([door.x, table.y - Math.sign(table.y - door.y) * halfW]);
+    else {
+      pts.push([door.x, table.y]);
+      pts.push([table.x - Math.sign(dx) * halfW, table.y]);
+    }
+  }
+  // draw-in animation
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - start) / 1400);
+      setP(1 - Math.pow(1 - k, 2));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [door.x, door.y, table.x, table.y]);
+  const lens = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+  const total = lens.reduce((a, b) => a + b, 0) || 1;
+  let left = total * p;
+  const shown: [number, number][] = [pts[0]];
+  for (let i = 0; i < lens.length && left > 0; i++) {
+    const k = Math.min(1, left / (lens[i] || 1));
+    shown.push([pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k]);
+    left -= lens[i];
+  }
+  const d = shown.map((q) => q.join(",")).join(" ");
+  return (
+    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polyline points={d} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polyline
+        points={d}
+        fill="none"
+        stroke="#16a34a"
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray={p < 1 ? undefined : "14 10"}
+        vectorEffect="non-scaling-stroke"
+        className={p < 1 ? undefined : "way-dash"}
+      />
+    </svg>
   );
 }
