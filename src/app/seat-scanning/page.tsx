@@ -146,8 +146,22 @@ export default function SeatScanning() {
   // Search guests as the person types. This page is used by guests on their
   // own phones (not logged in), so it uses the public search, which returns at
   // most 5 matches, instead of downloading the whole guest list.
+  // Opened from an event's QR code (?event=...): this phone uses that event,
+  // so guests only find names from their own event (several can run at once)
+  const [eventName, setEventName] = useState<string | null>(null);
   useEffect(() => {
-    setIsLoading(false);
+    const id = new URLSearchParams(window.location.search).get("event");
+    if (!id) {
+      setIsLoading(false);
+      return;
+    }
+    fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setEventName(j.event.name);
+      })
+      .catch(() => undefined)
+      .finally(() => setIsLoading(false));
   }, []);
   useEffect(() => {
     const q = searchValue.trim();
@@ -300,6 +314,7 @@ export default function SeatScanning() {
                 <CardTitle className="text-xl sm:text-2xl text-zinc-800 dark:text-zinc-200">
                   Find Your Seat
                 </CardTitle>
+                {eventName && <p className="text-base text-zinc-500">{eventName}</p>}
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

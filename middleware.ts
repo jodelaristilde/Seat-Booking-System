@@ -16,6 +16,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/get-seat", methods: ["GET"] }, // client view (names are hidden unless logged in)
   { path: "/api/seat-checkin", methods: ["POST"] }, // guest taps "I've arrived"
   { path: "/api/register", methods: ["POST"] }, // the route itself checks who is allowed
+  { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
 ]
 
 const isPublicApi = (path: string, method: string) =>

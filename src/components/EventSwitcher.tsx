@@ -6,7 +6,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarDays, ChevronDown, Plus, Trash2, Pencil, Check } from "lucide-react";
+import { CalendarDays, ChevronDown, Plus, Trash2, Pencil, Check, QrCode, Download } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 
 type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number };
@@ -20,6 +21,16 @@ export function EventSwitcher() {
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
+  const [qrFor, setQrFor] = useState<Ev | null>(null);
+  const qrLink = (e: Ev) => `${window.location.origin}/seat-scanning?event=${e.id}`;
+  const downloadQr = (e: Ev) => {
+    const c = document.getElementById("event-qr") as HTMLCanvasElement | null;
+    if (!c) return;
+    const a = document.createElement("a");
+    a.href = c.toDataURL("image/png");
+    a.download = `${e.name.replace(/[^\w\- ]+/g, "").trim() || "event"} - check-in QR.png`;
+    a.click();
+  };
 
   const load = async () => {
     try {
@@ -107,8 +118,8 @@ export function EventSwitcher() {
             <DialogTitle>Events</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-zinc-500">
-            Each event has its own floor plan, tables and guests. The open event is what the dashboard and the guests&apos;
-            QR code check-in use.
+            Each event has its own floor plan, tables and guests. Several events can run at the same time: each
+            computer opens the event it is working on, and each event has its own guest QR code.
           </p>
 
           <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
@@ -138,7 +149,7 @@ export function EventSwitcher() {
                     ) : (
                       <>
                         <div className="truncate font-semibold">
-                          {e.name} {isOpen && <span className="ml-1 text-xs font-medium text-lime-700">● open</span>}
+                          {e.name} {isOpen && <span className="ml-1 text-xs font-medium text-lime-700">● open on this computer</span>}
                         </div>
                         <div className="text-xs text-zinc-500">
                           {e.date ? `${e.date} · ` : ""}
@@ -149,6 +160,14 @@ export function EventSwitcher() {
                   </div>
                   {renaming !== e.id && (
                     <>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                        title="This event's guest QR code"
+                        onClick={() => setQrFor(e)}
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
@@ -202,9 +221,30 @@ export function EventSwitcher() {
               </Button>
             </div>
             <p className="mt-2 text-xs text-zinc-500">
-              The new event starts empty and opens right away. Your other events stay saved; open them again any time.
+              The new event starts empty and opens on this computer. Other computers keep their own event.
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* One QR code per event: guests who scan it only find this event's names */}
+      <Dialog open={!!qrFor} onOpenChange={(o) => !o && setQrFor(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Guest QR code · {qrFor?.name}</DialogTitle>
+          </DialogHeader>
+          {qrFor && (
+            <div className="flex flex-col items-center gap-3">
+              <QRCodeCanvas id="event-qr" value={qrLink(qrFor)} size={260} level="M" marginSize={2} />
+              <p className="break-all text-center text-xs text-zinc-500">{qrLink(qrFor)}</p>
+              <p className="text-center text-sm text-zinc-600">
+                Print this at the entrance of <b>{qrFor.name}</b>. Guests who scan it only see this event&apos;s guest list.
+              </p>
+              <Button onClick={() => downloadQr(qrFor)}>
+                <Download className="mr-1 h-4 w-4" /> Download QR code
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

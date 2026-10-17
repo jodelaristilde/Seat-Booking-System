@@ -1,8 +1,14 @@
 import { db } from "@/lib/db";
-import { activeEventId, setActiveEvent } from "@/lib/event";
+import { activeEventId, EVENT_COOKIE } from "@/lib/event";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+
+// This computer works on event `id` from now on (others are not affected)
+function withEventCookie(res: NextResponse, id: string) {
+  res.cookies.set(EVENT_COOKIE, id, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  return res;
+}
 
 // Events: each has its own floor plan, tables and guests.
 // Login required (not in the middleware's public list).
@@ -42,8 +48,7 @@ export async function POST(req: Request) {
     await activeEventId(); // make sure older data is already filed under an event
     const date = typeof body?.date === "string" && body.date.trim() ? body.date.trim().slice(0, 40) : null;
     const event = await db.event.create({ data: { name, date } });
-    await setActiveEvent(event.id);
-    return NextResponse.json({ success: true, event });
+    return withEventCookie(NextResponse.json({ success: true, event }), event.id);
   } catch (error) {
     console.error("Events POST:", error);
     return NextResponse.json({ success: false, message: "Could not create the event" }, { status: 500 });
@@ -65,10 +70,9 @@ export async function PUT(req: Request) {
           ...(typeof body.date === "string" ? { date: body.date.trim().slice(0, 40) || null } : {}),
         },
       });
-    } else {
-      await setActiveEvent(id);
+      return NextResponse.json({ success: true });
     }
-    return NextResponse.json({ success: true });
+    return withEventCookie(NextResponse.json({ success: true }), id);
   } catch (error) {
     console.error("Events PUT:", error);
     return NextResponse.json({ success: false, message: "Could not change the event" }, { status: 500 });
@@ -83,7 +87,7 @@ export async function DELETE(req: Request) {
     if (!id) return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     if (id === (await activeEventId())) {
       return NextResponse.json(
-        { success: false, message: "Open another event first; the open event can't be deleted." },
+        { success: false, message: "Open another event first; the event open on this computer can't be deleted." },
         { status: 400 }
       );
     }
