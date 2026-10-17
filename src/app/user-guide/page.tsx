@@ -204,7 +204,7 @@ export default function UserGuide() {
             <Steps
               items={[
                 "Click <b>New → Import Guests</b>.",
-                { text: "Choose your Excel file. The first row must have the headings <b>First Name</b> and <b>Last Name</b>.", tip: "One guest per row." },
+                { text: "Choose your Excel file. The first row must have the headings <b>First Name</b> and <b>Last Name</b>.", tip: "Optional columns: <b>Table</b> (seats them right away), <b>Meal</b> (Chicken, Fish, Veg…) and <b>VIP</b> (put yes)." },
                 "Your guests appear in the list, ready to be seated.",
               ]}
             />
@@ -283,6 +283,20 @@ export default function UserGuide() {
                 In full screen you can also point at a table: the card lists who hasn&apos;t arrived yet. Tick the box next to each guest as they come in.
               </Note>
             </div>
+          </Card>
+        </Section>
+
+        <Section id="extras" number={5} title="Event day extras">
+          <Card title="Make the night shine">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• <b>Welcome TV</b>: Menu ☰ → <b>Welcome TV screen</b>. Put it on a TV at the entrance and click Full screen. Each arriving guest sees &quot;Welcome, Name! You&apos;re at Table 9&quot; with the way to their table.</li>
+              <li>• <b>Arrival sound</b>: a soft chime for each arrival (a special one for VIPs). Turn it on/off with <b>Arrival sound</b>.</li>
+              <li>• <b>Flashing &amp; gold tables</b>: a table&apos;s number flashes when a guest arrives; when everyone at a table is in, it turns gold with a ✓.</li>
+              <li>• <b>VIP alerts</b>: point at a table and click the ★ next to a guest. When a VIP arrives, a gold banner appears on the dashboard.</li>
+              <li>• <b>Meals</b>: type a meal next to each guest (point at the table). Each table shows its meal counts, and the seating chart and report include them for the caterer.</li>
+              <li>• <b>Arrival bar</b>: shows how many guests are in, e.g. 112 of 150 (75%).</li>
+              <li>• <b>Languages</b>: guests can switch the phone check-in page to Español, Français or Kreyòl.</li>
+            </ul>
           </Card>
         </Section>
 

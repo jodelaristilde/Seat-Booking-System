@@ -20,6 +20,8 @@ interface Guest {
   lastname: string;
   // optional: seat the guest at this table on import ("Table 5" or "5")
   table?: string;
+  vip?: string;
+  meal?: string;
 }
 
 export function ImportGuestsforWeb() {
@@ -152,10 +154,14 @@ export function ImportGuestsforWeb() {
 
             const table =
               row.table ?? row.Table ?? row["Table Name"] ?? row["Table Number"] ?? row["TABLE"];
+            const vip = row.vip ?? row.VIP ?? row.Vip;
+            const meal = row.meal ?? row.Meal ?? row.MEAL ?? row["Meal Choice"];
             return {
               firstname: String(firstname).trim(),
               lastname: String(lastname).trim(),
               ...(table !== undefined && String(table).trim() ? { table: String(table).trim() } : {}),
+              ...(vip !== undefined && String(vip).trim() ? { vip: String(vip).trim() } : {}),
+              ...(meal !== undefined && String(meal).trim() ? { meal: String(meal).trim() } : {}),
             };
           });
 
@@ -172,10 +178,10 @@ export function ImportGuestsforWeb() {
   const downloadSampleFile = (fileType: "xlsx" | "csv") => {
     // "Table" is optional: fill it in and guests are seated on import
     const data = [
-      { firstname: "John", lastname: "Doe", Table: "1" },
-      { firstname: "Jane", lastname: "Smith", Table: "1" },
-      { firstname: "Ana", lastname: "Silva", Table: "Head Table" },
-      { firstname: "Paul", lastname: "Murphy", Table: "" },
+      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", VIP: "" },
+      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", VIP: "" },
+      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", VIP: "yes" },
+      { firstname: "Paul", lastname: "Murphy", Table: "", Meal: "", VIP: "" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -228,7 +234,8 @@ export function ImportGuestsforWeb() {
           <p className="text-sm text-zinc-600">
             Your Excel file needs the columns <b>First Name</b> and <b>Last Name</b>. Add a <b>Table</b> column
             (like <i>5</i> or <i>Head Table</i>) and each guest is seated at that table right away; missing tables
-            are created. Leave it empty to seat them later.
+            are created. Leave it empty to seat them later. Optional too: a <b>Meal</b> column (Chicken, Fish, Veg…)
+            and a <b>VIP</b> column (put <i>yes</i> for VIP guests).
           </p>
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />

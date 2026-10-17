@@ -13,9 +13,19 @@ type SeatRow = {
   isBooked: boolean;
   isReceived: boolean;
   table: { id: string; name: string };
-  user: { id: string; firstname: string; lastname: string } | null;
+  user: { id: string; firstname: string; lastname: string; vip?: boolean; meal?: string | null } | null;
 };
-type Guest = { id: string; firstname: string; lastname: string; seat: unknown[] };
+type Guest = { id: string; firstname: string; lastname: string; seat: unknown[]; vip?: boolean; meal?: string | null };
+
+// "4 Chicken · 5 Fish" for a list of guests
+const mealSummary = (list: { meal?: string | null }[]) => {
+  const m = new Map<string, number>();
+  for (const g of list) {
+    const k = g.meal?.trim();
+    if (k) m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()].map(([k, n]) => `${n} ${k}`).join(" · ");
+};
 
 const byTable = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 const byLast = (a: { firstname: string; lastname: string }, b: { firstname: string; lastname: string }) =>
@@ -86,14 +96,16 @@ export default function SeatingChart() {
       ["Did not arrive", seated.length - came],
       ["Without a seat", unseated.length],
       [],
-      ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive"],
+      ["Meals (all guests)", mealSummary(guests) || "-"],
+      [],
+      ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive", "Meals"],
       ...tables.map((t) => {
         const a = t.guests.filter((g) => g.isReceived).length;
-        return [t.name, t.seats, t.guests.length, a, t.guests.length - a];
+        return [t.name, t.seats, t.guests.length, a, t.guests.length - a, mealSummary(t.guests.map((g) => g.user!))];
       }),
     ];
     const ws1 = XLSX.utils.aoa_to_sheet(summary);
-    ws1["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
+    ws1["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 }];
     XLSX.utils.book_append_sheet(wb, ws1, "Summary");
     // Every guest
     const rows = [
@@ -102,12 +114,22 @@ export default function SeatingChart() {
         "First Name": s.user!.firstname,
         Table: s.table.name,
         Seat: s.seat,
+        Meal: s.user!.meal ?? "",
+        VIP: s.user!.vip ? "Yes" : "",
         Arrived: s.isReceived ? "Yes" : "No",
       })),
-      ...unseated.map((g) => ({ "Last Name": g.lastname, "First Name": g.firstname, Table: "", Seat: "", Arrived: "No seat" })),
+      ...unseated.map((g) => ({
+        "Last Name": g.lastname,
+        "First Name": g.firstname,
+        Table: "",
+        Seat: "",
+        Meal: g.meal ?? "",
+        VIP: g.vip ? "Yes" : "",
+        Arrived: "No seat",
+      })),
     ];
     const ws2 = XLSX.utils.json_to_sheet(rows);
-    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 9 }];
+    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 5 }, { wch: 9 }];
     XLSX.utils.book_append_sheet(wb, ws2, "All guests");
     // No-shows
     const ws3 = XLSX.utils.json_to_sheet(
@@ -183,13 +205,24 @@ export default function SeatingChart() {
                 </span>
               </div>
               {t.guests.length ? (
-                <ol className="text-sm">
-                  {t.guests.map((g) => (
-                    <li key={g.id}>
-                      {g.user!.firstname} {g.user!.lastname}
-                    </li>
-                  ))}
-                </ol>
+                <>
+                  <ol className="text-sm">
+                    {t.guests.map((g) => (
+                      <li key={g.id} className="flex justify-between gap-2">
+                        <span>
+                          {g.user!.vip && "★ "}
+                          {g.user!.firstname} {g.user!.lastname}
+                        </span>
+                        {g.user!.meal && <span className="text-xs text-zinc-500">{g.user!.meal}</span>}
+                      </li>
+                    ))}
+                  </ol>
+                  {mealSummary(t.guests.map((g) => g.user!)) && (
+                    <p className="mt-1 border-t border-zinc-200 pt-1 text-xs font-semibold text-zinc-700">
+                      Meals: {mealSummary(t.guests.map((g) => g.user!))}
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-sm text-zinc-400">No guests yet</p>
               )}

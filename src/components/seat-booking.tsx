@@ -43,6 +43,7 @@ import {
   Grid3x3,
   Map as MapIcon,
   Printer,
+  Tv,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -1142,6 +1143,11 @@ const handleTableClick = () => {
                         <Link href="/client-view" className="flex items-center">
                           <PersonStandingIcon className="mr-2 w-4 h-4" /> Client
                           View
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/welcome" target="_blank">
+                          <Tv className="mr-2 w-4 h-4" /> Welcome TV screen
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>

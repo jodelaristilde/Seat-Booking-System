@@ -2,7 +2,7 @@ import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
-// POST { firstname, lastname, table?, seats? }
+// POST { firstname, lastname, table?, seats?, vip?, meal? }
 // Adds a guest to the open event. With "table" (a name like "Table 5", or
 // just "5"), the guest is also seated there: the table is found (or made,
 // with `seats` seats, 10 by default) and the guest takes the first empty seat.
@@ -20,8 +20,12 @@ export async function POST(request: Request) {
     }
 
     const eventId = await activeEventId();
+    // optional columns from the Excel import: VIP (yes / x / 1) and Meal
+    const vipRaw = String(body.vip ?? "").trim().toLowerCase();
+    const vip = body.vip === true || ["yes", "y", "x", "1", "true", "vip", "oui", "si", "wi"].includes(vipRaw);
+    const meal = typeof body.meal === "string" && body.meal.trim() ? body.meal.trim().slice(0, 40) : null;
     const newGuest = await db.users.create({
-      data: { firstname, lastname, eventId },
+      data: { firstname, lastname, eventId, vip, meal },
     });
 
     // Optional: seat the guest at a table straight away

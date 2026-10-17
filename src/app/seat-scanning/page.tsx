@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { GUEST_TEXT, LANGS, detectLang, type Lang } from "@/lib/guestText";
 
 interface User {
   id: string;
@@ -40,6 +41,18 @@ interface FloorMapImage {
 }
 
 export default function SeatScanning() {
+  // Language (English / Español / Français / Kreyòl), remembered on the phone
+  const [lang, setLangRaw] = useState<Lang>("en");
+  useEffect(() => setLangRaw(detectLang()), []);
+  const setLang = (l: Lang) => {
+    setLangRaw(l);
+    try {
+      localStorage.setItem("seating4u_lang", l);
+    } catch {
+      /* ignore */
+    }
+  };
+  const t = GUEST_TEXT[lang];
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -114,11 +127,11 @@ export default function SeatScanning() {
     const name = `${user.firstname} ${user.lastname}`;
     const seat = user.seat?.[0];
     if (!seat) {
-      toast.error(`${name} has no seat yet. Please see the front desk.`);
+      toast.error(t.noSeatYet(name));
       return;
     }
     if (group.some((g) => g.seatId === seat.id)) {
-      toast(`${name} is already on your list`);
+      toast(t.alreadyOnList(name));
       setGroupQuery("");
       groupInputRef.current?.focus();
       return;
@@ -133,15 +146,15 @@ export default function SeatScanning() {
       const data = await response.json();
       if (data.success) {
         setGroup((g) => [...g, { seatId: seat.id, name, table: seat.table.name }]);
-        toast.success(`${name} arrived`);
+        toast.success(t.guestArrived(name));
         setGroupQuery("");
         groupInputRef.current?.focus();
       } else {
-        toast.error(data.message || "Could not check in");
+        toast.error(t.couldNotCheckIn);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Error checking in");
+      toast.error(t.couldNotCheckIn);
     } finally {
       setGroupBusy(null);
     }
@@ -224,11 +237,11 @@ export default function SeatScanning() {
         setFloorMapImage(data.image);
         setIsFloorMapOpen(true);
       } else {
-        toast.error("No floor map available");
+        toast.error(t.noMap);
       }
     } catch (error) {
       console.error("Failed to fetch floor map:", error);
-      toast.error("Failed to load floor map");
+      toast.error(t.mapFail);
     } finally {
       setLoadingFloorMap(false);
     }
@@ -276,7 +289,7 @@ export default function SeatScanning() {
           setTableNotes(seatCheckData.data.table?.notes || null); // Store notes
 
           if (seatCheckData.data.isReceived) {
-            toast.success(`Welcome back!`);
+            toast.success(t.welcomeBack);
           }
         }
       } catch (error) {
@@ -292,7 +305,7 @@ export default function SeatScanning() {
     } else {
       setSearchResult(null);
       setNoSeatFound(true);
-      toast.error("No seat booking found for this guest");
+      toast.error(t.noBooking);
     }
   };
 
@@ -332,6 +345,23 @@ export default function SeatScanning() {
             </div>
           </motion.div>
 
+          {/* Language */}
+          <div className="flex justify-center gap-1.5">
+            {LANGS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => setLang(l.id)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  lang === l.id ? "bg-green-600 text-white" : "bg-white text-zinc-600 shadow-sm hover:bg-lime-50"
+                )}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
           {/* Search Form (hidden while checking in a group) */}
           {!groupMode && (
           <motion.div
@@ -342,7 +372,7 @@ export default function SeatScanning() {
             <Card className="border-0 shadow-2xl shadow-lime-500/10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-xl sm:text-2xl text-zinc-800 dark:text-zinc-200">
-                  Find Your Seat
+                  {t.findSeat}
                 </CardTitle>
                 {eventName && <p className="text-base text-zinc-500">{eventName}</p>}
               </CardHeader>
@@ -353,7 +383,7 @@ export default function SeatScanning() {
                       htmlFor="name"
                       className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400"
                     >
-                      Search your name
+                      {t.searchName}
                     </Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-zinc-400" />
@@ -361,8 +391,8 @@ export default function SeatScanning() {
                         id="name"
                         placeholder={
                           isLoading
-                            ? "Loading guest list..."
-                            : "Start typing your name..."
+                            ? t.loading
+                            : t.startTyping
                         }
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
@@ -413,7 +443,7 @@ export default function SeatScanning() {
                             </div>
                           ) : (
                             <div className="p-4 text-center text-base text-zinc-500">
-                              No matching names found
+                              {t.noMatch}
                             </div>
                           )}
                         </CardContent>
@@ -448,7 +478,7 @@ export default function SeatScanning() {
             </span>
             <div>
               <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400 mb-1">
-                Table Note:
+                {t.tableNote}
               </p>
               <p className="text-base text-yellow-800 dark:text-yellow-300">
                 {tableNotes}
@@ -469,14 +499,14 @@ export default function SeatScanning() {
         // Checking in the rest of the group: the search stays up
         <div className="space-y-4">
           <p className="text-center text-lg font-semibold text-zinc-700">
-            Find each guest who came with you
+            {t.findEach}
           </p>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
             <Input
               ref={groupInputRef}
               autoFocus
-              placeholder="Type a guest's name..."
+              placeholder={t.typeGuest}
               value={groupQuery}
               onChange={(e) => setGroupQuery(e.target.value)}
               className="pl-10 h-14 text-lg rounded-xl"
@@ -510,7 +540,7 @@ export default function SeatScanning() {
                         {u.firstname} {u.lastname}
                       </span>
                       <span className="text-sm text-zinc-500">
-                        {groupBusy === u.id ? "..." : seat ? seat.table.name : "No seat"}
+                        {groupBusy === u.id ? "..." : seat ? seat.table.name : t.noSeat}
                       </span>
                     </button>
                   );
@@ -518,7 +548,7 @@ export default function SeatScanning() {
               )}
             </div>
           )}
-          <ArrivedList items={sortedGroup} />
+          <ArrivedList items={sortedGroup} title={t.arrivedHeader} />
           <Button
             onClick={() => {
               setGroupMode("done");
@@ -526,20 +556,20 @@ export default function SeatScanning() {
             }}
             className="w-full h-16 text-2xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700"
           >
-            Done
+            {t.done}
           </Button>
         </div>
       ) : seatIsReceived && groupMode === "done" ? (
         // The whole group, with their tables
         <div className="space-y-4">
-          <ArrivedList items={sortedGroup} />
+          <ArrivedList items={sortedGroup} title={t.arrivedHeader} />
         </div>
       ) : seatIsReceived ? (
         // Show seat details after check-in
         <>
           <div className="flex justify-center items-center gap-3 flex-col pb-4">
             <span className="text-3xl sm:text-4xl font-bold text-green-600 dark:text-lime-400">
-              You&apos;re on
+              {t.youreOn}
             </span>
             <span className="font-bold text-6xl sm:text-7xl text-zinc-800 dark:text-zinc-200">
               {searchResult.table}
@@ -553,11 +583,11 @@ export default function SeatScanning() {
             className="w-full h-16 text-xl sm:text-2xl rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
           >
             {loadingFloorMap ? (
-              "Loading..."
+              t.loadingShort
             ) : (
               <>
                 <MapPin className="mr-3 h-6 w-6" />
-                View Your Table Location
+                {t.viewLocation}
               </>
             )}
           </Button>
@@ -568,10 +598,10 @@ export default function SeatScanning() {
               <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-semibold text-green-700 dark:text-green-400">
-              Welcome!
+              {t.welcome}
             </h3>
             <p className="text-base sm:text-lg text-green-600 dark:text-green-500">
-              You have checked in successfully. Enjoy the event!
+              {t.checkedIn}
             </p>
           </div>
         </>
@@ -580,9 +610,7 @@ export default function SeatScanning() {
           {/* Instruction message */}
           <div className="p-5 bg-amber-50 dark:bg-amber-900/20 rounded-xl border-2 border-amber-200 dark:border-amber-800">
             <p className="text-base sm:text-lg text-amber-800 dark:text-amber-200 text-center font-medium leading-relaxed">
-              Please click the{" "}
-              <strong>&quot;Arrived&quot;</strong> button below
-              to see your table and seat number
+              <span dangerouslySetInnerHTML={{ __html: t.pressArrived }} />
             </p>
           </div>
           
@@ -607,9 +635,7 @@ export default function SeatScanning() {
                 const data = await response.json();
                 if (data.success) {
                   setSeatIsReceived(true);
-                  toast.success(
-                    `Welcome ${searchResult.name}!`
-                  );
+                  toast.success(t.welcomeName(searchResult.name));
                   setGroup([
                     {
                       seatId: searchResult.seatId,
@@ -620,12 +646,12 @@ export default function SeatScanning() {
                   setAskMore(true);
                 } else {
                   toast.error(
-                    data.message || "Failed to check in"
+                    t.couldNotCheckIn
                   );
                 }
               } catch (err) {
                 console.error(err);
-                toast.error("Error checking in");
+                toast.error(t.couldNotCheckIn);
               } finally {
                 setIsLoading(false);
               }
@@ -633,7 +659,7 @@ export default function SeatScanning() {
             disabled={isLoading}
             className="w-full h-20 text-2xl sm:text-3xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
           >
-            {isLoading ? "Processing..." : "Arrived"}
+            {isLoading ? t.processing : t.arrived}
           </Button>
         </div>
       )}
@@ -656,11 +682,10 @@ export default function SeatScanning() {
                       </div>
                       <div className="space-y-3">
                         <h3 className="text-2xl sm:text-3xl font-semibold text-zinc-800 dark:text-zinc-200">
-                          Seat Not Available
+                          {t.notAvailable}
                         </h3>
                         <p className="text-lg sm:text-xl text-red-700 dark:text-zinc-400 leading-relaxed">
-                          Your seat hasn&apos;t been assigned yet. Please see
-                          someone at the front desk for assistance.
+                          {t.notAssigned}
                         </p>
                       </div>
                       <Button
@@ -668,7 +693,7 @@ export default function SeatScanning() {
                         className="mt-4 h-14 text-lg px-8 bg-white dark:bg-zinc-900 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                         onClick={() => setNoSeatFound(false)}
                       >
-                        Search Again
+                        {t.searchAgain}
                       </Button>
                     </div>
                   </CardContent>
@@ -682,7 +707,7 @@ export default function SeatScanning() {
       {/* After "Arrived": did more guests come along? */}
       <Dialog open={askMore} onOpenChange={setAskMore}>
         <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
-          <DialogTitle className="text-center text-2xl">Arrived with more guests?</DialogTitle>
+          <DialogTitle className="text-center text-2xl">{t.moreGuests}</DialogTitle>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Button
               className="h-14 text-xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700"
@@ -691,14 +716,14 @@ export default function SeatScanning() {
                 setGroupMode("adding");
               }}
             >
-              Yes
+              {t.yes}
             </Button>
             <Button
               variant="outline"
               className="h-14 text-xl font-bold rounded-xl"
               onClick={() => setAskMore(false)}
             >
-              No
+              {t.no}
             </Button>
           </div>
         </DialogContent>
@@ -744,11 +769,11 @@ export default function SeatScanning() {
             {/* Title */}
             <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
               <h3 className="text-xl sm:text-2xl font-bold text-zinc-800 dark:text-zinc-200">
-                {way ? way.table.name : "Venue Floor Plan"}
+                {way ? way.table.name : t.floorPlan}
               </h3>
               {way && (
                 <p className="text-sm text-green-700 font-medium">
-                  {way.entrances.length ? "Follow the green line from the door" : "Your table is circled in red"}
+                  {way.entrances.length ? t.followLine : t.circled}
                 </p>
               )}
             </div>
@@ -762,7 +787,7 @@ export default function SeatScanning() {
                     alt="Floor Plan"
                     className="w-full h-auto object-contain"
                   />
-                  {way && <WayOverlay way={way} />}
+                  {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
@@ -780,11 +805,11 @@ export default function SeatScanning() {
 }
 
 // The list of everyone checked in together: name and table, sorted by table
-function ArrivedList({ items }: { items: { seatId: string; name: string; table: string }[] }) {
+function ArrivedList({ items, title = "Arrived" }: { items: { seatId: string; name: string; table: string }[]; title?: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-green-200 bg-white">
       <div className="flex items-center justify-between bg-green-50 px-4 py-2">
-        <span className="text-xl font-bold text-green-800">Arrived</span>
+        <span className="text-xl font-bold text-green-800">{title}</span>
         <span className="text-xl font-bold text-green-800 tabular-nums">{items.length}</span>
       </div>
       <table className="w-full">
@@ -809,7 +834,7 @@ type Way = {
   entrances: { x: number; y: number }[];
 };
 
-function WayOverlay({ way }: { way: Way }) {
+function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: string; yourTable: string }) {
   const t = way.table;
   // the door closest to the table
   const door = way.entrances.length
@@ -859,7 +884,7 @@ function WayOverlay({ way }: { way: Way }) {
           className={`way-ring absolute inset-0 border-[5px] border-red-500 bg-red-500/15 shadow-[0_0_0_4px_white] ${round ? "rounded-full" : "rounded-lg"}`}
         />
         <div className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white shadow-lg">
-          Your table · {t.name}
+          {yourTable} · {t.name}
         </div>
       </div>
       {/* the door: you are here */}
@@ -873,7 +898,7 @@ function WayOverlay({ way }: { way: Way }) {
             className="absolute -translate-x-1/2 whitespace-nowrap rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
             style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1rem)` }}
           >
-            You are here
+            {youAreHere}
           </div>
         </>
       )}

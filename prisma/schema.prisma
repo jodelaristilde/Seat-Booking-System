@@ -26,6 +26,10 @@ model Users {
   seat      Seat[]
   // Which event this guest belongs to (empty = not sorted yet)
   eventId   String?
+  // VIP guests: the dashboard announces when they arrive
+  vip       Boolean  @default(false)
+  // Meal choice, e.g. "Chicken", "Fish", "Veg" (free text)
+  meal      String?
 }
 
 model Table {

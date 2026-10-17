@@ -267,6 +267,7 @@ export function BookingSidebar({
                       <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
                         {/* only the box marks arrival; clicking the name does nothing */}
                         <span className="font-medium text-gray-900 select-text">
+                          {seat.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
                           {seat.user?.firstname} {seat.user?.lastname}
                         </span>
 

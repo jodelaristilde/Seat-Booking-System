@@ -18,6 +18,8 @@ export interface User {
   firstname: string
   lastname: string
   seat: Seat[]
+  vip?: boolean
+  meal?: string | null
 }
 
 export interface Seat {

@@ -22,6 +22,8 @@ import {
   RectangleHorizontal,
   Loader2,
   ZoomIn,
+  Volume2,
+  VolumeX,
   Check,
   Search,
   DoorOpen,
@@ -199,6 +201,21 @@ export function FloorPlanCanvas({
     if (zoomId && cardMode === "seat" && !allGuests) loadGuests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomId, cardMode]);
+  // VIP star / meal choice for one guest
+  const updateGuest = async (id: string, data: { vip?: boolean; meal?: string | null }) => {
+    try {
+      const res = await fetch("/api/guest-update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...data }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.message);
+      await onTablesChanged();
+    } catch (e) {
+      toast.error("Could not save", { description: e instanceof Error ? e.message : undefined });
+    }
+  };
   const removeFromSeat = async (seatId: string) => {
     try {
       const res = await fetch("/api/delete-booking", {
@@ -1121,7 +1138,7 @@ export function FloorPlanCanvas({
     const measure = () => {
       const r = el.getBoundingClientRect();
       // instructions above the room take some height while editing
-      const note = working ? 44 : roomOnly ? 46 : 0; // instructions, or the totals heading
+      const note = working ? 44 : roomOnly ? 66 : 22; // instructions, or the totals heading + arrival bar
       // leave room for the footer (logo) at the bottom, except in full screen
       const footer = !roomOnly && window.innerWidth >= 1024 ? document.querySelector("footer") : null;
       const footerH = footer ? footer.getBoundingClientRect().height : 0;
@@ -1150,6 +1167,7 @@ export function FloorPlanCanvas({
             name: `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest",
             table: tableNameOf(t),
             tableId: tableIdOf(t),
+            vip: !!s.user?.vip,
           }))
       ),
     [tables]
@@ -1158,6 +1176,45 @@ export function FloorPlanCanvas({
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
   // tables whose number is flashing right now (a guest just arrived there)
   const [flashing, setFlashing] = useState<Record<string, number>>({});
+  // VIPs who just arrived (banner at the top of the room)
+  const [vipBanners, setVipBanners] = useState<{ seatId: string; name: string; table: string }[]>([]);
+  // A soft chime when someone arrives (can be turned off; remembered)
+  const [soundOn, setSoundOn] = useState(true);
+  useEffect(() => {
+    if (readStored("floorPlanSound") === "off") setSoundOn(false);
+  }, []);
+  const soundOnRef = useRef(true);
+  soundOnRef.current = soundOn;
+  const audioRef = useRef<AudioContext | null>(null);
+  const chime = (vip: boolean) => {
+    if (!soundOnRef.current) return;
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = audioRef.current ?? (audioRef.current = new Ctx());
+      if (ctx.state === "suspended") ctx.resume();
+      const notes = vip ? [659, 784, 988, 1319] : [784, 1047];
+      notes.forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = f;
+        const t0 = ctx.currentTime + i * 0.16;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+        o.connect(g).connect(ctx.destination);
+        o.start(t0);
+        o.stop(t0 + 0.65);
+      });
+    } catch {
+      /* no sound on this device */
+    }
+  };
+  const toggleSound = () =>
+    setSoundOn((v) => {
+      writeStored("floorPlanSound", v ? "off" : "on");
+      return !v;
+    });
   const [popups, setPopups] = useState<(Arrival & { phase: "pop" | "fly" })[]>([]);
   const knownArrivals = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -1176,6 +1233,11 @@ export function FloorPlanCanvas({
     knownArrivals.current = ids;
     fresh.forEach((a, i) => {
       const item = { ...a, at: Date.now() };
+      setTimeout(() => chime(a.vip), i * 700);
+      if (a.vip) {
+        setVipBanners((v) => [...v, { seatId: a.seatId, name: a.name, table: a.table }]);
+        setTimeout(() => setVipBanners((v) => v.filter((x) => x.seatId !== a.seatId)), 12000);
+      }
       // the table number starts flashing 1 second before the name card
       // leaves, and keeps flashing for 5 seconds
       setTimeout(() => {
@@ -1319,6 +1381,8 @@ export function FloorPlanCanvas({
       @keyframes tableArriveNum { 0%,100% { opacity: 1; transform: translate(-50%,-50%) scale(1) }
         50% { opacity: .35; transform: translate(-50%,-50%) scale(1.35) } }
       .table-arrive-num { animation: tableArriveNum .7s ease-in-out 7; }
+      .table-complete-ring { border: 4px solid #f59e0b; background: rgba(251,191,36,.18);
+        box-shadow: 0 0 14px 4px rgba(245,158,11,.55); }
     `}</style>
     <div
       className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
@@ -1397,6 +1461,16 @@ export function FloorPlanCanvas({
             aria-pressed={hoverZoom}
           >
             <ZoomIn className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={soundOn ? "default" : "outline"}
+            onClick={toggleSound}
+            title={soundOn ? "Turn off the arrival sound" : "Turn on the arrival sound"}
+            aria-label="Arrival sound"
+            aria-pressed={soundOn}
+          >
+            {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
           {picture && (
             <Button
@@ -1643,6 +1717,12 @@ export function FloorPlanCanvas({
             {hoverZoom ? "Zoom on hover: On" : "Zoom on hover: Off"}
           </Button>
         )}
+        {!reviewing && !drawing && !editing && (
+          <Button size="sm" variant={soundOn ? "default" : "outline"} onClick={toggleSound} title="A soft chime when a guest arrives">
+            {soundOn ? <Volume2 className="w-4 h-4 mr-1" /> : <VolumeX className="w-4 h-4 mr-1" />}
+            {soundOn ? "Arrival sound: On" : "Arrival sound: Off"}
+          </Button>
+        )}
 
         {picture && !reviewing && !drawing && !editing && (
           <Button
@@ -1722,6 +1802,26 @@ export function FloorPlanCanvas({
           ))}
         </div>
       )}
+      {/* Live arrival bar: fills up as guests arrive */}
+      {!working && (() => {
+        const assigned = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0);
+        const came = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0);
+        if (!assigned) return null;
+        const pct = Math.round((came / assigned) * 100);
+        return (
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-zinc-600">
+            <div className="h-3 flex-1 overflow-hidden rounded-full bg-zinc-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-700"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="whitespace-nowrap tabular-nums">
+              {came} of {assigned} arrived ({pct}%)
+            </span>
+          </div>
+        );
+      })()}
       {/* The room. Outside of editing, the view zooms in on the tables so
           they are as big as possible; editing always shows the whole room. */}
       <div
@@ -1741,6 +1841,21 @@ export function FloorPlanCanvas({
               }
         }
       >
+      {/* VIP just arrived */}
+      {vipBanners.length > 0 && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-[70] flex -translate-x-1/2 flex-col items-center gap-2">
+          {vipBanners.map((v) => (
+            <div
+              key={v.seatId}
+              className="animate-bounce rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-300 px-6 py-3 text-center text-amber-950 shadow-2xl"
+            >
+              <div className="text-xs font-bold uppercase tracking-widest">⭐ VIP arrived</div>
+              <div className="text-xl font-extrabold sm:text-2xl">{v.name}</div>
+              <div className="text-sm font-semibold">{v.table}</div>
+            </div>
+          ))}
+        </div>
+      )}
       <div
         ref={canvasRef}
         className="absolute"
@@ -1960,6 +2075,25 @@ export function FloorPlanCanvas({
                 onMouseLeave={hoverZoom && !working ? zoomCloseSoon : undefined}
               >
                 {renderTable(withShape(table), index, !showSeats && !guestNames)}
+                {(() => {
+                  // everyone at this table has arrived: gold glow + check
+                  const booked = table.seats.filter((x) => x.isBooked);
+                  if (!booked.length || booked.some((x) => !x.isReceived) || working) return null;
+                  return (
+                    <div className="pointer-events-none absolute inset-0 z-20">
+                      <div
+                        className={`absolute table-complete-ring ${shape === "round" ? "rounded-full" : "rounded-lg"}`}
+                        style={{ left: "8%", top: "8%", width: "74%", height: "74%" }}
+                      />
+                      <span
+                        className="absolute flex h-[22%] min-h-[14px] aspect-square items-center justify-center rounded-full bg-amber-500 text-white shadow ring-2 ring-white"
+                        style={{ left: "72%", top: "6%", fontSize: "clamp(8px, 10cqw, 18px)" }}
+                      >
+                        ✓
+                      </span>
+                    </div>
+                  );
+                })()}
                 {flashing[id] && (
                   // A guest just arrived: glowing ring + big flashing number
                   <div className="pointer-events-none absolute inset-0 z-30">
@@ -2075,9 +2209,33 @@ export function FloorPlanCanvas({
                           className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
                         >
                           <span className="w-12 text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
+                          {/* VIP star: the dashboard announces VIPs when they arrive */}
+                          <button
+                            type="button"
+                            onClick={() => s.user && updateGuest(s.user.id, { vip: !s.user.vip })}
+                            className={`text-base leading-none ${s.user?.vip ? "text-amber-500" : "text-zinc-300 hover:text-amber-400"}`}
+                            title={s.user?.vip ? "VIP (click to remove)" : "Mark as VIP"}
+                            aria-label="VIP"
+                          >
+                            ★
+                          </button>
                           <span className="flex-1 font-medium text-zinc-800">
                             {`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"}
                           </span>
+                          {/* meal choice */}
+                          <input
+                            key={`${s.id}-${s.user?.meal ?? ""}`}
+                            defaultValue={s.user?.meal ?? ""}
+                            list="meal-options"
+                            placeholder="Meal"
+                            className="w-20 rounded border border-zinc-200 px-1.5 py-0.5 text-xs"
+                            onFocus={() => (zoomPinned.current = true)}
+                            onBlur={(e) => {
+                              const v = e.target.value.trim();
+                              if (s.user && v !== (s.user.meal ?? "")) updateGuest(s.user.id, { meal: v || null });
+                            }}
+                            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                          />
                           <button
                             type="button"
                             onClick={() => removeFromSeat(s.id)}
@@ -2092,6 +2250,25 @@ export function FloorPlanCanvas({
                   </ul>
                 )
               )}
+
+              <datalist id="meal-options">
+                {["Chicken", "Fish", "Beef", "Veg", "Kids"].map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+              {/* meal counts for this table (for the caterer) */}
+              {(() => {
+                const counts = new Map<string, number>();
+                for (const b of booked) {
+                  const m = b.user?.meal?.trim();
+                  if (m) counts.set(m, (counts.get(m) ?? 0) + 1);
+                }
+                return counts.size ? (
+                  <p className="mt-2 text-xs text-zinc-600">
+                    <b>Meals:</b> {[...counts.entries()].map(([m, n]) => `${n} ${m}`).join(" · ")}
+                  </p>
+                ) : null;
+              })()}
 
               {/* CHECK IN: everyone registered here. Click a name to mark them arrived. */}
               {cardMode === "checkin" && (booked.length === 0 ? (
@@ -2154,7 +2331,10 @@ export function FloorPlanCanvas({
                               >
                                 {s.isReceived && <Check className="h-3.5 w-3.5" />}
                               </button>
-                              <span className="flex-1 font-medium">{name}</span>
+                              <span className="flex-1 font-medium">
+                                {s.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
+                                {name}
+                              </span>
                               {s.isReceived && (
                                 <span className="text-xs font-semibold text-green-700">Arrived · untick to undo</span>
                               )}
