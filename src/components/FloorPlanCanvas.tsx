@@ -1273,18 +1273,21 @@ export function FloorPlanCanvas({
             }),
           5000
         );
-      }, i * 700 + 1600);
-      // pop out at the table, then fly to the Arrived list
-      setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 700);
+      }, i * 350 + 1600);
+      // Pop up in the MIDDLE of the room, one under another when several
+      // arrive together; after a few seconds the whole group slides to the
+      // Arrived list on the left
+      const leaveAt = (fresh.length - 1) * 350 + 3800;
+      setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 350);
       setTimeout(
         () => setPopups((p) => p.map((x) => (x.seatId === a.seatId ? { ...x, phase: "fly" } : x))),
-        i * 700 + 2600
+        leaveAt + i * 120
       );
       setTimeout(() => {
         setPopups((p) => p.filter((x) => x.seatId !== a.seatId));
         setArrivals((prev) => [item, ...prev.filter((x) => x.seatId !== a.seatId)]);
         setLastArrived(a.seatId); // this name flashes in the Arrived list
-      }, i * 700 + 3300);
+      }, leaveAt + i * 120 + 800);
     });
   }, [arrivedNow, tables.length]);
 
@@ -1943,6 +1946,56 @@ export function FloorPlanCanvas({
           ))}
         </div>
       )}
+        {/* A guest just arrived: their name pops up in the MIDDLE of the
+            room (a group goes one under another), then slides off to the
+            Arrived list on the left */}
+        {popups.length > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-[60] flex flex-col items-center justify-center gap-2 overflow-hidden p-2">
+            <AnimatePresence>
+              {popups.map((p) => {
+                // many at once: smaller cards so they all fit down the middle
+                const small = popups.length > 4;
+                return (
+                  <motion.div
+                    key={p.seatId}
+                    layout
+                    initial={{ opacity: 0, scale: 0.3, x: 0 }}
+                    animate={
+                      p.phase === "pop"
+                        ? { opacity: 1, scale: [0.3, 1.12, 1], x: 0 }
+                        : { opacity: 0, scale: 0.6, x: "-70vw" }
+                    }
+                    exit={{ opacity: 0 }}
+                    transition={p.phase === "pop" ? { duration: 0.55 } : { duration: 0.8, ease: "easeIn" }}
+                    className={`rounded-2xl text-center whitespace-nowrap shadow-2xl ring-4 ${
+                      small ? "px-4 py-1" : "px-6 py-2.5"
+                    } ${
+                      p.vip
+                        ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 ring-amber-200"
+                        : "bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white ring-green-200"
+                    }`}
+                  >
+                    {small ? (
+                      <div className="text-base sm:text-xl font-extrabold leading-tight">
+                        {p.vip ? "⭐ " : "🎉 "}
+                        {p.name} <span className="text-sm font-semibold opacity-90">· {p.table}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-xs font-semibold uppercase tracking-widest opacity-90">
+                          {p.vip ? "⭐ VIP · Welcome" : "🎉 Welcome"}
+                        </div>
+                        <div className="text-2xl sm:text-4xl font-extrabold leading-tight">{p.name}!</div>
+                        <div className="text-base sm:text-xl font-semibold opacity-90">{p.table}</div>
+                      </>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+
       <div
         ref={canvasRef}
         className="absolute"
@@ -2030,50 +2083,6 @@ export function FloorPlanCanvas({
               )}
             </div>
           ))}
-
-        {/* A guest just arrived: their name pops out of their table, then
-            flies off to the Arrived list on the left */}
-        <AnimatePresence>
-          {popups.map((p) => {
-            const pos = positions[p.tableId];
-            if (!pos) return null;
-            // The name card sits just ABOVE the table (or below it near the
-            // top edge) so the table's flashing number stays visible
-            const t = tables.find((x) => tableIdOf(x) === p.tableId);
-            const box = t ? tableBox(t) : { width: 8, ratio: 1 };
-            const halfH = (box.width / box.ratio / 2) * aspect;
-            const above = pos.y - halfH > 14;
-            const anchorY = above ? pos.y - halfH * 1.05 : pos.y + halfH * 1.05;
-            return (
-              <motion.div
-                key={p.seatId}
-                className="absolute z-[60] pointer-events-none"
-                initial={{ left: `${pos.x}%`, top: `${anchorY}%`, opacity: 0, scale: 0.3 }}
-                animate={
-                  p.phase === "pop"
-                    ? { left: `${pos.x}%`, top: `${anchorY}%`, opacity: 1, scale: [0.3, 1.15, 1] }
-                    : { left: "-12%", top: `${Math.max(5, pos.y - 20)}%`, opacity: 0, scale: 0.5 }
-                }
-                exit={{ opacity: 0 }}
-                transition={p.phase === "pop" ? { duration: 0.6 } : { duration: 0.7, ease: "easeIn" }}
-              >
-                <div
-                  className={`-translate-x-1/2 ${above ? "-translate-y-full" : ""} rounded-2xl px-5 py-2.5 text-center whitespace-nowrap shadow-2xl ring-4 ${
-                    p.vip
-                      ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 ring-amber-200"
-                      : "bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white ring-green-200"
-                  }`}
-                >
-                  <div className="text-xs font-semibold uppercase tracking-widest opacity-90">
-                    {p.vip ? "⭐ VIP · Welcome" : "🎉 Welcome"}
-                  </div>
-                  <div className="text-lg sm:text-2xl font-extrabold leading-tight">{p.name}!</div>
-                  <div className="text-sm sm:text-base font-semibold opacity-90">{p.table}</div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
 
         {/* Entrance pins (shown while setting them); click the room to add one */}
         {settingEntrance && (
