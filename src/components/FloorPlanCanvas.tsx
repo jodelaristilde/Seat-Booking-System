@@ -744,6 +744,8 @@ export function FloorPlanCanvas({
   };
 
   // ---------- Normal floor plan ----------
+  // tables shown at another spot because they were on top of another table
+  const movedTablesRef = useRef<{ name: string; onto: string }[]>([]);
   const positions = useMemo(() => {
     const unplaced = tables.filter((t) => {
       const id = tableIdOf(t);
@@ -755,8 +757,53 @@ export function FloorPlanCanvas({
       const id = tableIdOf(t);
       result[id] = draft?.[id] ?? saved[id] ?? auto[unplaced.indexOf(t)];
     });
+    // Two tables on the same spot would show only one number. Outside of
+    // "Move tables", a table that lands on another one is shown at the
+    // nearest free spot instead (tables you placed yourself keep theirs first).
+    const moved: { name: string; onto: string }[] = [];
+    if (!draft) {
+      const widthOf = (t: TableData) => {
+        const sw = Number(t.seats[0]?.table?.sizeW) || 0;
+        return sw > 0 ? (sw / 0.66) * (tableSize / 12) : tableSize;
+      };
+      const order = [...tables].sort(
+        (a, b) => Number(!saved[tableIdOf(a)]) - Number(!saved[tableIdOf(b)])
+      );
+      const kept: TableData[] = [];
+      const clash = (t: TableData, p: Pos) =>
+        kept.find((o) => {
+          const q = result[tableIdOf(o)];
+          const need = ((widthOf(t) + widthOf(o)) / 2) * 0.62;
+          return Math.hypot(p.x - q.x, (p.y - q.y) / aspect) < need;
+        });
+      for (const t of order) {
+        const id = tableIdOf(t);
+        const hit = clash(t, result[id]);
+        if (hit) {
+          const start = result[id];
+          const step = widthOf(t) * 0.8;
+          let best: Pos | null = null;
+          for (let ring = 1; ring <= 12 && !best; ring++) {
+            for (let k = 0; k < 8 * ring && !best; k++) {
+              const ang = (k / (8 * ring)) * Math.PI * 2;
+              const cand = {
+                x: Math.min(97, Math.max(3, start.x + Math.cos(ang) * step * ring)),
+                y: Math.min(97, Math.max(3, start.y + Math.sin(ang) * step * ring * aspect)),
+              };
+              if (!clash(t, cand)) best = cand;
+            }
+          }
+          if (best) {
+            result[id] = best;
+            moved.push({ name: tableNameOf(t), onto: tableNameOf(hit) });
+          }
+        }
+        kept.push(t);
+      }
+    }
+    movedTablesRef.current = moved;
     return result;
-  }, [tables, saved, draft]);
+  }, [tables, saved, draft, tableSize, aspect]);
 
   const startEditing = () => {
     setDraftShapes({});
@@ -801,6 +848,21 @@ export function FloorPlanCanvas({
       ? { width: tableSize * 1.6, ratio: 2 }
       : { width: tableSize, ratio: 1 };
   };
+  // Pairs of tables sitting on top of each other (centres too close)
+  const stackedPairs = (pos: Record<string, Pos>) => {
+    const out: [string, string][] = [];
+    for (let i = 0; i < tables.length; i++) {
+      for (let j = i + 1; j < tables.length; j++) {
+        const a = tables[i], b = tables[j];
+        const p = pos[tableIdOf(a)], q = pos[tableIdOf(b)];
+        if (!p || !q) continue;
+        const need = ((tableBox(a).width + tableBox(b).width) / 2) * 0.62;
+        if (Math.hypot(p.x - q.x, (p.y - q.y) / aspect) < need) out.push([tableNameOf(a), tableNameOf(b)]);
+      }
+    }
+    return out;
+  };
+
   const withShape = (t: TableData): TableData => {
     const shape = shapeOf(t);
     const { ratio } = tableBox(t);
@@ -821,6 +883,13 @@ export function FloorPlanCanvas({
 
   const saveLayout = async () => {
     if (!draft) return;
+    const stacked = stackedPairs({ ...positions, ...draft });
+    if (stacked.length) {
+      toast.error("Two tables are on top of each other", {
+        description: stacked.map(([a, b]) => `${a} and ${b}`).join(", ") + ". Drag them apart, then Save layout.",
+      });
+      return;
+    }
     setSaving(true);
     try {
       const body = {
@@ -934,6 +1003,17 @@ export function FloorPlanCanvas({
     if (b.w < 1.5 || b.h < 1.5) {
       // A click (no drag): find the table under the mouse on the picture
       await addClickedTable(box.x0, box.y0);
+      return;
+    }
+    const cx = b.x, cy = b.y;
+    const under = tables.find((t) => {
+      const p = positions[tableIdOf(t)];
+      if (!p) return false;
+      const half = tableBox(t).width * 0.45;
+      return Math.abs(p.x - cx) < half && Math.abs(p.y - cy) < half * aspect;
+    });
+    if (under) {
+      toast.message(`${tableNameOf(under)} is already there. Draw the new table in an empty spot.`);
       return;
     }
     setDrawBusy(true);
@@ -1124,8 +1204,14 @@ export function FloorPlanCanvas({
   };
 
   const onPointerUp = () => {
+    const d = dragging.current;
     resizing.current = null;
     dragging.current = null;
+    if (d && editing && draft) {
+      const t = tables.find((x) => tableIdOf(x) === d.id);
+      const hit = t && stackedPairs({ ...positions, ...draft }).find(([a, b]) => a === tableNameOf(t) || b === tableNameOf(t));
+      if (hit) toast.error(`${hit[0]} and ${hit[1]} are on top of each other. Move one of them.`);
+    }
   };
 
   const pickedCount = review?.filter((r) => r.picked).length ?? 0;
@@ -1931,6 +2017,13 @@ export function FloorPlanCanvas({
               }
         }
       >
+      {/* A table was on top of another one: say so, so it can be fixed */}
+      {!working && movedTablesRef.current.length > 0 && (
+        <div className="absolute bottom-2 left-2 z-[66] max-w-[90%] rounded-lg border border-red-300 bg-red-50/95 px-3 py-1.5 text-xs font-semibold text-red-800 shadow">
+          ⚠ {movedTablesRef.current.map((m) => `${m.name} was on top of ${m.onto}`).join(" · ")}. It is shown next to
+          it for now. Click <b>Move tables</b>, drag it to its real spot, then <b>Save layout</b>.
+        </div>
+      )}
       {/* VIP just arrived */}
       {vipBanners.length > 0 && (
         <div className="pointer-events-none absolute left-1/2 top-3 z-[70] flex -translate-x-1/2 flex-col items-center gap-2">
