@@ -1781,21 +1781,29 @@ export function FloorPlanCanvas({
           {popups.map((p) => {
             const pos = positions[p.tableId];
             if (!pos) return null;
+            // The name card sits just ABOVE the table (or below it near the
+            // top edge) so the table's flashing number stays visible
+            const t = tables.find((x) => tableIdOf(x) === p.tableId);
+            const box = t ? tableBox(t) : { width: 8, ratio: 1 };
+            const halfH = (box.width / box.ratio / 2) * aspect;
+            const above = pos.y - halfH > 14;
+            const anchorY = above ? pos.y - halfH * 1.05 : pos.y + halfH * 1.05;
             return (
               <motion.div
                 key={p.seatId}
                 className="absolute z-[60] pointer-events-none"
-                style={{ transform: "translate(-50%, -50%)" }}
-                initial={{ left: `${pos.x}%`, top: `${pos.y}%`, opacity: 0, scale: 0.3 }}
+                initial={{ left: `${pos.x}%`, top: `${anchorY}%`, opacity: 0, scale: 0.3 }}
                 animate={
                   p.phase === "pop"
-                    ? { left: `${pos.x}%`, top: `${pos.y}%`, opacity: 1, scale: [0.3, 1.15, 1] }
+                    ? { left: `${pos.x}%`, top: `${anchorY}%`, opacity: 1, scale: [0.3, 1.15, 1] }
                     : { left: "-12%", top: `${Math.max(5, pos.y - 20)}%`, opacity: 0, scale: 0.5 }
                 }
                 exit={{ opacity: 0 }}
                 transition={p.phase === "pop" ? { duration: 0.6 } : { duration: 0.7, ease: "easeIn" }}
               >
-                <div className="-translate-x-1/2 -translate-y-1/2 rounded-xl bg-green-600 text-white shadow-2xl px-4 py-2 text-center whitespace-nowrap ring-4 ring-green-200">
+                <div
+                  className={`-translate-x-1/2 ${above ? "-translate-y-full" : ""} rounded-xl bg-green-600 text-white shadow-2xl px-4 py-2 text-center whitespace-nowrap ring-4 ring-green-200`}
+                >
                   <div className="text-lg sm:text-2xl font-bold leading-tight">{p.name}</div>
                   <div className="text-sm sm:text-base opacity-90">arrived · {p.table}</div>
                 </div>
