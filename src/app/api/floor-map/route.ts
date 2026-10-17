@@ -1,16 +1,19 @@
 // app/api/floor-map/route.ts
-import { activeEventId } from "@/lib/event";
+import { activeEventId, eventExists } from "@/lib/event";
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 // GET - Fetch the floor map (returns the most recent image)
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // ?event=... picks the event (the guest's own event on the phone page)
+    const asked = request.nextUrl.searchParams.get("event");
+    const eventId = asked && (await eventExists(asked)) ? asked : await activeEventId();
     // Get the most recent image (assuming floor map is the latest uploaded)
     const image = await prisma.image.findFirst({
-      where: { eventId: await activeEventId() },
+      where: { eventId },
       orderBy: {
         createdAt: 'desc',
       },

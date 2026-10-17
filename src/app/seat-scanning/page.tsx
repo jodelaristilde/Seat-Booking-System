@@ -17,6 +17,8 @@ interface User {
   id: string;
   firstname: string;
   lastname: string;
+  eventId?: string | null;
+  eventName?: string | null;
   seat: Array<{
     id: string;
     seat: number;
@@ -149,12 +151,23 @@ export default function SeatScanning() {
   // Opened from an event's QR code (?event=...): this phone uses that event,
   // so guests only find names from their own event (several can run at once)
   const [eventName, setEventName] = useState<string | null>(null);
+  // Which event this phone is on. Empty = the general QR code: search every event.
+  const [eventId, setEventId] = useState<string | null>(null);
+  const chooseEvent = (id: string) => {
+    setEventId(id);
+    // remembers the event on this phone (for "more guests" and the floor map)
+    fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((j) => j.success && setEventName(j.event.name))
+      .catch(() => undefined);
+  };
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("event");
     if (!id) {
       setIsLoading(false);
       return;
     }
+    setEventId(id);
     fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
       .then((j) => {
@@ -172,7 +185,7 @@ export default function SeatScanning() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}`);
+        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? "" : "&all=1"}`);
         const data = await response.json();
         if (!cancelled && data.success) setAllUsers(data.data);
       } catch (error) {
@@ -183,13 +196,15 @@ export default function SeatScanning() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [searchValue]);
+  }, [searchValue, eventId]);
 
   // Fetch floor map
   const fetchFloorMap = async () => {
     setLoadingFloorMap(true);
     try {
-      const response = await fetch("/api/floor-map");
+      const response = await fetch(
+        `/api/floor-map${eventId || selectedUser?.eventId ? `?event=${encodeURIComponent(eventId || selectedUser?.eventId || "")}` : ""}`
+      );
       const data = await response.json();
 
       if (data.image) {
@@ -224,6 +239,8 @@ export default function SeatScanning() {
   }, [searchValue, allUsers]);
 
   const handleUserSelect = async (user: User) => {
+    // General QR code: from now on this phone uses the guest's own event
+    if (!eventId && user.eventId) chooseEvent(user.eventId);
     setSelectedUser(user);
     setSearchValue(`${user.firstname} ${user.lastname}`);
     setNoSeatFound(false);
@@ -370,6 +387,14 @@ export default function SeatScanning() {
                                   <span className="flex-1 font-medium">
                                     {user.firstname} {user.lastname}
                                   </span>
+                                  {/* general QR code: say which event, when matches come from several */}
+                                  {!eventId &&
+                                    user.eventName &&
+                                    new Set(filteredUsers.map((u) => u.eventId)).size > 1 && (
+                                      <span className="ml-2 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
+                                        {user.eventName}
+                                      </span>
+                                    )}
                                 </button>
                               ))}
                             </div>

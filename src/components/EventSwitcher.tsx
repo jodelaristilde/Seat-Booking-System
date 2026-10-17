@@ -238,7 +238,7 @@ export function EventSwitcher() {
               <QRCodeCanvas id="event-qr" value={qrLink(qrFor)} size={260} level="M" marginSize={2} />
               <p className="break-all text-center text-xs text-zinc-500">{qrLink(qrFor)}</p>
               <p className="text-center text-sm text-zinc-600">
-                Print this at the entrance of <b>{qrFor.name}</b>. Guests who scan it only see this event&apos;s guest list.
+                Optional: guests who scan this code only see <b>{qrFor.name}</b>&apos;s guest list. Your usual Seating4U QR code (the one on your banners) works for every event too: guests type their name and are found in their own event.
               </p>
               <Button onClick={() => downloadQr(qrFor)}>
                 <Download className="mr-1 h-4 w-4" /> Download QR code
