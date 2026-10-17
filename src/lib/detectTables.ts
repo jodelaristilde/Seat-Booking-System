@@ -284,6 +284,7 @@ export function readingOrder<T extends { x: number; y: number; h: number }>(item
 interface AreaMap {
   W: number;
   H: number;
+  px: Uint8ClampedArray;
   label: Int32Array;
   areas: { area: number; minX: number; minY: number; maxX: number; maxY: number; sx: number; sy: number; edge: boolean }[];
   canvas: HTMLCanvasElement;
@@ -356,21 +357,130 @@ async function areaMap(src: string): Promise<AreaMap> {
     }
     areas.push(r);
   }
-  const map = { W, H, label, areas, canvas };
+  const map = { W, H, px, label, areas, canvas };
   areaCache = { src, map };
   return map;
 }
 
-export async function shapeAtPoint(
-  src: string,
-  xPct: number,
-  yPct: number
-): Promise<{ shape: DetectedShape; chairs: number; canvas: HTMLCanvasElement } | null> {
+type ClickResult = { shape: DetectedShape; chairs: number; canvas: HTMLCanvasElement } | null;
+
+// Works on any picture:
+// - tables drawn as outlines (white inside): the closed area under the click
+// - tables filled with a colour (orange, grey...): the patch of that colour
+//   under the click, wherever its colour changes is its edge
+export async function shapeAtPoint(src: string, xPct: number, yPct: number): Promise<ClickResult> {
   const m = await areaMap(src);
-  const { W, H, label, areas } = m;
-  const total = W * H;
+  const { W, H, px } = m;
   const cx = Math.round((xPct / 100) * (W - 1));
   const cy = Math.round((yPct / 100) * (H - 1));
+  const seed = dominantColour(px, W, H, cx, cy);
+  const whiteInside = seed && seed[0] > 225 && seed[1] > 225 && seed[2] > 225;
+  if (!seed || whiteInside) {
+    const r = outlineShapeAtPoint(m, cx, cy);
+    if (r) return r;
+  }
+  return colourShapeAtPoint(m, cx, cy, seed) ?? (whiteInside ? null : outlineShapeAtPoint(m, cx, cy));
+}
+
+// The most common colour near the click, ignoring dark text and lines
+function dominantColour(px: Uint8ClampedArray, W: number, H: number, cx: number, cy: number) {
+  const R = Math.max(4, Math.round(Math.min(W, H) * 0.012));
+  const counts = new Map<number, { n: number; r: number; g: number; b: number }>();
+  for (let y = Math.max(0, cy - R); y <= Math.min(H - 1, cy + R); y++)
+    for (let x = Math.max(0, cx - R); x <= Math.min(W - 1, cx + R); x++) {
+      const o = (y * W + x) * 4;
+      const r = px[o], g = px[o + 1], b = px[o + 2];
+      if ((r * 299 + g * 587 + b * 114) / 1000 < 70) continue; // text / lines
+      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+      const c = counts.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+      c.n++; c.r += r; c.g += g; c.b += b;
+      counts.set(key, c);
+    }
+  let best: { n: number; r: number; g: number; b: number } | null = null;
+  for (const c of counts.values()) if (!best || c.n > best.n) best = c;
+  return best ? [best.r / best.n, best.g / best.n, best.b / best.n] : null;
+}
+
+function colourShapeAtPoint(m: AreaMap, cx: number, cy: number, seed: number[] | null): ClickResult {
+  if (!seed) return null;
+  const { W, H, px } = m;
+  const total = W * H;
+  for (const tol of [60, 40, 26]) {
+    const near = (i: number) => {
+      const o = i * 4;
+      return (
+        Math.abs(px[o] - seed[0]) <= tol &&
+        Math.abs(px[o + 1] - seed[1]) <= tol &&
+        Math.abs(px[o + 2] - seed[2]) <= tol
+      );
+    };
+    // start from every matching pixel close to the click (so clicking on the
+    // table's text still works)
+    const seen = new Uint8Array(total);
+    const stack: number[] = [];
+    const R = Math.max(3, Math.round(Math.min(W, H) * 0.01));
+    for (let y = Math.max(0, cy - R); y <= Math.min(H - 1, cy + R); y++)
+      for (let x = Math.max(0, cx - R); x <= Math.min(W - 1, cx + R); x++) {
+        const i = y * W + x;
+        if (near(i)) { seen[i] = 1; stack.push(i); }
+      }
+    if (!stack.length) continue;
+    let area = 0, minX = W, minY = H, maxX = 0, maxY = 0, edge = false, tooBig = false;
+    const rowMin = new Int32Array(H).fill(W);
+    const rowMax = new Int32Array(H).fill(-1);
+    while (stack.length) {
+      const p = stack.pop()!;
+      const x = p % W;
+      const y = (p - x) / W;
+      area++;
+      if (area > total * 0.06) { tooBig = true; break; }
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      if (x < rowMin[y]) rowMin[y] = x;
+      if (x > rowMax[y]) rowMax[y] = x;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) edge = true;
+      if (x > 0 && !seen[p - 1] && near(p - 1)) { seen[p - 1] = 1; stack.push(p - 1); }
+      if (x < W - 1 && !seen[p + 1] && near(p + 1)) { seen[p + 1] = 1; stack.push(p + 1); }
+      if (y > 0 && !seen[p - W] && near(p - W)) { seen[p - W] = 1; stack.push(p - W); }
+      if (y < H - 1 && !seen[p + W] && near(p + W)) { seen[p + W] = 1; stack.push(p + W); }
+    }
+    if (tooBig || edge) continue; // leaked into the background: be stricter
+    if (area < total * 0.0004) return null;
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    // fill measured with the text holes closed (row by row)
+    let solid = 0;
+    for (let y = minY; y <= maxY; y++) if (rowMax[y] >= rowMin[y]) solid += rowMax[y] - rowMin[y] + 1;
+    const fill = solid / (bw * bh);
+    const aspect = bw / bh;
+    const long = aspect > 1.6 || aspect < 0.625;
+    const squareish = aspect > 0.8 && aspect < 1.25;
+    const shape: Shape = long ? "rectangle" : fill < 0.88 ? "round" : squareish ? "square" : "rectangle";
+    return {
+      shape: {
+        key: `k${minX}_${minY}`,
+        x: ((minX + bw / 2) / W) * 100,
+        y: ((minY + bh / 2) / H) * 100,
+        w: (bw / W) * 100,
+        h: (bh / H) * 100,
+        shape,
+        likelyTable: true,
+        text: "",
+      },
+      chairs: 0,
+      canvas: m.canvas,
+    };
+  }
+  return null;
+}
+
+function outlineShapeAtPoint(m: AreaMap, cx0: number, cy0: number): ClickResult {
+  const { W, H, label, areas } = m;
+  const total = W * H;
+  const cx = cx0;
+  const cy = cy0;
   const ok = (id: number) => {
     if (id < 0) return false;
     const a = areas[id];
