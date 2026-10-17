@@ -10,7 +10,6 @@ import {
   X,
   ImageIcon,
   LayoutGrid,
-  ScanSearch,
   PenLine,
   PanelLeftClose,
   PanelRightOpen,
@@ -381,6 +380,8 @@ export function FloorPlanCanvas({
   }, [loadPicture]);
 
   // ---------- Read tables from the picture ----------
+  // Reading tables from the picture is switched off (not needed); kept for later
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const startReview = useCallback(
     async (src?: string | null) => {
       const pic = src ?? picture;
@@ -458,13 +459,13 @@ export function FloorPlanCanvas({
     [picture]
   );
 
-  // A new picture was uploaded: show it and offer its tables right away
+  // A new picture was uploaded: just show it (tables are added with
+  // "Draw tables": click a table in the picture, or drag to draw one)
   useEffect(() => {
     const pending = window as unknown as { __floorMapPending?: boolean };
     const onUploaded = async () => {
       pending.__floorMapPending = false;
-      const src = await loadPicture();
-      if (src) startReview(src);
+      await loadPicture();
     };
     // Uploaded while the grid view was showing: do it now that we are open
     if (pending.__floorMapPending) onUploaded();
@@ -478,7 +479,7 @@ export function FloorPlanCanvas({
       window.removeEventListener("floor-map-uploaded", onUploaded);
       window.removeEventListener("floor-map-deleted", onDeleted);
     };
-  }, [loadPicture, startReview]);
+  }, [loadPicture]);
 
   const updateItem = (key: string, change: Partial<ReviewItem>) =>
     setReview((prev) => prev?.map((it) => (it.key === key ? { ...it, ...change } : it)) ?? prev);
@@ -1452,11 +1453,6 @@ export function FloorPlanCanvas({
             <Button onClick={startEditing} size="sm" variant="outline">
               <Move className="w-4 h-4 mr-2" /> Move tables
             </Button>
-            {picture && (
-              <Button onClick={() => startReview()} size="sm" variant="outline">
-                <ScanSearch className="w-4 h-4 mr-2" /> Read tables from picture
-              </Button>
-            )}
             {picture && tables.length > 0 && (
               <Button
                 onClick={async () => {
