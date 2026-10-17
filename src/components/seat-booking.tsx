@@ -642,7 +642,7 @@ const handleTableClick = () => {
         )}
         {/* Center Table Label */}
         <div
-          className={`absolute items-center flex flex-col z-10 transform -translate-x-1/2 -translate-y-1/2 ${
+          className={`absolute items-center flex flex-col ${inFloorPlan && !shortName ? "z-30" : "z-10"} transform -translate-x-1/2 -translate-y-1/2 ${
             inFloorPlan ? "gap-0.5" : "gap-2 top-1/2 left-1/2"
           }`}
           // On the floor plan the name stays inside the tabletop, clear of the seats
@@ -651,21 +651,28 @@ const handleTableClick = () => {
               ? {
                   left: "45%",
                   top: "45%",
-                  // a short name (a number) may be as wide as it needs
-                  maxWidth: shortName ? "none" : hideSeats ? "76%" : "58%",
+                  // a short name (a number) may be as wide as it needs; a longer
+                  // name may go over the seats so it stays big enough to read
+                  maxWidth: shortName ? "none" : "120%",
+                  width: shortName ? undefined : "max-content",
                 }
               : undefined
           }
         >
           <div
-            className={`relative ${tableColor} rounded-full transition-all duration-200 ease-in-out cursor-pointer hover:shadow-lg ${
-              inFloorPlan ? "px-1.5 py-0 max-w-full" : "px-4 py-2 mt-5 ml-5"
+            className={`relative ${
+              inFloorPlan && !shortName
+                ? // a name (not a number): dark bold letters on a white label, easy to read
+                  "bg-white text-zinc-900 ring-1 ring-zinc-400 shadow-md rounded-md"
+                : `${tableColor} rounded-full`
+            } transition-all duration-200 ease-in-out cursor-pointer hover:shadow-lg ${
+              inFloorPlan ? (shortName ? "px-1.5 py-0 max-w-full" : "px-1.5 py-0.5 max-w-full") : "px-4 py-2 mt-5 ml-5"
             }`}
             onClick={handleTableClick}
           >
             <span className="flex items-center justify-center">
               <span
-                className={`font-semibold text-center ${
+                className={`${inFloorPlan && !shortName ? "font-extrabold tracking-tight" : "font-semibold"} text-center ${
                   inFloorPlan
                     ? `block ${shortName ? "leading-tight whitespace-nowrap" : "leading-none whitespace-normal break-normal [word-break:keep-all] max-w-full"}`
                     : "text-lg"
@@ -680,16 +687,19 @@ const handleTableClick = () => {
                             ? `var(--table-num, ${isRect ? "clamp(14px, 12cqw, 56px)" : "clamp(14px, 24cqw, 64px)"})`
                             : fitNameFont(
                                 displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "") || displayName,
-                                hideSeats ? 76 : 58,
+                                120,
                                 isRect,
                               ),
                       }
                     : undefined
                 }
               >
-                {/* On the floor plan "Table 12" is shown as just "12" so it fits */}
+                {/* On the floor plan "Table 12" is shown as just "12" so it fits;
+                    a longer name with spaces goes on two balanced lines */}
                 {inFloorPlan
-                  ? displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "") || displayName
+                  ? nameLines(displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "") || displayName).map((line, i) => (
+                      <span key={i} className="block whitespace-nowrap">{line}</span>
+                    ))
                   : displayName}
               </span>
             </span>
@@ -1669,14 +1679,30 @@ const handleTableClick = () => {
 
 // Font size so a table name (like "JODEL" or "Head Table") fits inside the
 // tabletop instead of being cut to "J...". Long names may use two lines.
+// "Head Table Family" -> ["Head Table", "Family"]: two lines of about equal
+// length, never splitting a word. Short names stay on one line.
+function nameLines(name: string): string[] {
+  const t = name.trim();
+  const words = t.split(/\s+/);
+  if (words.length < 2 || t.length <= 8) return [t];
+  let best = [t], bestDiff = Infinity;
+  for (let k = 1; k < words.length; k++) {
+    const a = words.slice(0, k).join(" "), b = words.slice(k).join(" ");
+    const diff = Math.max(a.length, b.length);
+    if (diff < bestDiff) { bestDiff = diff; best = [a, b]; }
+  }
+  return best;
+}
+
 function fitNameFont(name: string, maxWidthPct: number, isRect: boolean) {
-  const n = name.trim().length || 1;
   const words = name.trim().split(/\s+/);
   const longestWord = Math.max(...words.map((w) => w.length));
-  const perLine = words.length > 1 && n > 8 ? Math.max(longestWord, Math.ceil(n / 2)) : n;
-  // a bold capital letter is up to about 0.9 of the font size wide; 12px is the pill's padding
+  // two lines for longer names with spaces, never splitting a word
+  const perLine = Math.max(longestWord, ...nameLines(name).map((l) => l.length), 1);
+  // a bold capital is up to about 0.85 of the font size wide; 12px is the label's padding
   const width = isRect ? maxWidthPct * 0.55 : maxWidthPct;
-  return `clamp(6px, calc((${width}cqw - 12px) / ${(perLine * 0.9).toFixed(2)}), ${isRect ? 30 : 32}px)`;
+  const fit = `calc((${width}cqw - 12px) / ${(perLine * 0.85).toFixed(2)})`;
+  return `clamp(10px, min(${fit}, ${isRect ? 9 : 17}cqw), 30px)`;
 }
 
 export default SeatBooking;
