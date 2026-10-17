@@ -1151,7 +1151,8 @@ export function FloorPlanCanvas({
     knownArrivals.current = ids;
     fresh.forEach((a, i) => {
       const item = { ...a, at: Date.now() };
-      // the arriving guest's table number flashes for a few seconds
+      // the table number starts flashing 1 second before the name card
+      // leaves, and keeps flashing for 5 seconds
       setTimeout(() => {
         setFlashing((f) => ({ ...f, [a.tableId]: (f[a.tableId] ?? 0) + 1 }));
         setTimeout(
@@ -1163,9 +1164,9 @@ export function FloorPlanCanvas({
               else next[a.tableId] = n;
               return next;
             }),
-          3800
+          5000
         );
-      }, i * 700);
+      }, i * 700 + 1600);
       // pop out at the table, then fly to the Arrived list
       setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 700);
       setTimeout(
@@ -1289,10 +1290,10 @@ export function FloorPlanCanvas({
     <style>{`
       @keyframes tableArriveRing { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.0); border-color: rgba(34,197,94,.4) }
         50% { box-shadow: 0 0 0 10px rgba(34,197,94,.45), 0 0 28px 8px rgba(34,197,94,.6); border-color: rgb(22,163,74) } }
-      .table-arrive-ring { border: 4px solid rgb(22,163,74); animation: tableArriveRing .7s ease-in-out 5; }
+      .table-arrive-ring { border: 4px solid rgb(22,163,74); animation: tableArriveRing .7s ease-in-out 7; }
       @keyframes tableArriveNum { 0%,100% { opacity: 1; transform: translate(-50%,-50%) scale(1) }
         50% { opacity: .35; transform: translate(-50%,-50%) scale(1.35) } }
-      .table-arrive-num { animation: tableArriveNum .7s ease-in-out 5; }
+      .table-arrive-num { animation: tableArriveNum .7s ease-in-out 7; }
     `}</style>
     <div
       className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
