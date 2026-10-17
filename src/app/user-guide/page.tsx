@@ -290,7 +290,7 @@ export default function UserGuide() {
         <Section id="extras" number={6} title="Event day extras">
           <Card title="Make the night shine">
             <ul className="space-y-2 text-zinc-700">
-              <li>• <b>Welcome TV</b>: Menu ☰ → <b>Welcome TV screen</b>. Put it on a TV at the entrance and click Full screen. Each arriving guest sees &quot;Welcome, Name! You&apos;re at Table 9&quot; with the way to their table.</li>
+              <li>• <b>Welcome</b>: in full screen the dashboard shows &quot;Welcome to&quot; your event, and each arriving guest pops up with &quot;🎉 Welcome, Name!&quot; and their table.</li>
               <li>• <b>Arrival sound</b>: a soft chime for each arrival (a special one for VIPs). Turn it on/off with <b>Arrival sound</b>.</li>
               <li>• <b>Flashing &amp; gold tables</b>: a table&apos;s number flashes when a guest arrives; when everyone at a table is in, it turns gold with a ✓.</li>
               <li>• <b>VIP alerts</b>: point at a table and click the ★ next to a guest. When a VIP arrives, a gold banner appears on the dashboard.</li>

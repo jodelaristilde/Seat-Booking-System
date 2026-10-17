@@ -1138,7 +1138,7 @@ export function FloorPlanCanvas({
     const measure = () => {
       const r = el.getBoundingClientRect();
       // instructions above the room take some height while editing
-      const note = working ? 44 : roomOnly ? 66 : 22; // instructions, or the totals heading + arrival bar
+      const note = working ? 44 : roomOnly ? 78 : 22; // instructions, or the totals heading + arrival bar
       // leave room for the footer (logo) at the bottom, except in full screen
       const footer = !roomOnly && window.innerWidth >= 1024 ? document.querySelector("footer") : null;
       const footerH = footer ? footer.getBoundingClientRect().height : 0;
@@ -1176,6 +1176,14 @@ export function FloorPlanCanvas({
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
   // tables whose number is flashing right now (a guest just arrived there)
   const [flashing, setFlashing] = useState<Record<string, number>>({});
+  // The open event's name ("Welcome to ..." in full screen)
+  const [eventName, setEventName] = useState("");
+  useEffect(() => {
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((j) => j.success && setEventName(j.events.find((e: { id: string }) => e.id === j.activeId)?.name ?? ""))
+      .catch(() => undefined);
+  }, []);
   // VIPs who just arrived (banner at the top of the room)
   const [vipBanners, setVipBanners] = useState<{ seatId: string; name: string; table: string }[]>([]);
   // A soft chime when someone arrives (can be turned off; remembered)
@@ -1381,6 +1389,8 @@ export function FloorPlanCanvas({
       @keyframes tableArriveNum { 0%,100% { opacity: 1; transform: translate(-50%,-50%) scale(1) }
         50% { opacity: .35; transform: translate(-50%,-50%) scale(1.35) } }
       .table-arrive-num { animation: tableArriveNum .7s ease-in-out 7; }
+      @keyframes welcomeShine { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
+      .welcome-title { background-size: 200% auto; animation: welcomeShine 4s linear infinite; }
       .table-complete-ring { border: 4px solid #f59e0b; background: rgba(251,191,36,.18);
         box-shadow: 0 0 14px 4px rgba(245,158,11,.55); }
     `}</style>
@@ -1785,7 +1795,15 @@ export function FloorPlanCanvas({
 
       {/* Totals, shown in full screen where the top bar is hidden */}
       {roomOnly && !working && (
-        <div className="flex flex-wrap gap-1.5 mb-2 pointer-events-none">
+        <div className="flex flex-wrap items-center gap-1.5 mb-2 pointer-events-none">
+          {eventName && (
+            <div className="mr-3 leading-tight">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-600">Welcome to</div>
+              <div className="welcome-title bg-gradient-to-r from-emerald-600 via-lime-500 to-emerald-600 bg-clip-text text-2xl font-extrabold text-transparent">
+                {eventName}
+              </div>
+            </div>
+          )}
           {[
             { label: "Seats", value: tables.reduce((n, t) => n + t.seats.length, 0), c: "bg-zinc-50 border-zinc-200 text-zinc-500", v: "text-zinc-800" },
             ...(invited !== undefined
@@ -1971,10 +1989,17 @@ export function FloorPlanCanvas({
                 transition={p.phase === "pop" ? { duration: 0.6 } : { duration: 0.7, ease: "easeIn" }}
               >
                 <div
-                  className={`-translate-x-1/2 ${above ? "-translate-y-full" : ""} rounded-xl bg-green-600 text-white shadow-2xl px-4 py-2 text-center whitespace-nowrap ring-4 ring-green-200`}
+                  className={`-translate-x-1/2 ${above ? "-translate-y-full" : ""} rounded-2xl px-5 py-2.5 text-center whitespace-nowrap shadow-2xl ring-4 ${
+                    p.vip
+                      ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 ring-amber-200"
+                      : "bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white ring-green-200"
+                  }`}
                 >
-                  <div className="text-lg sm:text-2xl font-bold leading-tight">{p.name}</div>
-                  <div className="text-sm sm:text-base opacity-90">arrived · {p.table}</div>
+                  <div className="text-xs font-semibold uppercase tracking-widest opacity-90">
+                    {p.vip ? "⭐ VIP · Welcome" : "🎉 Welcome"}
+                  </div>
+                  <div className="text-lg sm:text-2xl font-extrabold leading-tight">{p.name}!</div>
+                  <div className="text-sm sm:text-base font-semibold opacity-90">{p.table}</div>
                 </div>
               </motion.div>
             );
