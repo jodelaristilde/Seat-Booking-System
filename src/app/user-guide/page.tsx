@@ -203,7 +203,7 @@ export default function UserGuide() {
             <Steps
               items={[
                 "Click <b>New → Import Guests</b>.",
-                "Choose your Excel file with a column for <b>first name</b> and one for <b>last name</b>.",
+                { text: "Choose your Excel file. The first row must have the headings <b>First Name</b> and <b>Last Name</b>.", tip: "One guest per row." },
                 "Your guests appear in the list, ready to be seated.",
               ]}
             />
