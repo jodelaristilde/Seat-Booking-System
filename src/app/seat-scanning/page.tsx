@@ -54,6 +54,8 @@ export default function SeatScanning() {
   const [seatIsReceived, setSeatIsReceived] = useState(false);
   const [noSeatFound, setNoSeatFound] = useState(false);
   const [isFloorMapOpen, setIsFloorMapOpen] = useState(false);
+  // The way to the guest's table: their table on the plan + the entrance(s)
+  const [way, setWay] = useState<Way | null>(null);
   const [floorMapImage, setFloorMapImage] = useState<FloorMapImage | null>(
     null
   );
@@ -206,6 +208,17 @@ export default function SeatScanning() {
         `/api/floor-map${eventId || selectedUser?.eventId ? `?event=${encodeURIComponent(eventId || selectedUser?.eventId || "")}` : ""}`
       );
       const data = await response.json();
+
+      // where the guest's table is, and the doors (to draw the way)
+      setWay(null);
+      if (searchResult?.seatId) {
+        try {
+          const w = await fetch(`/api/wayfind?seatId=${encodeURIComponent(searchResult.seatId)}`).then((r) => r.json());
+          if (w.success && w.table?.x != null && w.table?.y != null) setWay({ table: w.table, entrances: w.entrances ?? [] });
+        } catch {
+          /* the map still opens, just without the line */
+        }
+      }
 
       if (data.image) {
         setFloorMapImage(data.image);
@@ -731,18 +744,26 @@ export default function SeatScanning() {
             {/* Title */}
             <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
               <h3 className="text-xl sm:text-2xl font-bold text-zinc-800 dark:text-zinc-200">
-                Venue Floor Plan
+                {way ? way.table.name : "Venue Floor Plan"}
               </h3>
+              {way && (
+                <p className="text-sm text-green-700 font-medium">
+                  {way.entrances.length ? "Follow the green line from the door" : "Your table is circled in red"}
+                </p>
+              )}
             </div>
 
             {/* Floor map image */}
             <div className="w-full h-[90vh] overflow-auto p-4 pt-24">
               {floorMapImage ? (
-                <img
-                  src={floorMapImage.data}
-                  alt="Floor Plan"
-                  className="w-full h-auto object-contain"
-                />
+                <div className="relative w-full">
+                  <img
+                    src={floorMapImage.data}
+                    alt="Floor Plan"
+                    className="w-full h-auto object-contain"
+                  />
+                  {way && <WayOverlay way={way} />}
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-lg text-zinc-500">
@@ -778,6 +799,84 @@ function ArrivedList({ items }: { items: { seatId: string; name: string; table: 
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// ---- The way from the door to the guest's table, drawn over the floor plan ----
+type Way = {
+  table: { name: string; x: number; y: number; w: number | null; h: number | null; shape: string | null };
+  entrances: { x: number; y: number }[];
+};
+
+function WayOverlay({ way }: { way: Way }) {
+  const t = way.table;
+  // the door closest to the table
+  const door = way.entrances.length
+    ? [...way.entrances].sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))[0]
+    : null;
+  const ringW = Math.max(5, (t.w ?? 7) * 1.45);
+  const round = (t.shape ?? "round") === "round";
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      <style>{`
+        @keyframes wayDash { to { stroke-dashoffset: -36 } }
+        .way-dash { animation: wayDash 0.9s linear infinite }
+        @keyframes wayRing { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.2); opacity: .55 } }
+        .way-ring { animation: wayRing 1.2s ease-in-out infinite }
+        @keyframes wayPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 50% { transform: translate(-50%,-50%) scale(1.25); opacity: .6 } }
+        .way-pulse { animation: wayPulse 1.2s ease-in-out infinite }
+      `}</style>
+      {door && (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1={door.x} y1={door.y} x2={t.x} y2={t.y} stroke="white" strokeWidth={10} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <line
+            x1={door.x}
+            y1={door.y}
+            x2={t.x}
+            y2={t.y}
+            stroke="#16a34a"
+            strokeWidth={6}
+            strokeLinecap="round"
+            strokeDasharray="14 10"
+            vectorEffect="non-scaling-stroke"
+            className="way-dash"
+          />
+        </svg>
+      )}
+      {/* the guest's table: a pulsing ring with a label above it */}
+      <div
+        className="absolute"
+        style={{
+          left: `${t.x}%`,
+          top: `${t.y}%`,
+          width: `${ringW}%`,
+          transform: "translate(-50%, -50%)",
+          ...(t.h && !round ? { height: `${t.h * 1.45}%` } : { aspectRatio: "1" }),
+        }}
+      >
+        <div
+          className={`way-ring absolute inset-0 border-[5px] border-red-500 bg-red-500/15 shadow-[0_0_0_4px_white] ${round ? "rounded-full" : "rounded-lg"}`}
+        />
+        <div className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white shadow-lg">
+          Your table · {t.name}
+        </div>
+      </div>
+      {/* the door: you are here */}
+      {door && (
+        <>
+          <div
+            className="way-pulse absolute h-5 w-5 rounded-full bg-green-600 shadow-[0_0_0_5px_rgba(255,255,255,.9)]"
+            style={{ left: `${door.x}%`, top: `${door.y}%` }}
+          />
+          <div
+            className="absolute -translate-x-1/2 whitespace-nowrap rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
+            style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1rem)` }}
+          >
+            You are here
+          </div>
+        </>
+      )}
     </div>
   );
 }

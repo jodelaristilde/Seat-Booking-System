@@ -24,6 +24,7 @@ import {
   ZoomIn,
   Check,
   Search,
+  DoorOpen,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -316,7 +317,31 @@ export function FloorPlanCanvas({
 
   // Drawing, moving or checking tables: show only the room, then bring the
   // rest of the dashboard back when finished
-  const working = drawing || editing || reviewing;
+  // ---- Entrance(s): where guests come in (the phone draws the way from here) ----
+  const [settingEntrance, setSettingEntrance] = useState(false);
+  const [entrances, setEntrances] = useState<{ x: number; y: number }[]>([]);
+  useEffect(() => {
+    fetch("/api/event-entrance")
+      .then((r) => r.json())
+      .then((j) => j.success && setEntrances(j.entrances))
+      .catch(() => undefined);
+  }, []);
+  const saveEntrances = async (next: { x: number; y: number }[]) => {
+    setEntrances(next);
+    try {
+      const res = await fetch("/api/event-entrance", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entrances: next }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.message);
+    } catch (e) {
+      toast.error("Could not save the entrance", { description: e instanceof Error ? e.message : undefined });
+    }
+  };
+
+  const working = drawing || editing || reviewing || settingEntrance;
   const wasWorking = useRef(false);
   useEffect(() => {
     if (working && !wasWorking.current) onRoomOnlyChange?.(true);
@@ -1504,6 +1529,17 @@ export function FloorPlanCanvas({
             <Button onClick={startEditing} size="sm" variant="outline">
               <Move className="w-4 h-4 mr-2" /> Move tables
             </Button>
+            {picture && (
+              <Button
+                onClick={() => setSettingEntrance((v) => !v)}
+                size="sm"
+                variant={settingEntrance ? "default" : "outline"}
+                title="Click the door(s) on the floor plan. Guests' phones show a line from there to their table."
+              >
+                <DoorOpen className="w-4 h-4 mr-2" />
+                {settingEntrance ? "Done with entrance" : entrances.length ? "Entrance ✓" : "Set entrance"}
+              </Button>
+            )}
             {picture && tables.length > 0 && (
               <Button
                 onClick={async () => {
@@ -1636,6 +1672,23 @@ export function FloorPlanCanvas({
 
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0" ref={roomColRef}>
+      {settingEntrance && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-green-50 px-3 py-2 text-sm text-green-900">
+          <DoorOpen className="h-4 w-4" />
+          <span className="flex-1">
+            Click the <b>door</b> on the floor plan where guests come in (up to 6 doors). Click a green pin to remove
+            it. Guests&apos; phones will show a line from the nearest door to their table.
+          </span>
+          {entrances.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => saveEntrances([])}>
+              Clear all
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setSettingEntrance(false)}>
+            Done
+          </Button>
+        </div>
+      )}
       {(editing || reviewing || drawing) && (
         <p className="text-sm text-blue-800 bg-blue-50 rounded px-3 py-2 mb-3">
           {drawing
@@ -1702,7 +1755,7 @@ export function FloorPlanCanvas({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        {picture && (showPicture || reviewing || drawing || editing) && (
+        {picture && (showPicture || reviewing || drawing || editing || settingEntrance) && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={picture}
@@ -1812,6 +1865,34 @@ export function FloorPlanCanvas({
             );
           })}
         </AnimatePresence>
+
+        {/* Entrance pins (shown while setting them); click the room to add one */}
+        {settingEntrance && (
+          <div
+            className="absolute inset-0 z-50 cursor-crosshair"
+            onClick={(e) => {
+              if (entrances.length >= 6) return toast.message("Up to 6 entrances.");
+              const p = pointToPercent(e.clientX, e.clientY);
+              saveEntrances([...entrances, { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }]);
+            }}
+          >
+            {entrances.map((pt, i) => (
+              <button
+                key={i}
+                type="button"
+                className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg ring-4 ring-green-200 hover:bg-red-600"
+                style={{ left: `${pt.x}%`, top: `${pt.y}%` }}
+                title="Remove this entrance"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  saveEntrances(entrances.filter((_, j) => j !== i));
+                }}
+              >
+                <DoorOpen className="h-3.5 w-3.5" /> Entrance
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Drawing: a layer over everything that catches the mouse */}
         {drawing && (

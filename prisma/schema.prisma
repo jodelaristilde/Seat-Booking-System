@@ -78,6 +78,9 @@ model Event {
   id        String   @id @default(cuid())
   name      String
   date      String?
+  // Where guests come in, on the floor plan: [{ x, y }] in % of the picture.
+  // The guest's phone draws a line from the nearest one to their table.
+  entrances Json?
   createdAt DateTime @default(now())
 }
 

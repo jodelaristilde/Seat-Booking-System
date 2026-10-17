@@ -180,6 +180,7 @@ export default function UserGuide() {
             <Steps
               items={[
                 "<b>Move tables</b>: drag a table to its spot. Drag the blue dot at its corner to make it bigger or smaller. The <b>Shape</b> button switches round / square / rectangle. Then click <b>Save layout</b>.",
+                "<b>Set entrance</b>: click it, then click the door(s) on the floor plan. On their phone, guests see a green line from the door to their table.",
                 "<b>Rename a table or add a note</b>: point at the table and click the ⚙️ gear.",
                 "<b>Delete one table</b>: point at it and click the 🗑️ bin.",
                 "<b>New venue?</b> Click <b>New → Delete All Tables</b>, upload the new floor plan, and draw again. Your guests stay in your list.",
