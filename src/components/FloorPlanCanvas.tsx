@@ -1131,6 +1131,8 @@ export function FloorPlanCanvas({
   );
   type Arrival = (typeof arrivedNow)[number] & { at?: number };
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
+  // tables whose number is flashing right now (a guest just arrived there)
+  const [flashing, setFlashing] = useState<Record<string, number>>({});
   const [popups, setPopups] = useState<(Arrival & { phase: "pop" | "fly" })[]>([]);
   const knownArrivals = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -1149,6 +1151,21 @@ export function FloorPlanCanvas({
     knownArrivals.current = ids;
     fresh.forEach((a, i) => {
       const item = { ...a, at: Date.now() };
+      // the arriving guest's table number flashes for a few seconds
+      setTimeout(() => {
+        setFlashing((f) => ({ ...f, [a.tableId]: (f[a.tableId] ?? 0) + 1 }));
+        setTimeout(
+          () =>
+            setFlashing((f) => {
+              const n = (f[a.tableId] ?? 1) - 1;
+              const next = { ...f };
+              if (n <= 0) delete next[a.tableId];
+              else next[a.tableId] = n;
+              return next;
+            }),
+          3800
+        );
+      }, i * 700);
       // pop out at the table, then fly to the Arrived list
       setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 700);
       setTimeout(
@@ -1268,6 +1285,15 @@ export function FloorPlanCanvas({
   const showArrived = arrivals.length > 0 && !working;
 
   return (
+    <>
+    <style>{`
+      @keyframes tableArriveRing { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.0); border-color: rgba(34,197,94,.4) }
+        50% { box-shadow: 0 0 0 10px rgba(34,197,94,.45), 0 0 28px 8px rgba(34,197,94,.6); border-color: rgb(22,163,74) } }
+      .table-arrive-ring { border: 4px solid rgb(22,163,74); animation: tableArriveRing .7s ease-in-out 5; }
+      @keyframes tableArriveNum { 0%,100% { opacity: 1; transform: translate(-50%,-50%) scale(1) }
+        50% { opacity: .35; transform: translate(-50%,-50%) scale(1.35) } }
+      .table-arrive-num { animation: tableArriveNum .7s ease-in-out 5; }
+    `}</style>
     <div
       className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
         roomOnly ? "py-2" : "py-3 pb-[9rem] sm:pb-3"
@@ -1844,6 +1870,21 @@ export function FloorPlanCanvas({
                 onMouseLeave={hoverZoom && !working ? zoomCloseSoon : undefined}
               >
                 {renderTable(withShape(table), index, !showSeats && !guestNames)}
+                {flashing[id] && (
+                  // A guest just arrived: glowing ring + big flashing number
+                  <div className="pointer-events-none absolute inset-0 z-30">
+                    <div
+                      className={`absolute table-arrive-ring ${shape === "round" ? "rounded-full" : "rounded-lg"}`}
+                      style={{ left: "6%", top: "6%", width: "78%", height: "78%" }}
+                    />
+                    <span
+                      className="table-arrive-num absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-green-600 px-2 font-extrabold text-white shadow-lg"
+                      style={{ left: "45%", top: "45%", fontSize: "var(--table-num, 20px)" }}
+                    >
+                      {tableNameOf(table).replace(/^\s*table\s*#?\s*(?=\S)/i, "")}
+                    </span>
+                  </div>
+                )}
                 {editing && (
                   <>
                     <div
@@ -2125,5 +2166,6 @@ export function FloorPlanCanvas({
       </div>
       </div>
     </div>
+    </>
   );
 }
