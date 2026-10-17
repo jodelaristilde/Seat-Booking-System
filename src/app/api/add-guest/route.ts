@@ -2,7 +2,7 @@ import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
-// POST { firstname, lastname, table?, seats?, vip?, meal? }
+// POST { firstname, lastname, table?, seats?, vip?, meal?, arrived? }
 // Adds a guest to the open event. With "table" (a name like "Table 5", or
 // just "5"), the guest is also seated there: the table is found (or made,
 // with `seats` seats, 10 by default) and the guest takes the first empty seat.
@@ -51,13 +51,15 @@ export async function POST(request: Request) {
         });
       }
       const free = table.Seat.find((s: { isBooked: boolean }) => !s.isBooked);
+      // a last-minute guest standing at the desk can be checked in right away
+      const arrived = body.arrived === true;
       if (free) {
-        await db.seat.update({ where: { id: free.id }, data: { isBooked: true, userId: newGuest.id } });
+        await db.seat.update({ where: { id: free.id }, data: { isBooked: true, userId: newGuest.id, isReceived: arrived } });
       } else {
         // table is full: add one more seat for this guest
         const next = table.Seat.reduce((m: number, s: { seat: number }) => Math.max(m, s.seat), 0) + 1;
         await db.seat.create({
-          data: { tableId: table.id, seat: next, isBooked: true, isReceived: false, userId: newGuest.id },
+          data: { tableId: table.id, seat: next, isBooked: true, isReceived: arrived, userId: newGuest.id },
         });
       }
       seatedAt = table.name;

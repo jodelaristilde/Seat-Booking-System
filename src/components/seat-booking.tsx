@@ -1517,8 +1517,10 @@ const handleTableClick = () => {
       <AddGuestForm
         isOpen={isAddGuestOpen}
         onClose={() => setIsAddGuestOpen(false)}
+        tables={getTableInfo()}
         onSuccess={() => {
           setIsAddGuestOpen(false);
+          refreshSeats();
           router.refresh();
         }}
       />
