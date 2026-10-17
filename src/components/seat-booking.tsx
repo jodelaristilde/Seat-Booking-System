@@ -667,7 +667,7 @@ const handleTableClick = () => {
               <span
                 className={`font-semibold text-center ${
                   inFloorPlan
-                    ? `block ${shortName ? "leading-tight whitespace-nowrap" : "leading-none whitespace-normal break-words max-w-full"}`
+                    ? `block ${shortName ? "leading-tight whitespace-nowrap" : "leading-none whitespace-normal break-normal [word-break:keep-all] max-w-full"}`
                     : "text-lg"
                 }`}
                 title={displayName}
@@ -1674,9 +1674,9 @@ function fitNameFont(name: string, maxWidthPct: number, isRect: boolean) {
   const words = name.trim().split(/\s+/);
   const longestWord = Math.max(...words.map((w) => w.length));
   const perLine = words.length > 1 && n > 8 ? Math.max(longestWord, Math.ceil(n / 2)) : n;
-  // a bold capital letter is about 0.75 of the font size wide; 12px is the pill's padding
+  // a bold capital letter is up to about 0.9 of the font size wide; 12px is the pill's padding
   const width = isRect ? maxWidthPct * 0.55 : maxWidthPct;
-  return `clamp(6px, calc((${width}cqw - 12px) / ${(perLine * 0.75).toFixed(2)}), ${isRect ? 30 : 32}px)`;
+  return `clamp(6px, calc((${width}cqw - 12px) / ${(perLine * 0.9).toFixed(2)}), ${isRect ? 30 : 32}px)`;
 }
 
 export default SeatBooking;
