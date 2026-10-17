@@ -189,16 +189,10 @@ export function FloorPlanCanvas({
   const [allGuests, setAllGuests] = useState<GuestRow[] | null>(null);
   const [addQuery, setAddQuery] = useState("");
   const [tableQuery, setTableQuery] = useState("");
-  // Zoom card mode: "seat" = set up the table (add / remove guests),
-  // "checkin" = event day (tick who arrived). Remembered per computer.
-  const [cardMode, setCardModeRaw] = useState<"seat" | "checkin">("seat");
-  useEffect(() => {
-    if (readStored("floorPlanCardMode") === "checkin") setCardModeRaw("checkin");
-  }, []);
-  const setCardMode = (m: "seat" | "checkin") => {
-    setCardModeRaw(m);
-    writeStored("floorPlanCardMode", m);
-  };
+  // Zoom card job, decided by the screen:
+  // - menu showing (setting up)  -> seat guests: add / remove guests
+  // - full screen (event day)    -> check in: tick who arrived
+  const cardMode: "seat" | "checkin" = roomOnly ? "checkin" : "seat";
   // Seat guests mode: have the guest list ready as soon as a table opens
   useEffect(() => {
     if (zoomId && cardMode === "seat" && !allGuests) loadGuests();
@@ -1914,26 +1908,6 @@ export function FloorPlanCanvas({
               <span className="text-xs text-zinc-500 tabular-nums">
                 {booked.length}/{seats.length} seated · {arrived} arrived
               </span>
-              {/* Two clear jobs: setting up the table, or checking guests in */}
-              <div className="ml-3 inline-flex rounded-lg border bg-zinc-50 p-0.5 text-sm">
-                {(
-                  [
-                    ["seat", "Seat guests"],
-                    ["checkin", "Check in"],
-                  ] as const
-                ).map(([m, label]) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setCardMode(m)}
-                    className={`rounded-md px-3 py-1 font-medium ${
-                      cardMode === m ? "bg-white shadow text-zinc-900" : "text-zinc-500 hover:text-zinc-800"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
               <button
                 type="button"
                 className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100"
