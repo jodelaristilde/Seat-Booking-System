@@ -41,10 +41,12 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
   const [selectedTable, setSelectedTable] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
   const [searchValue, setSearchValue] = useState("")
+  // Guests assigned while this window is open: hidden right away, counted for the "Done" summary
+  const [justAssigned, setJustAssigned] = useState<string[]>([])
 
   // guests without a seat, A–Z by last name
   const availableGuests = guests
-    .filter((guest) => guest.seat.length === 0)
+    .filter((guest) => guest.seat.length === 0 && !justAssigned.includes(guest.id))
     .sort((a, b) =>
       `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`, undefined, { sensitivity: "base" }),
     )
@@ -112,17 +114,27 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
     setIsAssigning(true)
     try {
       await onAssignGuests(selectedGuests, selectedTable)
-      toast.success("Guests assigned successfully")
+      const n = selectedGuests.length
+      toast.success(`${n} guest${n === 1 ? "" : "s"} assigned to ${selectedTableData.name}`)
+      // Stay open so the next group can be assigned; "Done" closes the window
+      setJustAssigned((prev) => [...prev, ...selectedGuests])
       setSelectedGuests([])
       setSelectedTable("")
       setSearchValue("")
-      onClose()
     } catch (error) {
       console.error(error)
       toast.error("Failed to assign guests")
     } finally {
       setIsAssigning(false)
     }
+  }
+
+  const handleDone = () => {
+    setSelectedGuests([])
+    setSelectedTable("")
+    setSearchValue("")
+    setJustAssigned([])
+    onClose()
   }
 
   const getTableAvailability = (table: Table) => {
@@ -132,10 +144,20 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleDone()}>
+      <DialogContent
+        className="max-w-4xl max-h-[95vh] overflow-y-auto"
+        // Clicking outside or pressing Esc must not close it; only "Done" (or the X) does
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Assign Multiple Guests</DialogTitle>
+          {justAssigned.length > 0 && (
+            <p className="text-sm text-green-700">
+              ✓ {justAssigned.length} guest{justAssigned.length === 1 ? "" : "s"} assigned so far. Keep going, or click Done when finished.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 mt-4">
@@ -221,8 +243,8 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
             </ScrollArea>
             {/* Assign right under the tables, on the same line as "Select 10 guests" */}
             <div className="flex justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={onClose}>
-                Cancel
+              <Button variant="outline" size="sm" onClick={handleDone}>
+                Done
               </Button>
               <Button size="sm" onClick={handleAssign} disabled={isAssigning || !selectedTable || selectedGuests.length === 0}>
                 {isAssigning
