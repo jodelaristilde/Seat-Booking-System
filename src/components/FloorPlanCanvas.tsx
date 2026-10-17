@@ -1154,8 +1154,13 @@ export function FloorPlanCanvas({
     ro.observe(el);
     if (fsHeaderRef.current) ro.observe(fsHeaderRef.current);
     window.addEventListener("resize", measure);
+    // Switching to full screen, the top menu slides away for about half a
+    // second. The room moves up but does not change size, so measure again
+    // once things have settled (otherwise the map stays short at the bottom).
+    const timers = [100, 400, 700, 1100, 1800].map((ms) => setTimeout(measure, ms));
     return () => {
       ro.disconnect();
+      timers.forEach(clearTimeout);
       window.removeEventListener("resize", measure);
     };
   }, [working, roomOnly]);
