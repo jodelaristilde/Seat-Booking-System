@@ -72,6 +72,7 @@ export default function UserGuide() {
     ["guests", "Add your guests"],
     ["seat", "Seat your guests"],
     ["day", "Event day: check-in"],
+    ["extras", "Event day extras"],
     ["fix", "Fixing mistakes"],
   ];
 
@@ -286,7 +287,7 @@ export default function UserGuide() {
           </Card>
         </Section>
 
-        <Section id="extras" number={5} title="Event day extras">
+        <Section id="extras" number={6} title="Event day extras">
           <Card title="Make the night shine">
             <ul className="space-y-2 text-zinc-700">
               <li>• <b>Welcome TV</b>: Menu ☰ → <b>Welcome TV screen</b>. Put it on a TV at the entrance and click Full screen. Each arriving guest sees &quot;Welcome, Name! You&apos;re at Table 9&quot; with the way to their table.</li>
@@ -301,7 +302,7 @@ export default function UserGuide() {
         </Section>
 
         {/* 6 */}
-        <Section id="fix" number={6} title="Fixing mistakes">
+        <Section id="fix" number={7} title="Fixing mistakes">
           <Card title="Someone was checked in by accident">
             <Steps
               items={[
