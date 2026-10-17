@@ -75,6 +75,7 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
+const FS_ARRIVED_KEY = "floorPlanFullScreenArrived";
 const ZOOM_KEY = "floorPlanHoverZoom";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
@@ -1131,6 +1132,8 @@ export function FloorPlanCanvas({
 
   // How much room the floor plan has on this screen (any monitor size)
   const roomColRef = useRef<HTMLDivElement>(null);
+  // Full screen: the one-line header (welcome, totals, arrival bar) above the room
+  const fsHeaderRef = useRef<HTMLDivElement>(null);
   const [avail, setAvail] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
     const el = roomColRef.current;
@@ -1138,16 +1141,18 @@ export function FloorPlanCanvas({
     const measure = () => {
       const r = el.getBoundingClientRect();
       // instructions above the room take some height while editing
-      const note = working ? 44 : roomOnly ? 78 : 22; // instructions, or the totals heading + arrival bar
+      const fsHead = roomOnly && !working ? fsHeaderRef.current : null;
+      const note = working ? 44 : fsHead ? fsHead.offsetHeight + 4 : roomOnly ? 40 : 22; // instructions, or the header line + arrival bar
       // leave room for the footer (logo) at the bottom, except in full screen
       const footer = !roomOnly && window.innerWidth >= 1024 ? document.querySelector("footer") : null;
       const footerH = footer ? footer.getBoundingClientRect().height : 0;
-      const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - footerH - 12);
+      const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - footerH - (roomOnly ? 6 : 12));
       setAvail({ w: r.width, h });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (fsHeaderRef.current) ro.observe(fsHeaderRef.current);
     window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
@@ -1299,7 +1304,7 @@ export function FloorPlanCanvas({
       y1 = Math.max(y1, p.y + halfH);
     }
     if (x1 <= x0 || y1 <= y0) return whole;
-    const m = roomOnly ? 3 : 2;
+    const m = 2;
     x0 = Math.max(0, x0 - m);
     y0 = Math.max(0, y0 - m * aspect);
     x1 = Math.min(100, x1 + m);
@@ -1394,6 +1399,16 @@ export function FloorPlanCanvas({
     setArrivedSlot(roomOnly ? null : document.getElementById("arrived-under-guests"));
   }, [roomOnly]);
   const showArrived = arrivals.length > 0 && !working;
+  // Full screen: the Arrived list is tucked into a button so the map gets the room
+  const [fsArrivedOpen, setFsArrivedOpen] = useState(false);
+  useEffect(() => {
+    if (readStored(FS_ARRIVED_KEY) === "on") setFsArrivedOpen(true);
+  }, []);
+  const toggleFsArrived = () =>
+    setFsArrivedOpen((v) => {
+      writeStored(FS_ARRIVED_KEY, v ? "off" : "on");
+      return !v;
+    });
 
   return (
     <>
@@ -1412,8 +1427,8 @@ export function FloorPlanCanvas({
         box-shadow: 0 0 14px 4px rgba(245,158,11,.55); }
     `}</style>
     <div
-      className={`px-2 sm:px-3 flex flex-col lg:flex-row gap-3 ${
-        roomOnly ? "py-2" : "py-3 pb-[9rem] sm:pb-3"
+      className={`flex flex-col lg:flex-row ${
+        roomOnly ? "px-1 py-1 gap-1" : "px-2 sm:px-3 gap-3 py-3 pb-[9rem] sm:pb-3"
       }`}
     >
       {/* Floor plan controls: a column down the left side on bigger screens */}
@@ -1771,14 +1786,20 @@ export function FloorPlanCanvas({
       )}
 
       {/* Arrived guests (left of the room on big screens) */}
-      {showArrived &&
+      {showArrived && !roomOnly &&
         arrivedList(
           `w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 ${arrivedSlot ? "hidden xl:block" : ""}`
         )}
       {showArrived && arrivedSlot && createPortal(arrivedList("w-full xl:hidden mt-3", true), arrivedSlot)}
 
       {/* The room, with any instructions above it */}
-      <div className="flex-1 min-w-0" ref={roomColRef}>
+      <div className="flex-1 min-w-0 relative" ref={roomColRef}>
+      {roomOnly && showArrived && fsArrivedOpen && (
+        // Full screen: the Arrived list floats over the left of the map
+        <div className="absolute left-2 z-[65] shadow-xl rounded-lg bg-white" style={{ top: (fsHeaderRef.current?.offsetHeight ?? 40) + 8 }}>
+          {arrivedList("w-fit")}
+        </div>
+      )}
       {settingEntrance && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-green-50 px-3 py-2 text-sm text-green-900">
           <DoorOpen className="h-4 w-4" />
@@ -1810,15 +1831,16 @@ export function FloorPlanCanvas({
         </p>
       )}
 
-      {/* Totals, shown in full screen where the top bar is hidden */}
+      {/* Full screen: welcome, totals, arrival bar and the Arrived button on ONE slim line,
+          so the map gets as much of the screen as possible */}
       {roomOnly && !working && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-2 pointer-events-none">
+        <div ref={fsHeaderRef} className="flex flex-wrap items-center gap-1.5 mb-1">
           {eventName && (
-            <div className="mr-3 leading-tight">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-600">Welcome to</div>
-              <div className="welcome-title bg-gradient-to-r from-emerald-600 via-lime-500 to-emerald-600 bg-clip-text text-2xl font-extrabold text-transparent">
+            <div className="mr-2 flex items-baseline gap-2 leading-tight pointer-events-none">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Welcome to</span>
+              <span className="welcome-title bg-gradient-to-r from-emerald-600 via-lime-500 to-emerald-600 bg-clip-text text-xl font-extrabold text-transparent">
                 {eventName}
-              </div>
+              </span>
             </div>
           )}
           {[
@@ -1830,15 +1852,46 @@ export function FloorPlanCanvas({
             { label: "Available", value: tables.reduce((n, t) => n + t.seats.filter((s) => !s.isBooked).length, 0), c: "bg-green-50 border-green-200 text-green-600", v: "text-green-800" },
             { label: "Arrived", value: tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0), c: "bg-blue-50 border-blue-200 text-blue-600", v: "text-blue-800" },
           ].map((b) => (
-            <div key={b.label} className={`rounded-md border px-2 py-0.5 text-center shadow-sm ${b.c}`}>
-              <div className="text-[10px] leading-tight uppercase tracking-wider">{b.label}</div>
-              <div className={`text-sm leading-tight font-bold tabular-nums ${b.v}`}>{b.value}</div>
+            <div key={b.label} className={`pointer-events-none flex items-baseline gap-1 rounded-md border px-2 py-0.5 shadow-sm ${b.c}`}>
+              <span className="text-[10px] leading-tight uppercase tracking-wider">{b.label}</span>
+              <span className={`text-sm leading-tight font-bold tabular-nums ${b.v}`}>{b.value}</span>
             </div>
           ))}
+          {(() => {
+            const assigned = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0);
+            const came = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0);
+            if (!assigned) return <div className="flex-1" />;
+            const pct = Math.round((came / assigned) * 100);
+            return (
+              <div className="flex min-w-[10rem] flex-1 items-center gap-2 text-xs font-semibold text-zinc-600 pointer-events-none">
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-200">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-700"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="whitespace-nowrap tabular-nums">
+                  {came} of {assigned} arrived ({pct}%)
+                </span>
+              </div>
+            );
+          })()}
+          {showArrived && (
+            <Button
+              size="sm"
+              variant={fsArrivedOpen ? "default" : "outline"}
+              className="h-7 border-green-300 px-2 text-xs"
+              onClick={toggleFsArrived}
+              title={fsArrivedOpen ? "Hide the Arrived list" : "Show the Arrived list over the map"}
+              aria-pressed={fsArrivedOpen}
+            >
+              ✓ Arrived list ({arrivals.length})
+            </Button>
+          )}
         </div>
       )}
-      {/* Live arrival bar: fills up as guests arrive */}
-      {!working && (() => {
+      {/* Live arrival bar: fills up as guests arrive (in full screen it is in the line above) */}
+      {!working && !roomOnly && (() => {
         const assigned = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked).length, 0);
         const came = tables.reduce((n, t) => n + t.seats.filter((s) => s.isBooked && s.isReceived).length, 0);
         if (!assigned) return null;
@@ -1871,7 +1924,7 @@ export function FloorPlanCanvas({
             : {
                 aspectRatio: String(view.aspect),
                 // Never taller than the window
-                maxWidth: `min(100%, calc((100vh - ${roomOnly ? 4.5 : 7}rem) * ${view.aspect}))`,
+                maxWidth: `min(100%, calc((100vh - ${roomOnly ? 3 : 7}rem) * ${view.aspect}))`,
                 marginInline: "auto",
               }
         }
