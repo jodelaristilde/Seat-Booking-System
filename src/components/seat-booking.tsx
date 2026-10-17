@@ -550,6 +550,9 @@ const renderCircularTable = (
     // "Table 12" or "12": shown big on the floor plan as just the number
     const shortName = displayName.replace(/^\s*table\s*#?\s*(?=\S)/i, "").length <= 3;
     const tableColor = getTableColor(index);
+    // every guest at this table is VIP: the table gets a gold VIP badge
+    const bookedHere = table.seats.filter((s) => s.isBooked && s.user);
+    const vipTable = bookedHere.length > 0 && bookedHere.every((s) => s.user?.vip);
     const isHovered = hoveredTable === tableId;
     // round / square / rectangle (the floor plan view draws the table's outline)
     const shape = inFloorPlan ? table.seats[0]?.table?.shape ?? "round" : "round";
@@ -639,6 +642,15 @@ const handleTableClick = () => {
                 : { left: "12%", top: "12%", width: "66%", height: "66%" }
             }
           />
+        )}
+        {inFloorPlan && vipTable && (
+          <div
+            className="absolute z-30 -translate-x-1/2 rounded-full border-2 border-amber-300 bg-amber-400 px-1.5 font-extrabold uppercase leading-tight text-amber-950 shadow pointer-events-none"
+            style={{ left: "45%", top: "-4%", fontSize: "clamp(8px, 11cqw, 16px)" }}
+            title="VIP table"
+          >
+            ★ VIP
+          </div>
         )}
         {/* Center Table Label */}
         <div

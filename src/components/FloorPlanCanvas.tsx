@@ -217,6 +217,22 @@ export function FloorPlanCanvas({
       toast.error("Could not save", { description: e instanceof Error ? e.message : undefined });
     }
   };
+  // Whole table VIP (or take VIP off the whole table)
+  const setTableVip = async (userIds: string[], vip: boolean) => {
+    try {
+      const res = await fetch("/api/guest-update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: userIds, vip }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.message);
+      await onTablesChanged();
+      toast.success(vip ? `${userIds.length} guests are now VIP` : "VIP taken off this table");
+    } catch (e) {
+      toast.error("Could not save", { description: e instanceof Error ? e.message : undefined });
+    }
+  };
   const removeFromSeat = async (seatId: string) => {
     try {
       const res = await fetch("/api/delete-booking", {
@@ -2392,6 +2408,26 @@ export function FloorPlanCanvas({
                 booked.length === 0 ? (
                   <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet. Add them below.</p>
                 ) : (
+                  <>
+                  {(() => {
+                    const ids = booked.map((b) => b.user?.id).filter((x): x is string => !!x);
+                    const allVip = booked.length > 0 && booked.every((b) => b.user?.vip);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setTableVip(ids, !allVip)}
+                        className={`mb-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-sm font-semibold ${
+                          allVip
+                            ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-amber-300 hover:bg-amber-50"
+                        }`}
+                        title={allVip ? "Take VIP off every guest at this table" : "Mark every guest at this table as VIP"}
+                      >
+                        <span className="text-amber-500">★</span>
+                        {allVip ? "VIP table · click to remove VIP" : "Make the whole table VIP"}
+                      </button>
+                    );
+                  })()}
                   <ul className="space-y-1">
                     {[...booked]
                       .sort((a, b) =>
@@ -2444,6 +2480,7 @@ export function FloorPlanCanvas({
                         </li>
                       ))}
                   </ul>
+                  </>
                 )
               )}
 
@@ -2531,6 +2568,11 @@ export function FloorPlanCanvas({
                                 {s.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
                                 {name}
                               </span>
+                              {s.user?.meal && (
+                                <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700" title="Meal">
+                                  {s.user.meal}
+                                </span>
+                              )}
                               {s.isReceived && (
                                 <span className="text-xs font-semibold text-green-700">Arrived · untick to undo</span>
                               )}
