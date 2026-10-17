@@ -1968,7 +1968,7 @@ export function FloorPlanCanvas({
               ) : (
                 <>
                   <p className="mb-1 text-[11px] text-zinc-500">
-                    Click a name to mark them arrived; they then leave this list. Marked by mistake? Search the name and click it to undo.
+                    Tick the box to mark a guest arrived; they then leave this list. Marked by mistake? Search the name and untick it.
                   </p>
                   <div className="relative mb-1.5">
                     <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -2001,29 +2001,34 @@ export function FloorPlanCanvas({
                         const name = `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest";
                         return (
                           <li key={s.id}>
-                            <button
-                              type="button"
-                              disabled={!onToggleArrived}
-                              onClick={() => onToggleArrived?.(s.id, !s.isReceived)}
-                              className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm transition-colors ${
+                            {/* only the box marks arrival; the name itself is not clickable */}
+                            <div
+                              className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm ${
                                 s.isReceived
                                   ? "border-green-300 bg-green-50 text-green-900"
-                                  : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50"
+                                  : "border-zinc-200 bg-white text-zinc-800"
                               }`}
                             >
-                              <span
+                              <button
+                                type="button"
+                                disabled={!onToggleArrived}
+                                onClick={() => onToggleArrived?.(s.id, !s.isReceived)}
+                                aria-label={s.isReceived ? "Undo arrival" : "Mark arrived"}
+                                title={s.isReceived ? "Undo arrival" : "Mark arrived"}
                                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                                  s.isReceived ? "border-green-600 bg-green-600 text-white" : "border-zinc-300"
+                                  s.isReceived
+                                    ? "border-green-600 bg-green-600 text-white"
+                                    : "border-zinc-400 hover:border-green-600 hover:bg-green-50"
                                 }`}
                               >
                                 {s.isReceived && <Check className="h-3.5 w-3.5" />}
-                              </span>
+                              </button>
                               <span className="flex-1 font-medium">{name}</span>
                               {s.isReceived && (
-                                <span className="text-xs font-semibold text-green-700">Arrived · click to undo</span>
+                                <span className="text-xs font-semibold text-green-700">Arrived · untick to undo</span>
                               )}
                               <span className="text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
-                            </button>
+                            </div>
                           </li>
                         );
                       })}

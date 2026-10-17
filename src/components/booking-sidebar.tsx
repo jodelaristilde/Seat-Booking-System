@@ -265,12 +265,10 @@ export function BookingSidebar({
                         />
                       </td>
                       <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
-                        <label
-                          htmlFor={`received-${seat.id}`}
-                          className="font-medium text-gray-900 cursor-pointer"
-                        >
+                        {/* only the box marks arrival; clicking the name does nothing */}
+                        <span className="font-medium text-gray-900 select-text">
                           {seat.user?.firstname} {seat.user?.lastname}
-                        </label>
+                        </span>
 
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
