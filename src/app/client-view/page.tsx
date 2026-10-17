@@ -138,7 +138,7 @@ const SeatBooking = () => {
                   seat.isReceived ? (
                     <Check className="h-4 w-4 text-green-600" />
                   ) : (
-                    <span className="font-bold text-lg">X</span>
+                    <span className="block h-[45%] w-[45%] rounded-full bg-red-500" aria-label="Assigned, not arrived yet" />
                   )
                 ) : (
                   <span
