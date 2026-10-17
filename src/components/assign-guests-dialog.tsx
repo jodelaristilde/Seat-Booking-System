@@ -8,8 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { AlertCircle, Search } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 interface Guest {
@@ -134,7 +133,7 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Assign Multiple Guests</DialogTitle>
         </DialogHeader>
@@ -155,7 +154,7 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
               />
             </div>
 
-            <ScrollArea className="h-[360px] border rounded-lg p-4">
+            <ScrollArea className="h-[min(360px,45vh)] border rounded-lg p-4">
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest) => (
                   <div
@@ -202,7 +201,7 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
           {/* Right side - Table selection */}
           <div className="space-y-4">
             <h3 className="font-semibold">Select Table</h3>
-            <ScrollArea className="h-[400px] border rounded-lg p-4">
+            <ScrollArea className="h-[calc(min(360px,45vh)+3.5rem)] border rounded-lg p-4">
               <RadioGroup value={selectedTable} onValueChange={setSelectedTable}>
                 {availableTables.map((table) => (
                   <div
@@ -220,26 +219,22 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
                 ))}
               </RadioGroup>
             </ScrollArea>
+            {/* Assign right under the tables, on the same line as "Select 10 guests" */}
+            <div className="flex justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleAssign} disabled={isAssigning || !selectedTable || selectedGuests.length === 0}>
+                {isAssigning
+                  ? "Assigning..."
+                  : selectedTable
+                  ? `Assign ${selectedGuests.length || ""} to ${tables.find((t) => t.id === selectedTable)?.name ?? "table"}`.replace("  ", " ")
+                  : "Assign Guests"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {selectedGuests.length > 0 && selectedTable && (
-          <Alert className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Selected guests will be assigned to the first available seats at the table.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleAssign} disabled={isAssigning || !selectedTable || selectedGuests.length === 0}>
-            {isAssigning ? "Assigning..." : "Assign Guests"}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   )
