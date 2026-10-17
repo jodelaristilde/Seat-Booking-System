@@ -1174,6 +1174,8 @@ export function FloorPlanCanvas({
   );
   type Arrival = (typeof arrivedNow)[number] & { at?: number };
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
+  // the most recent arrival: flashes in the Arrived list, then stays marked
+  const [lastArrived, setLastArrived] = useState<string | null>(null);
   // tables whose number is flashing right now (a guest just arrived there)
   const [flashing, setFlashing] = useState<Record<string, number>>({});
   // The open event's name ("Welcome to ..." in full screen)
@@ -1271,6 +1273,7 @@ export function FloorPlanCanvas({
       setTimeout(() => {
         setPopups((p) => p.filter((x) => x.seatId !== a.seatId));
         setArrivals((prev) => [item, ...prev.filter((x) => x.seatId !== a.seatId)]);
+        setLastArrived(a.seatId); // this name flashes in the Arrived list
       }, i * 700 + 3300);
     });
   }, [arrivedNow, tables.length]);
@@ -1359,12 +1362,24 @@ export function FloorPlanCanvas({
                       <motion.tr
                         key={a.seatId}
                         initial={{ opacity: 0, backgroundColor: "rgba(134,239,172,0.9)" }}
-                        animate={{ opacity: 1, backgroundColor: "rgba(255,255,255,0)" }}
+                        animate={{
+                          opacity: 1,
+                          backgroundColor: a.seatId === lastArrived ? "rgba(187,247,208,0.9)" : "rgba(255,255,255,0)",
+                        }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
                         className="border-b border-green-100 last:border-b-0"
                       >
-                        <td className="pl-2 pr-6 py-0.5 font-medium text-zinc-900 whitespace-nowrap">{a.name}</td>
+                        <td
+                          className={`pl-2 pr-6 py-0.5 font-medium text-zinc-900 whitespace-nowrap ${
+                            a.seatId === lastArrived ? "last-arrived font-extrabold" : ""
+                          }`}
+                        >
+                          {a.seatId === lastArrived && (
+                            <span className="mr-1 rounded bg-green-600 px-1 text-[10px] font-bold uppercase text-white">New</span>
+                          )}
+                          {a.name}
+                        </td>
                         <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">{a.table}</td>
                       </motion.tr>
                     ))}
@@ -1391,6 +1406,8 @@ export function FloorPlanCanvas({
       .table-arrive-num { animation: tableArriveNum .7s ease-in-out 7; }
       @keyframes welcomeShine { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
       .welcome-title { background-size: 200% auto; animation: welcomeShine 4s linear infinite; }
+      @keyframes lastArrived { 0%,100% { color: rgb(24 24 27); } 50% { color: rgb(22 163 74); text-shadow: 0 0 8px rgba(34,197,94,.6); } }
+      .last-arrived { animation: lastArrived .7s ease-in-out 7; }
       .table-complete-ring { border: 4px solid #f59e0b; background: rgba(251,191,36,.18);
         box-shadow: 0 0 14px 4px rgba(245,158,11,.55); }
     `}</style>
