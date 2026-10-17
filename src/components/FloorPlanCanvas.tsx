@@ -1791,11 +1791,10 @@ export function FloorPlanCanvas({
         )}
 
         {/* Normal view */}
-        {!reviewing && tables.length === 0 && (
+        {/* Only when there is no picture yet (never written over the picture) */}
+        {!reviewing && tables.length === 0 && !picture && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-sm text-center px-4">
-            {picture
-              ? 'No tables yet. Click "Draw tables" to draw them on your floor plan, or "Read tables from picture".'
-              : "No tables yet. Upload your floor plan with the FLOOR MAP button, or add tables."}
+            No tables yet. Upload your floor plan with the FLOOR MAP button, then click Draw tables.
           </div>
         )}
 
