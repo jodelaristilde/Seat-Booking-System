@@ -279,6 +279,8 @@ export default function SeatScanning() {
   };
   const recRef = useRef<Rec | null>(null);
   const [listening, setListening] = useState(false);
+  // microphone problem: a centred pop-up explains the fix
+  const [micHelp, setMicHelp] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(false);
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
@@ -307,9 +309,8 @@ export default function SeatScanning() {
         const iphone = /iPhone|iPad|iPod/i.test(ua);
         const inApp = /FBAN|FBAV|Instagram|Line\/|wv\)|GSA\//i.test(ua);
         const err = e?.error ?? "";
-        if (err === "no-speech" || err === "aborted") return toast(t.micNothing);
-        // show the fix for 8 seconds, so there is time to read it
-        const show = (msg: string) => toast.error(msg, { duration: 8000 });
+        if (err === "no-speech" || err === "aborted") return setMicHelp(t.micNothing);
+        const show = (msg: string) => setMicHelp(msg);
         if (inApp) return show(t.micInApp);
         if (err === "service-not-allowed" && iphone) return show(t.micIphone);
         if (err === "not-allowed" || err === "service-not-allowed") return show(t.micDenied);
@@ -321,7 +322,7 @@ export default function SeatScanning() {
       rec.start();
     } catch {
       setListening(false);
-      toast.error(t.micBlocked, { duration: 8000 });
+      setMicHelp(t.micBlocked);
     }
   };
   const stopListening = () => {
@@ -828,6 +829,26 @@ export default function SeatScanning() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Microphone problem: centred, bold outline, until OK */}
+      {micHelp && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-sm rounded-2xl border-[3px] border-sky-400 bg-sky-50 p-5 text-center shadow-2xl">
+            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-sky-100">
+              <Mic className="h-7 w-7 text-sky-700" />
+            </div>
+            <p className="text-sm font-bold uppercase tracking-wide text-sky-700">{t.sayName}</p>
+            <p className="mt-2 text-lg font-semibold leading-snug text-sky-950">{micHelp}</p>
+            <button
+              type="button"
+              onClick={() => setMicHelp(null)}
+              className="mt-5 h-14 w-full rounded-xl bg-sky-600 text-xl font-bold text-white shadow hover:bg-sky-700"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Seat not available: stays until the guest refreshes or closes it */}
       {noSeatFound && (
