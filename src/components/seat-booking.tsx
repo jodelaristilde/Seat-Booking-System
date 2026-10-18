@@ -151,6 +151,15 @@ const SeatBooking = () => {
   const { data: session } = useSession();
   // check-in only account: hide everything that deletes or changes tables
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
+  // check-in staff go straight to the full-screen check-in view (once per visit;
+  // they can still leave it with Esc or the button on the left edge)
+  const staffFullScreenDone = useRef(false);
+  useEffect(() => {
+    if (isStaff && !staffFullScreenDone.current) {
+      staffFullScreenDone.current = true;
+      setIsFullScreen(true);
+    }
+  }, [isStaff]);
   const {
     guests: allGuests,
     loading: guestsLoading,
