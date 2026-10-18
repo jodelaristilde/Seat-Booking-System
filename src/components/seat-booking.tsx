@@ -842,11 +842,13 @@ const handleTableClick = () => {
                           seat.isBooked
                             ? "cursor-pointer " +
                               (seat.isReceived
-                                ? "bg-green-200 border-green-300 text-green-600"
+                                ? // arrived: solid dark green with a white check, easy to tell apart
+                                  "bg-green-600 border-green-700 text-white shadow-sm"
                                 : "bg-red-200 border-red-300 text-red-600")
                             : hoveredSeat === seat.id
                             ? `${tableColor} cursor-pointer`
-                            : `bg-white hover:${tableColor} cursor-pointer`
+                            : // empty: plain white with a grey number
+                              "bg-white border-zinc-300 text-zinc-500 cursor-pointer"
                         }
                         border-2
                       `}
@@ -855,7 +857,7 @@ const handleTableClick = () => {
                     >
                       {seat.isBooked ? (
                         seat.isReceived ? (
-                          <Check className="h-4 w-4 text-green-600" />
+                          <Check className="h-[70%] w-[70%] text-white" strokeWidth={3.5} aria-label="Arrived" />
                         ) : (
                           <span className="block h-[45%] w-[45%] rounded-full bg-red-500" aria-label="Assigned, not arrived yet" />
                         )
@@ -1410,7 +1412,7 @@ const handleTableClick = () => {
                     <div className="flex items-center space-x-2">
                       {" "}
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-zinc-200"></div>
+                        <div className="w-3 h-3 rounded-full bg-white border-2 border-zinc-300"></div>
                         <span className="text-sm text-zinc-600">Available</span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1418,7 +1420,7 @@ const handleTableClick = () => {
                         <span className="text-sm text-zinc-600">Assigned</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-green-200"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-600"></div>
                         <span className="text-sm text-zinc-600">Arrived</span>
                       </div>
                     </div>
