@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { activeEventId, EVENT_COOKIE } from "@/lib/event";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 export const dynamic = "force-dynamic";
 
@@ -56,9 +57,15 @@ export async function POST(req: Request) {
 }
 
 // PUT - open another event { id }, or rename one { id, name, date? }
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
+    // check-in staff may open another event, but not rename one
+    if (typeof body?.name === "string" && body.name.trim()) {
+      const token = await getToken({ req });
+      if (token?.role === "staff")
+        return NextResponse.json({ success: false, message: "Check-in staff accounts can't rename events." }, { status: 403 });
+    }
     const id = typeof body?.id === "string" ? body.id : "";
     const event = id ? await db.event.findUnique({ where: { id } }) : null;
     if (!event) return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
