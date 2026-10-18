@@ -104,11 +104,11 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Guest</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <label htmlFor="firstname" className="text-sm font-medium">
@@ -159,6 +159,24 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
             </select>
           </div>
 
+          {/* Note for the desk: the guest's phone won't show the seat until the desk says yes */}
+          <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
+            <label htmlFor="guest-note" className="text-sm font-semibold">
+              📝 Note for the desk <span className="font-normal text-zinc-500">(optional)</span>
+            </label>
+            <Input
+              id="guest-note"
+              value={note}
+              maxLength={300}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="e.g. See the organizer before seating"
+              className={`bg-white ${note.trim() ? "border-amber-400" : ""}`}
+            />
+            <p className="text-[11px] leading-snug text-zinc-600">
+              With a note, their phone won&apos;t show the seat. The desk sees the note and decides: Yes / No.
+            </p>
+          </div>
+
           {/* Meal (optional) */}
           <div className="space-y-2">
             <label htmlFor="guest-meal" className="text-sm font-medium">
@@ -178,43 +196,28 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
                 </button>
               ))}
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <Input
               id="guest-meal"
               value={meal}
               maxLength={40}
               onChange={(e) => setMeal(e.target.value)}
-              placeholder="Or type another meal (e.g. Vegan)"
+              placeholder="Or type a meal (e.g. Vegan)"
+              aria-label="Meal"
             />
-          </div>
-
           {/* Allergy (optional), shown in red to the caterer */}
-          <div className="space-y-2">
-            <label htmlFor="guest-allergy" className="text-sm font-medium">
-              Allergy <span className="font-normal text-zinc-500">(optional)</span>
-            </label>
+          <div>
             <Input
               id="guest-allergy"
               value={allergy}
               maxLength={60}
               onChange={(e) => setAllergy(e.target.value)}
-              placeholder="e.g. Nuts, shellfish, gluten"
+              placeholder="Allergy (e.g. Nuts)"
+              aria-label="Allergy"
               className={allergy.trim() ? "border-red-300 bg-red-50 text-red-700" : ""}
             />
           </div>
-
-          {/* Note: the guest's phone won't show the seat; the desk reads it first */}
-          <div className="space-y-2">
-            <label htmlFor="guest-note" className="text-sm font-medium">
-              Note <span className="font-normal text-zinc-500">(optional, shown to the desk)</span>
-            </label>
-            <Input
-              id="guest-note"
-              value={note}
-              maxLength={300}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="e.g. See the organizer before seating"
-              className={note.trim() ? "border-amber-300 bg-amber-50" : ""}
-            />
           </div>
 
           <div className="flex flex-wrap gap-x-6 gap-y-2">
