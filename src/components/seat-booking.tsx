@@ -45,6 +45,7 @@ import {
   Printer,
   ClipboardCheck,
   ListChecks,
+  ChefHat,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -1185,6 +1186,11 @@ const handleTableClick = () => {
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/door-list">
                           <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/kitchen">
+                          <ChefHat className="mr-2 w-4 h-4" /> Kitchen screen
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
