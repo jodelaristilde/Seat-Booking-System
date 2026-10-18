@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { matches } from "@/lib/fold";
+import { matches, matchesAny } from "@/lib/fold";
 import { heldKeys } from "@/lib/guestNotes";
 
 // Used by the public "find my seat" page.
@@ -27,10 +27,12 @@ export async function GET(request: Request) {
       where: eventId ? { eventId } : {},
       select: { id: true, firstname: true, lastname: true },
     });
-    const ids = names
-      .filter((g: { firstname: string; lastname: string }) => matches(`${g.firstname} ${g.lastname}`, q.slice(0, 80)))
-      .slice(0, 5)
-      .map((g: { id: string }) => g.id);
+    const full = (g: { firstname: string; lastname: string }) => `${g.firstname} ${g.lastname}`;
+    let hits = names.filter((g: { firstname: string; lastname: string }) => matches(full(g), q.slice(0, 80)));
+    // nothing for every word (a name said out loud and half misheard): any word
+    if (!hits.length && q.trim().includes(" "))
+      hits = names.filter((g: { firstname: string; lastname: string }) => matchesAny(full(g), q.slice(0, 80)));
+    const ids = hits.slice(0, 5).map((g: { id: string }) => g.id);
     const guests = await db.users.findMany({
       where: { id: { in: ids } },
       include: {

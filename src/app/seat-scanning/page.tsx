@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, HelpCircle, QrCode, Search, MapPin, X } from "lucide-react";
+import { Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { matches } from "@/lib/fold";
+import { matches, matchesAny } from "@/lib/fold";
 import { toast } from "sonner";
 import { GUEST_TEXT, LANGS, detectLang, type Lang } from "@/lib/guestText";
 
@@ -261,10 +261,63 @@ export default function SeatScanning() {
   const filteredUsers = useMemo(() => {
     if (!searchValue) return [];
 
-    return allUsers
-      .filter((user) => matches(`${user.firstname} ${user.lastname}`, searchValue))
+    const all = allUsers.filter((user) => matches(`${user.firstname} ${user.lastname}`, searchValue));
+    return (all.length ? all : allUsers.filter((user) => matchesAny(`${user.firstname} ${user.lastname}`, searchValue)))
       .slice(0, 5); // Limit to 5 results
   }, [searchValue, allUsers]);
+
+  // ---- Say your name (the phone's speech recognition, where available) ----
+  type Rec = {
+    lang: string;
+    interimResults: boolean;
+    maxAlternatives: number;
+    onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+    onerror: ((e: { error?: string }) => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+  };
+  const recRef = useRef<Rec | null>(null);
+  const [listening, setListening] = useState(false);
+  const [canListen, setCanListen] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+    setCanListen(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+  }, []);
+  const startListening = () => {
+    const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
+    const R = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!R) return;
+    try {
+      const rec = new R();
+      // Kreyòl isn't offered by phones: French understands the names best
+      rec.lang = lang === "es" ? "es-US" : lang === "fr" || lang === "ht" ? "fr-FR" : "en-US";
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      rec.onresult = (e) => {
+        let said = "";
+        for (let i = 0; i < e.results.length; i++) said += e.results[i][0].transcript;
+        // names only: drop "my name is", punctuation
+        said = said.replace(/^(my name is|i am|i'm|me llamo|je m'appelle|mwen rele)\s+/i, "").replace(/[.,!?]/g, "").trim();
+        if (said) setSearchValue(said);
+      };
+      rec.onerror = (e) => {
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") toast.error(t.micBlocked);
+        setListening(false);
+      };
+      rec.onend = () => setListening(false);
+      recRef.current = rec;
+      setListening(true);
+      rec.start();
+    } catch {
+      setListening(false);
+      toast.error(t.micBlocked);
+    }
+  };
+  const stopListening = () => {
+    recRef.current?.stop();
+    setListening(false);
+  };
 
   // "Refresh" on the Seat not available pop-up: ask again (the desk may have released the seat)
   const [refreshing, setRefreshing] = useState(false);
@@ -420,9 +473,28 @@ export default function SeatScanning() {
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         disabled={isLoading}
-                        className="pl-10 h-14 text-base sm:text-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-lime-500/20 transition-all rounded-xl"
+                        className={`pl-10 h-14 text-base sm:text-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-lime-500/20 transition-all rounded-xl ${
+                          canListen ? "pr-16" : ""
+                        }`}
                       />
+                      {/* Say your name instead of typing it */}
+                      {canListen && (
+                        <button
+                          type="button"
+                          onClick={listening ? stopListening : startListening}
+                          className={`absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full ${
+                            listening ? "animate-pulse bg-red-600 text-white" : "bg-lime-600 text-white hover:bg-lime-700"
+                          }`}
+                          aria-label={t.sayName}
+                          title={t.sayName}
+                        >
+                          <Mic className="h-6 w-6" />
+                        </button>
+                      )}
                     </div>
+                    {listening && (
+                      <p className="mt-1 text-center text-base font-semibold text-red-600">{t.listening}</p>
+                    )}
 
                     {/* Search Results */}
                     {searchValue && !isLoading && (

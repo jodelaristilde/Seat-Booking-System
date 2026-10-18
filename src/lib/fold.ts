@@ -10,6 +10,16 @@ export function fold(s: string | null | undefined): string {
     .trim();
 }
 
+// At least one word (3+ letters) appears: a softer match, e.g. when the phone
+// mishears one of the names said out loud
+export function matchesAny(text: string | null | undefined, query: string): boolean {
+  const t = fold(text);
+  return fold(query)
+    .split(" ")
+    .filter((w) => w.length >= 3)
+    .some((w) => t.includes(w));
+}
+
 // Every word typed must appear somewhere in the text
 export function matches(text: string | null | undefined, query: string): boolean {
   const q = fold(query);
