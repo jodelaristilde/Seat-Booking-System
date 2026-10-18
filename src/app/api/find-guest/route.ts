@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { matches, matchesAny } from "@/lib/fold";
 import { heldKeys } from "@/lib/guestNotes";
+import { generalQrEventIds, isOpenForGuests } from "@/lib/guestAccess";
 
 // Used by the public "find my seat" page.
 // Returns at most 5 matches and needs at least 2 letters,
@@ -20,11 +21,25 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const eventId = all ? undefined : await activeEventId();
+    // Only events open to guests: a past event (or one closed by hand) can't be
+    // searched, so a guest from last week's party can't find a seat this week.
+    let where: { eventId: string } | { eventId: { in: string[] } };
+    if (all) {
+      // the general QR code: every event that is open right now
+      where = { eventId: { in: [...(await generalQrEventIds())] } };
+    } else {
+      // an event's own QR code (?event=…), else this phone's remembered event
+      const asked = params.get("event");
+      const eventId = asked || (await activeEventId());
+      if (!(await isOpenForGuests(eventId))) {
+        return NextResponse.json({ success: true, data: [], closed: true });
+      }
+      where = { eventId };
+    }
     // Match names while ignoring accents ("nadege" finds "Nadège"): compare
     // the names here, then load the (at most 5) matches
     const names = await db.users.findMany({
-      where: eventId ? { eventId } : {},
+      where,
       select: { id: true, firstname: true, lastname: true },
     });
     const full = (g: { firstname: string; lastname: string }) => `${g.firstname} ${g.lastname}`;

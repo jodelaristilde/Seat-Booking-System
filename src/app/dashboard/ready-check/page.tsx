@@ -49,7 +49,8 @@ export default function ReadyCheck() {
       const seats: SeatRow[] = s.success ? s.data : [];
       const guests: Guest[] = g.success ? g.data : [];
       const pos: Pos[] = p.success ? p.data : [];
-      if (e.success) setEventName(e.events.find((x: { id: string }) => x.id === e.activeId)?.name ?? "");
+      const thisEvent = e.success ? e.events.find((x: { id: string }) => x.id === e.activeId) : null;
+      if (thisEvent) setEventName(thisEvent.name ?? "");
 
       const out: Check[] = [];
 
@@ -175,6 +176,17 @@ export default function ReadyCheck() {
         problem: "No entrance is set, so guests' phones only circle their table (no green line).",
         items: [],
         fix: "Floor plan → Set entrance → click the door on the plan.",
+      });
+
+      // 8b. event date: after it, guests can no longer look up seats on their phone
+      out.push({
+        title: "Event date",
+        ok: !!thisEvent?.date,
+        level: "warn",
+        okText: `Date set (${thisEvent?.date}). After this date, guests can no longer look up seats on their phone.`,
+        problem: "No date set. Without a date, guests from this event can look up seats until you close it by hand.",
+        items: [],
+        fix: "Click the event name at the top → rename (✏️) and add the date. Or set Guest check-in: Closed after the event.",
       });
 
       // 9. floor plan picture

@@ -32,6 +32,8 @@ export function EventSwitcher() {
     a.click();
   };
 
+  // per event: can guests look up seats on their phone?
+  const [access, setAccess] = useState<Record<string, { open: boolean; past: boolean; closed: boolean }>>({});
   const load = async () => {
     try {
       const res = await fetch("/api/events");
@@ -40,9 +42,19 @@ export function EventSwitcher() {
         setEvents(json.events);
         setActiveId(json.activeId);
       }
+      const ga = await fetch("/api/events/guest-access").then((r) => r.json()).catch(() => null);
+      if (ga?.success) setAccess(ga.data);
     } catch {
       /* keep what we have */
     }
+  };
+  const toggleGuests = async (id: string, open: boolean) => {
+    await fetch("/api/events/guest-access", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, closed: open }),
+    }).catch(() => undefined);
+    load();
   };
   useEffect(() => {
     load();
@@ -155,6 +167,32 @@ export function EventSwitcher() {
                           {e.date ? `${e.date} · ` : ""}
                           {e.tables ?? 0} tables · {e.guests ?? 0} guests
                         </div>
+                        {/* can guests find their seat on their phone? */}
+                        {access[e.id] && (
+                          <button
+                            type="button"
+                            onClick={() => toggleGuests(e.id, access[e.id].open)}
+                            disabled={access[e.id].past && !access[e.id].closed}
+                            className={`mt-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                              access[e.id].open
+                                ? "border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
+                                : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                            }`}
+                            title={
+                              access[e.id].past
+                                ? "This event's date has passed: guests can no longer look up seats"
+                                : access[e.id].open
+                                ? "Guests can find their seat on their phone. Click to close."
+                                : "Guests can't look up seats. Click to reopen."
+                            }
+                          >
+                            {access[e.id].open
+                              ? "Guest check-in: Open"
+                              : access[e.id].past
+                              ? "Guest check-in: Closed (date passed)"
+                              : "Guest check-in: Closed"}
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

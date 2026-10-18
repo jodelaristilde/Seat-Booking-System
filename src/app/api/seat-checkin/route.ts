@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { isHeld } from "@/lib/guestNotes"
+import { isOpenForGuests } from "@/lib/guestAccess"
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +12,9 @@ export async function POST(req: Request) {
     }
 
     const seat = await db.seat.findUnique({ where: { id: seatId }, select: { userId: true, table: { select: { eventId: true } } } })
+    if (seat && !(await isOpenForGuests(seat.table?.eventId))) {
+      return NextResponse.json({ success: false, message: "Guest check-in for this event is closed." }, { status: 403 })
+    }
     if (seat && (await isHeld(seat.table?.eventId, seat.userId))) {
       return NextResponse.json({ success: false, message: "Please see the desk." }, { status: 403 })
     }

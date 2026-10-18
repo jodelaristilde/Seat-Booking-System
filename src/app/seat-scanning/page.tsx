@@ -95,7 +95,9 @@ export default function SeatScanning() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}`);
+        const response = await fetch(
+          `/api/find-guest?q=${encodeURIComponent(q)}${eventId ? `&event=${encodeURIComponent(eventId)}` : ""}`
+        );
         const data = await response.json();
         if (!cancelled && data.success) setGroupResults(data.data);
       } catch (error) {
@@ -169,6 +171,8 @@ export default function SeatScanning() {
   const [eventName, setEventName] = useState<string | null>(null);
   // Which event this phone is on. Empty = the general QR code: search every event.
   const [eventId, setEventId] = useState<string | null>(null);
+  // this event is closed to guests (past, or closed by the organizer)
+  const [eventClosed, setEventClosed] = useState(false);
   const chooseEvent = (id: string) => {
     setEventId(id);
     // remembers the event on this phone (for "more guests" and the floor map)
@@ -201,9 +205,12 @@ export default function SeatScanning() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? "" : "&all=1"}`);
+        const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? `&event=${encodeURIComponent(eventId)}` : "&all=1"}`);
         const data = await response.json();
-        if (!cancelled && data.success) setAllUsers(data.data);
+        if (!cancelled && data.success) {
+          setAllUsers(data.data);
+          setEventClosed(!!data.closed);
+        }
       } catch (error) {
         console.error("Error searching guests:", error);
       }
@@ -360,7 +367,7 @@ export default function SeatScanning() {
     setRefreshing(true);
     try {
       const q = `${selectedUser.firstname} ${selectedUser.lastname}`;
-      const res = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? "" : "&all=1"}`);
+      const res = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? `&event=${encodeURIComponent(eventId)}` : "&all=1"}`);
       const data = await res.json();
       const me = (data?.data as User[] | undefined)?.find((u) => u.id === selectedUser.id);
       if (me?.seat?.length) {
@@ -583,8 +590,12 @@ export default function SeatScanning() {
                               ))}
                             </div>
                           ) : (
-                            <div className="p-4 text-center text-base text-zinc-500">
-                              {t.noMatch}
+                            <div
+                              className={`p-4 text-center text-base ${
+                                eventClosed ? "font-semibold text-amber-800" : "text-zinc-500"
+                              }`}
+                            >
+                              {eventClosed ? t.eventClosed : t.noMatch}
                             </div>
                           )}
                         </CardContent>

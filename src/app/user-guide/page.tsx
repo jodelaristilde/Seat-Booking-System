@@ -403,6 +403,15 @@ export default function UserGuide() {
               ]}
             />
           </Card>
+          <Card title="Guests only find seats for the right event">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• Each event&apos;s own QR code only searches that event.</li>
+              <li>• Once an event&apos;s <b>date has passed</b>, guests can no longer look up seats in it on their phone (your dashboard and reports are not affected).</li>
+              <li>• The general Seating4U QR code only searches events that are still open.</li>
+              <li>• Click the event name at the top: each event shows <b>Guest check-in: Open / Closed</b>. Click it to close an event early or reopen it.</li>
+              <li>• Give every event a <b>date</b> so it closes by itself (the Ready check reminds you).</li>
+            </ul>
+          </Card>
           <Card title="Kitchen screen for the caterer">
             <Steps
               items={[
