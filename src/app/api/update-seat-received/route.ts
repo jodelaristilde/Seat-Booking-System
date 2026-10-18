@@ -6,6 +6,13 @@ export async function PUT(req: NextRequest) {
     const body = await req.json()
     const { seatId, isReceived } = body
 
+    // Several seats at once (a whole table arrives): { seatIds: [...], isReceived }
+    if (Array.isArray(body?.seatIds)) {
+      const ids = body.seatIds.filter((x: unknown): x is string => typeof x === "string").slice(0, 100)
+      const r = await db.seat.updateMany({ where: { id: { in: ids }, isBooked: true }, data: { isReceived: !!isReceived } })
+      return NextResponse.json({ success: true, count: r.count })
+    }
+
     const updatedSeat = await db.seat.update({
       where: {
         id: seatId,

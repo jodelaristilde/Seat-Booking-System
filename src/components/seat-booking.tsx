@@ -964,6 +964,33 @@ const handleTableClick = () => {
     }
   };
 
+  // A whole table (or group) arrives at once
+  const handleArriveMany = async (seatIds: string[]) => {
+    if (!seatIds.length) return;
+    try {
+      const response = await fetch("/api/update-seat-received", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatIds, isReceived: true }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message || "Failed");
+      const ids = new Set(seatIds);
+      setTables((prev) =>
+        prev.map((table) => ({
+          ...table,
+          seats: table.seats.map((seat) => (ids.has(seat.id) ? { ...seat, isReceived: true } : seat)),
+        }))
+      );
+      setBookedSeats((prev) => prev.map((seat) => (ids.has(seat.id) ? { ...seat, isReceived: true } : seat)));
+      toast.success(`${seatIds.length} guest${seatIds.length === 1 ? "" : "s"} checked in`);
+    } catch (error) {
+      toast.error("Could not check in the table", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   const handleToggleReceived = async (seatId: string, isReceived: boolean) => {
     try {
       const response = await fetch("/api/update-seat-received", {
@@ -980,16 +1007,17 @@ const handleTableClick = () => {
       const result = await response.json();
 
       if (result.success) {
-        const updatedTables = tables.map((table) => ({
-          ...table,
-          seats: table.seats.map((seat) =>
-            seat.id === seatId ? { ...seat, isReceived } : seat
-          ),
-        }));
-
-        setTables(updatedTables);
-        setBookedSeats(
-          bookedSeats.map((seat) =>
+        // functional updates: two quick ticks never undo each other
+        setTables((prev) =>
+          prev.map((table) => ({
+            ...table,
+            seats: table.seats.map((seat) =>
+              seat.id === seatId ? { ...seat, isReceived } : seat
+            ),
+          }))
+        );
+        setBookedSeats((prev) =>
+          prev.map((seat) =>
             seat.id === seatId ? { ...seat, isReceived } : seat
           )
         );
@@ -1403,6 +1431,7 @@ const handleTableClick = () => {
                 onGuestNamesChange={setShowNames}
                 invited={totalGuests}
                 onToggleArrived={handleToggleReceived}
+                onArriveMany={handleArriveMany}
                 onTablesChanged={refreshSeats}
                 roomOnly={isFullScreen}
                 onRoomOnlyChange={setIsFullScreen}

@@ -60,6 +60,8 @@ interface FloorPlanCanvasProps {
   invited?: number;
   /** tick / untick a guest as arrived */
   onToggleArrived?: (seatId: string, arrived: boolean) => void;
+  // check in several seats at once (whole table)
+  onArriveMany?: (seatIds: string[]) => void;
 }
 
 // One table while checking the picture
@@ -152,6 +154,7 @@ export function FloorPlanCanvas({
   onGuestNamesChange,
   invited,
   onToggleArrived,
+  onArriveMany,
 }: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
@@ -2557,6 +2560,21 @@ export function FloorPlanCanvas({
                   {!tableQuery.trim() && booked.every((s) => s.isReceived) && (
                     <p className="py-2 text-center text-sm text-green-700">Everyone at this table has arrived ✓</p>
                   )}
+                  {onArriveMany && booked.some((s) => !s.isReceived) && (() => {
+                    const waiting = booked.filter((s) => !s.isReceived);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Check in all ${waiting.length} guests still expected at ${tableNameOf(table)}?`))
+                            onArriveMany(waiting.map((s) => s.id));
+                        }}
+                        className="mb-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-2 py-1.5 text-sm font-semibold text-green-800 hover:bg-green-100"
+                      >
+                        <Check className="h-4 w-4" /> Whole table arrived ({waiting.length})
+                      </button>
+                    );
+                  })()}
                   <ul className="space-y-1">
                     {[...booked]
                       // arrived guests are hidden, unless searched for (to undo a mistake)
