@@ -1246,7 +1246,7 @@ export function FloorPlanCanvas({
   const roomColRef = useRef<HTMLDivElement>(null);
   // Full screen: the one-line header (welcome, totals, arrival bar) above the room
   const fsHeaderRef = useRef<HTMLDivElement>(null);
-  const [avail, setAvail] = useState<{ w: number; h: number } | null>(null);
+  const [avail, setAvail] = useState<{ w: number; h: number; note?: number } | null>(null);
   useEffect(() => {
     const el = roomColRef.current;
     if (!el) return;
@@ -1259,7 +1259,7 @@ export function FloorPlanCanvas({
       const footer = !roomOnly && window.innerWidth >= 1024 ? document.querySelector("footer") : null;
       const footerH = footer ? footer.getBoundingClientRect().height : 0;
       const h = Math.max(240, window.innerHeight - Math.max(0, r.top) - note - footerH - (roomOnly ? 6 : 12));
-      setAvail({ w: r.width, h });
+      setAvail({ w: r.width, h, note });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -1472,7 +1472,11 @@ export function FloorPlanCanvas({
             <span className="font-semibold text-green-900">Arrived</span>
             <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
           </div>
-          <div className={`${mobile ? "max-h-72" : "max-h-40 lg:max-h-[calc(100vh-6rem)]"} overflow-y-auto`}>
+          <div
+            className={`${mobile ? "max-h-72" : "max-h-40 lg:max-h-[calc(100vh-6rem)]"} overflow-y-auto overscroll-contain`}
+            // never taller than the map next to it: the names scroll, the map stays put
+            style={!mobile && avail && window.innerWidth >= 1024 ? { maxHeight: Math.max(160, avail.h + (avail.note ?? 0) - 30) } : undefined}
+          >
             {/* A table so the table names line up a few spaces after the longest name */}
             <table className="text-sm border-collapse">
               <tbody>
