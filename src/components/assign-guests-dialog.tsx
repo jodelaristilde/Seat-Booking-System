@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { matches } from "@/lib/fold"
 
 interface Guest {
   id: string
@@ -55,13 +56,7 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
   // Filter guests by search
   const filteredGuests = useMemo(() => {
     if (!searchValue) return availableGuests
-    const term = searchValue.toLowerCase()
-    return availableGuests.filter(
-      (g) =>
-        g.firstname.toLowerCase().includes(term) ||
-        g.lastname.toLowerCase().includes(term) ||
-        `${g.firstname} ${g.lastname}`.toLowerCase().includes(term),
-    )
+    return availableGuests.filter((g) => matches(`${g.firstname} ${g.lastname}`, searchValue))
   }, [searchValue, availableGuests])
 
   // Empty seats at the chosen table

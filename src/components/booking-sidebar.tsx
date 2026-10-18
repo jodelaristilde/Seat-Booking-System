@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { matches } from "@/lib/fold";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -144,8 +145,8 @@ export function BookingSidebar({
       .filter(
         (seat) =>
           !q ||
-          fullName(seat).toLowerCase().includes(q) ||
-          (seat.table?.name ?? "").toLowerCase().includes(q)
+          matches(fullName(seat), q) ||
+          matches(seat.table?.name, q)
       )
       // by last name, then first name
       .sort((a, b) => {

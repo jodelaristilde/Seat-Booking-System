@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { matches } from "@/lib/fold";
 
 // Used by the public "find my seat" page.
 // Returns at most 5 matches and needs at least 2 letters,
@@ -18,19 +19,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const terms = q.split(/\s+/).filter(Boolean).slice(0, 4);
-
     const eventId = all ? undefined : await activeEventId();
+    // Match names while ignoring accents ("nadege" finds "Nadège"): compare
+    // the names here, then load the (at most 5) matches
+    const names = await db.users.findMany({
+      where: eventId ? { eventId } : {},
+      select: { id: true, firstname: true, lastname: true },
+    });
+    const ids = names
+      .filter((g: { firstname: string; lastname: string }) => matches(`${g.firstname} ${g.lastname}`, q.slice(0, 80)))
+      .slice(0, 5)
+      .map((g: { id: string }) => g.id);
     const guests = await db.users.findMany({
-      where: {
-        ...(eventId ? { eventId } : {}),
-        AND: terms.map((t) => ({
-          OR: [
-            { firstname: { contains: t, mode: "insensitive" as const } },
-            { lastname: { contains: t, mode: "insensitive" as const } },
-          ],
-        })),
-      },
+      where: { id: { in: ids } },
       include: {
         seat: {
           include: {
@@ -42,9 +43,9 @@ export async function GET(request: Request) {
     });
 
     // Add each guest's event name (shown when matches come from different events)
-    const ids = [...new Set(guests.map((g: { eventId: string | null }) => g.eventId).filter(Boolean))] as string[];
-    const events = ids.length
-      ? await db.event.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+    const evIds = [...new Set(guests.map((g: { eventId: string | null }) => g.eventId).filter(Boolean))] as string[];
+    const events = evIds.length
+      ? await db.event.findMany({ where: { id: { in: evIds } }, select: { id: true, name: true } })
       : [];
     const nameOf = new Map(events.map((e: { id: string; name: string }) => [e.id, e.name] as const));
     const data = guests.map((g: { eventId: string | null }) => ({

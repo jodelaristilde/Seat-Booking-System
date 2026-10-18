@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { matches as nameMatches } from "@/lib/fold";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -2530,7 +2531,7 @@ export function FloorPlanCanvas({
                       .filter((s) => {
                         const q = tableQuery.trim().toLowerCase();
                         if (!q) return !s.isReceived;
-                        return `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.toLowerCase().includes(q);
+                        return nameMatches(`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`, q);
                       })
                       .sort((a, b) =>
                         // by last name, then first name
@@ -2596,7 +2597,7 @@ export function FloorPlanCanvas({
                 const q = addQuery.trim().toLowerCase();
                 const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);
                 const matches = unseated
-                  .filter((g) => !q || `${g.firstname} ${g.lastname}`.toLowerCase().includes(q))
+                  .filter((g) => !q || nameMatches(`${g.firstname} ${g.lastname}`, q))
                   .sort((a, b) => `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`)) // by last name
                   .slice(0, 50);
                 const full = addPicked.length >= free;

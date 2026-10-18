@@ -11,6 +11,7 @@ import { Check, HelpCircle, QrCode, Search, MapPin, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { matches } from "@/lib/fold";
 import { toast } from "sonner";
 import { GUEST_TEXT, LANGS, detectLang, type Lang } from "@/lib/guestText";
 
@@ -251,16 +252,8 @@ export default function SeatScanning() {
   const filteredUsers = useMemo(() => {
     if (!searchValue) return [];
 
-    const searchTerm = searchValue.toLowerCase();
     return allUsers
-      .filter(
-        (user) =>
-          user.firstname.toLowerCase().includes(searchTerm) ||
-          user.lastname.toLowerCase().includes(searchTerm) ||
-          `${user.firstname} ${user.lastname}`
-            .toLowerCase()
-            .includes(searchTerm)
-      )
+      .filter((user) => matches(`${user.firstname} ${user.lastname}`, searchValue))
       .slice(0, 5); // Limit to 5 results
   }, [searchValue, allUsers]);
 
