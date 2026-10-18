@@ -344,6 +344,15 @@ export default function SeatScanning() {
     setListening(false);
   };
 
+  // "Close" on the Seat not available pop-up: back to an empty search
+  const closeNoSeat = () => {
+    setNoSeatFound(false);
+    setSelectedUser(null);
+    setSearchResult(null);
+    setSearchValue("");
+    window.setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
+
   // "Refresh" on the Seat not available pop-up: ask again (the desk may have released the seat)
   const [refreshing, setRefreshing] = useState(false);
   const refreshSeat = async () => {
@@ -876,7 +885,7 @@ export default function SeatScanning() {
           <div className="relative w-full max-w-sm rounded-2xl border-4 border-amber-400 bg-amber-50 p-5 text-center shadow-2xl">
             <button
               type="button"
-              onClick={() => setNoSeatFound(false)}
+              onClick={closeNoSeat}
               className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-2xl leading-none text-amber-900 hover:bg-amber-100"
               aria-label={t.close}
             >
@@ -902,7 +911,7 @@ export default function SeatScanning() {
               </button>
               <button
                 type="button"
-                onClick={() => setNoSeatFound(false)}
+                onClick={closeNoSeat}
                 className="h-14 rounded-xl border border-zinc-300 bg-white text-xl font-bold text-zinc-900 shadow-sm hover:bg-zinc-50"
               >
                 {t.close}
