@@ -22,9 +22,14 @@ interface Guest {
   table?: string;
   vip?: string;
   meal?: string;
+  allergy?: string;
 }
 
 export function ImportGuestsforWeb() {
+  // "new": add guests from the file. "update": fill in meals / allergies / VIP
+  // for guests already on the list (nobody is added twice)
+  const [mode, setMode] = useState<"new" | "update">("new");
+  const [updateResult, setUpdateResult] = useState<{ updated: number; notFound: string[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState<{
@@ -66,6 +71,7 @@ export function ImportGuestsforWeb() {
     setError(null);
     setImportProgress(null);
     setImportStats(null);
+    setUpdateResult(null);
 
     try {
       const file = files[0];
@@ -75,6 +81,20 @@ export function ImportGuestsforWeb() {
         throw new Error("No valid data found in the file");
       }
 
+      if (mode === "update") {
+        const res = await fetch("/api/update-guests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: guests }),
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.message || "Update failed");
+        setUpdateResult({ updated: j.updated, notFound: j.notFound ?? [] });
+        toast.success(`${j.updated} guests updated`);
+        return;
+      }
+      const allergyItems: { id: string; allergy: string }[] = [];
+
       const importedGuests: Guest[] = [];
       const failedGuests: Guest[] = [];
       const errors: string[] = [];
@@ -82,7 +102,8 @@ export function ImportGuestsforWeb() {
       for (let i = 0; i < guests.length; i++) {
         const guest = guests[i];
         try {
-          await addGuest(guest);
+          const added = await addGuest(guest);
+          if (guest.allergy && added?.data?.id) allergyItems.push({ id: added.data.id, allergy: guest.allergy });
           importedGuests.push(guest);
         } catch (error) {
           failedGuests.push(guest);
@@ -99,6 +120,13 @@ export function ImportGuestsforWeb() {
         });
       }
 
+      if (allergyItems.length) {
+        await fetch("/api/allergies", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: allergyItems }),
+        }).catch(() => undefined);
+      }
       setImportStats({
         imported: importedGuests.length,
         total: guests.length,
@@ -156,12 +184,15 @@ export function ImportGuestsforWeb() {
               row.table ?? row.Table ?? row["Table Name"] ?? row["Table Number"] ?? row["TABLE"];
             const vip = row.vip ?? row.VIP ?? row.Vip;
             const meal = row.meal ?? row.Meal ?? row.MEAL ?? row["Meal Choice"];
+            const allergy =
+              row.allergy ?? row.Allergy ?? row.Allergies ?? row.allergies ?? row.ALLERGY ?? row["Dietary"] ?? row["Diet"];
             return {
               firstname: String(firstname).trim(),
               lastname: String(lastname).trim(),
               ...(table !== undefined && String(table).trim() ? { table: String(table).trim() } : {}),
               ...(vip !== undefined && String(vip).trim() ? { vip: String(vip).trim() } : {}),
               ...(meal !== undefined && String(meal).trim() ? { meal: String(meal).trim() } : {}),
+              ...(allergy !== undefined && String(allergy).trim() ? { allergy: String(allergy).trim() } : {}),
             };
           });
 
@@ -178,10 +209,10 @@ export function ImportGuestsforWeb() {
   const downloadSampleFile = (fileType: "xlsx" | "csv") => {
     // "Table" is optional: fill it in and guests are seated on import
     const data = [
-      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", VIP: "" },
-      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", VIP: "" },
-      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", VIP: "yes" },
-      { firstname: "Paul", lastname: "Murphy", Table: "", Meal: "", VIP: "" },
+      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", Allergy: "", VIP: "" },
+      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", Allergy: "Nuts", VIP: "" },
+      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", Allergy: "", VIP: "yes" },
+      { firstname: "Paul", lastname: "Murphy", Table: "", Meal: "", Allergy: "", VIP: "" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -231,12 +262,41 @@ export function ImportGuestsforWeb() {
           <DialogTitle>Import Guests</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Add new guests, or update the ones already on the list */}
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1 text-sm font-semibold">
+            {([
+              ["new", "Add new guests"],
+              ["update", "Update meals / allergies"],
+            ] as const).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMode(m);
+                  setUpdateResult(null);
+                  setImportStats(null);
+                  setError(null);
+                }}
+                className={`rounded-md px-3 py-1.5 ${mode === m ? "bg-white shadow" : "text-zinc-600 hover:text-zinc-900"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === "update" ? (
+            <p className="text-sm text-zinc-600">
+              For guests <b>already on your list</b>. Upload an Excel file with <b>First Name</b>, <b>Last Name</b> and
+              any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>. Each guest is found by name (accents don&apos;t matter)
+              and their meal, allergy or VIP is filled in. <b>Nobody is added twice</b>, and empty cells change nothing.
+            </p>
+          ) : (
           <p className="text-sm text-zinc-600">
             Your Excel file needs the columns <b>First Name</b> and <b>Last Name</b>. Add a <b>Table</b> column
             (like <i>5</i> or <i>Head Table</i>) and each guest is seated at that table right away; missing tables
-            are created. Leave it empty to seat them later. Optional too: a <b>Meal</b> column (Chicken, Fish, Veg…)
-            and a <b>VIP</b> column (put <i>yes</i> for VIP guests).
+            are created. Leave it empty to seat them later. Optional too: a <b>Meal</b> column (Chicken, Fish, Veg…),
+            an <b>Allergy</b> column and a <b>VIP</b> column (put <i>yes</i> for VIP guests).
           </p>
+          )}
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />
           </div>
@@ -278,6 +338,23 @@ export function ImportGuestsforWeb() {
                 (Success: {importProgress.success}, Failure:{" "}
                 {importProgress.failure})
               </p>
+            </div>
+          )}
+          {updateResult && (
+            <div className="space-y-2 rounded-lg bg-gray-50 p-4">
+              <p className="font-medium text-green-700">✓ {updateResult.updated} guests updated</p>
+              {updateResult.notFound.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-amber-700">
+                    Not on your list ({updateResult.notFound.length}). Check the spelling, or add them with New Guest:
+                  </p>
+                  <ul className="max-h-40 list-inside list-disc overflow-y-auto text-sm text-amber-700">
+                    {updateResult.notFound.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {error && (
