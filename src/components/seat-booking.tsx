@@ -1071,7 +1071,7 @@ const handleTableClick = () => {
   }
 
   return (
-    <div className={`bg-zinc-50 ${isFullScreen ? "overflow-hidden" : ""}`}>
+    <div className={`bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
       <AnimatePresence>
         {!isFullScreen && (
           <motion.nav
@@ -1105,7 +1105,8 @@ const handleTableClick = () => {
                   <Button
                     onClick={refreshSeats}
                     size="icon"
-                    className="w-8 h-8 sm:w-10 sm:h-10"
+                    variant="outline"
+                    className="w-8 h-8 sm:w-9 sm:h-9"
                   >
                     <RefreshCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
@@ -1137,7 +1138,8 @@ const handleTableClick = () => {
                     <TooltipTrigger asChild>
                       <Button
                         size="sm"
-                        className="h-8 sm:h-10"
+                        variant="outline"
+                        className="h-8 sm:h-9"
                         onClick={toggleViewMode}
                       >
                         {viewMode === "plan" ? (
@@ -1177,7 +1179,7 @@ const handleTableClick = () => {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="icon" className="w-8 h-8 sm:w-10 sm:h-10">
+                      <Button size="icon" variant="outline" className="w-8 h-8 sm:w-9 sm:h-9">
                         <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1243,7 +1245,7 @@ const handleTableClick = () => {
                   {/* Create New Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button className="px-2 sm:px-4 text-sm sm:text-base">
+                      <Button variant="outline" className="h-8 sm:h-9 px-2 sm:px-3 text-sm font-semibold">
                         <span>New</span>
                         <ChevronDown className="h-4 w-4 ml-1 sm:ml-2" />
                       </Button>
@@ -1335,35 +1337,35 @@ const handleTableClick = () => {
                   y: -50,
                 }}
                 transition={{ duration: 0.5 }}
-                className="sticky top-0 z-40 bg-white border-b border-zinc-200 px-4 py-1.5 md:px-6 md:py-2"
+                className="sticky top-0 z-40 bg-white border-b border-zinc-200 px-4 py-1.5 md:px-5 md:py-2"
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="w-full md:w-auto">
-                    <div className="grid grid-cols-5 gap-1.5 md:gap-2">
-                      <div className="bg-zinc-50 rounded-md border border-zinc-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
-                        <div className="text-[10px] leading-tight uppercase tracking-wider text-zinc-500">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
+                      <div className="bg-zinc-50 rounded-md border border-zinc-200 px-2.5 py-1 flex items-baseline gap-1.5 whitespace-nowrap">
+                        <div className="text-[10.5px] leading-none uppercase tracking-wider font-medium text-zinc-500">
                           Seats
                         </div>
-                        <div className="text-sm leading-tight font-bold text-zinc-800 tabular-nums">
+                        <div className="text-[15px] leading-none font-bold text-zinc-800 tabular-nums">
                           {tables.reduce(
                             (total, table) => total + table.seats.length,
                             0
                           )}
                         </div>
                       </div>
-                      <div className="bg-cyan-50 rounded-md border border-cyan-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
-                        <div className="text-[10px] leading-tight uppercase tracking-wider text-cyan-600">
+                      <div className="bg-cyan-50 rounded-md border border-cyan-200 px-2.5 py-1 flex items-baseline gap-1.5 whitespace-nowrap">
+                        <div className="text-[10.5px] leading-none uppercase tracking-wider font-medium text-cyan-600">
                           Invited
                         </div>
-                        <div className="text-sm leading-tight font-bold text-cyan-800 tabular-nums">
+                        <div className="text-[15px] leading-none font-bold text-cyan-800 tabular-nums">
                           {totalGuests}
                         </div>
                       </div>
-                      <div className="bg-red-50 rounded-md border border-red-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
-                        <div className="text-[10px] leading-tight uppercase tracking-wider text-red-600">
+                      <div className="bg-red-50 rounded-md border border-red-200 px-2.5 py-1 flex items-baseline gap-1.5 whitespace-nowrap">
+                        <div className="text-[10.5px] leading-none uppercase tracking-wider font-medium text-red-600">
                           Assigned
                         </div>
-                        <div className="text-sm leading-tight font-bold text-red-800 tabular-nums">
+                        <div className="text-[15px] leading-none font-bold text-red-800 tabular-nums">
                           {tables.reduce(
                             (booked, table) =>
                               booked +
@@ -1373,11 +1375,11 @@ const handleTableClick = () => {
                           )}
                         </div>
                       </div>
-                      <div className="bg-green-50 rounded-md border border-green-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
-                        <div className="text-[10px] leading-tight uppercase tracking-wider text-green-600">
+                      <div className="bg-green-50 rounded-md border border-green-200 px-2.5 py-1 flex items-baseline gap-1.5 whitespace-nowrap">
+                        <div className="text-[10.5px] leading-none uppercase tracking-wider font-medium text-green-600">
                           Available
                         </div>
-                        <div className="text-sm leading-tight font-bold text-green-800 tabular-nums">
+                        <div className="text-[15px] leading-none font-bold text-green-800 tabular-nums">
                           {tables.reduce(
                             (available, table) =>
                               available +
@@ -1387,11 +1389,11 @@ const handleTableClick = () => {
                           )}
                         </div>
                       </div>
-                      <div className="bg-blue-50 rounded-md border border-blue-200 px-2 py-0.5 text-center hover:shadow-sm transition-all">
-                        <div className="text-[10px] leading-tight uppercase tracking-wider text-blue-600">
+                      <div className="bg-blue-50 rounded-md border border-blue-200 px-2.5 py-1 flex items-baseline gap-1.5 whitespace-nowrap">
+                        <div className="text-[10.5px] leading-none uppercase tracking-wider font-medium text-blue-600">
                           Arrived
                         </div>
-                        <div className="text-sm leading-tight font-bold text-blue-800 tabular-nums">
+                        <div className="text-[15px] leading-none font-bold text-blue-800 tabular-nums">
                           {tables.reduce(
                             (arrived, table) =>
                               arrived +
@@ -1473,7 +1475,7 @@ const handleTableClick = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
               transition={{ duration: 0.3 }}
-              className={`hidden xl:block ${isFullScreen ? "w-fit min-w-[13rem] max-w-xs shrink-0" : "w-1/4"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
+              className={`hidden xl:block ${isFullScreen ? "w-fit min-w-[13rem] max-w-xs shrink-0" : "w-1/4 xl:rounded-xl xl:border xl:border-zinc-200 xl:mr-2 xl:shadow-sm"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
             >
               <BookingSidebar
                 bookedSeats={bookedSeats}
