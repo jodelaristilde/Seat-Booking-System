@@ -42,6 +42,9 @@ import {
   type DetectedShape,
   type Shape,
   shapeAtPoint,
+  readPictureLabels,
+  pictureSignature,
+  type PictureLabel,
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
 
@@ -183,6 +186,10 @@ export function FloorPlanCanvas({
       writeStored(STRETCH_KEY, v ? "off" : "on");
       return !v;
     });
+  // The words printed on the picture, redrawn un-stretched when stretching
+  const [labels, setLabels] = useState<PictureLabel[] | null>(null);
+  const [labelsBusy, setLabelsBusy] = useState(false);
+  const labelsFor = useRef<string | null>(null);
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
   // Hover a table to see it big (seats, guests, who arrived). Can be turned off.
@@ -1452,6 +1459,40 @@ export function FloorPlanCanvas({
   // fills it with no empty bands, on any monitor
   // Stretched: the whole picture fills the box exactly (tables keep their % spots)
   const stretched = stretch && !!picture && showPicture && !working && !!avail && avail.w >= 50;
+  useEffect(() => {
+    if (!stretched || !picture) return;
+    const sig = pictureSignature(picture);
+    if (labelsFor.current === sig) return;
+    labelsFor.current = sig;
+    setLabels(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await fetch("/api/floor-labels").then((r) => r.json()).catch(() => null);
+        if (saved?.data?.sig === sig && Array.isArray(saved.data.labels)) {
+          if (!cancelled) setLabels(saved.data.labels);
+          return;
+        }
+        setLabelsBusy(true);
+        const read = await readPictureLabels(picture);
+        if (cancelled) return;
+        setLabels(read);
+        fetch("/api/floor-labels", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sig, labels: read }),
+        }).catch(() => undefined);
+      } catch {
+        /* reader not available: the picture just shows stretched */
+      } finally {
+        if (!cancelled) setLabelsBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      labelsFor.current = null;
+    };
+  }, [stretched, picture]);
   const fitted = (() => {
     if (!avail || avail.w < 50) return null;
     if (stretched) return { x: 0, y: 0, w: 100, h: 100, width: avail.w, height: avail.h };
@@ -2189,6 +2230,44 @@ export function FloorPlanCanvas({
             style={{ filter: "contrast(1.08) saturate(1.05)" }}
             draggable={false}
           />
+        )}
+        {/* Stretched picture: its words are drawn again on top, not stretched */}
+        {stretched && avail && labels?.map((l, i) => {
+          const wpx = (l.w / 100) * avail.w;
+          const hpx = (l.h / 100) * avail.h;
+          const font = Math.max(7, Math.min(hpx * 0.95, (wpx * 1.6) / Math.max(1, l.text.length)));
+          return (
+            <div
+              key={i}
+              className="absolute pointer-events-none flex items-center justify-center"
+              style={{
+                left: `${l.x}%`,
+                top: `${l.y}%`,
+                width: wpx + 6,
+                height: hpx + 6,
+                transform: "translate(-50%, -50%)",
+                background: l.bg,
+              }}
+            >
+              <span
+                style={{
+                  color: l.fg,
+                  fontSize: font,
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                  fontFamily: "'Times New Roman', Georgia, serif",
+                  fontWeight: 600,
+                }}
+              >
+                {l.text}
+              </span>
+            </div>
+          );
+        })}
+        {stretched && labelsBusy && (
+          <div className="absolute bottom-2 right-2 z-[5] rounded bg-white/90 px-2 py-1 text-xs text-zinc-600 shadow pointer-events-none">
+            Reading the words on the picture…
+          </div>
         )}
 
         {/* Checking the picture */}

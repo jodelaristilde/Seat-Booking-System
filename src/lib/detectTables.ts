@@ -557,3 +557,90 @@ function outlineShapeAtPoint(m: AreaMap, cx0: number, cy0: number): ClickResult 
     canvas: m.canvas,
   };
 }
+
+// ---- Reading the labels written on the floor plan ("Head Table", "Bar"…) ----
+// Used when the picture is stretched: the words are drawn again on top, so
+// they are never stretched. Positions are in % of the picture.
+export type PictureLabel = { text: string; x: number; y: number; w: number; h: number; bg: string; fg: string };
+
+type TessLine = { text: string; confidence: number; bbox: { x0: number; y0: number; x1: number; y1: number } };
+
+export async function readPictureLabels(src: string): Promise<PictureLabel[]> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Could not open the picture"));
+    i.src = src;
+  });
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0);
+  const px = ctx.getImageData(0, 0, W, H).data;
+  const at = (x: number, y: number) => {
+    const i = (Math.min(H - 1, Math.max(0, Math.round(y))) * W + Math.min(W - 1, Math.max(0, Math.round(x)))) * 4;
+    return [px[i], px[i + 1], px[i + 2]];
+  };
+  const hex = (c: number[]) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+
+  const T = await loadTesseract();
+  const worker = await T.createWorker("eng");
+  try {
+    // sparse text: find words anywhere on the plan
+    await worker.setParameters({ tessedit_pageseg_mode: "11" });
+    const r = (await worker.recognize(canvas)) as unknown as { data: { lines?: TessLine[] } };
+    const out: PictureLabel[] = [];
+    for (const l of r.data.lines ?? []) {
+      const text = l.text.replace(/[^A-Za-z0-9 #&'.\-]/g, " ").replace(/\s+/g, " ").trim();
+      const letters = text.replace(/[^A-Za-z]/g, "").length;
+      if (letters < 2 || l.confidence < 70) continue;
+      const { x0, y0, x1, y1 } = l.bbox;
+      const bw = x1 - x0, bh = y1 - y0;
+      if (bw < 6 || bh < 5 || bh > H * 0.12) continue;
+      // background: the most common light colour just around the words
+      const ring: number[][] = [];
+      for (let k = 0; k <= 10; k++) {
+        const x = x0 + (bw * k) / 10;
+        ring.push(at(x, y0 - 3), at(x, y1 + 3));
+      }
+      for (let k = 0; k <= 4; k++) {
+        const y = y0 + (bh * k) / 4;
+        ring.push(at(x0 - 3, y), at(x1 + 3, y));
+      }
+      ring.sort((a, b) => b[0] + b[1] + b[2] - (a[0] + a[1] + a[2]));
+      const top = ring.slice(0, Math.max(1, Math.ceil(ring.length / 2)));
+      const bg = [0, 1, 2].map((c) => top.reduce((s, p) => s + p[c], 0) / top.length);
+      // text colour: the darkest pixels inside the box
+      const inside: number[][] = [];
+      for (let yy = y0; yy < y1; yy += Math.max(1, bh / 12))
+        for (let xx = x0; xx < x1; xx += Math.max(1, bw / 40)) inside.push(at(xx, yy));
+      inside.sort((a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]));
+      const dark = inside.slice(0, Math.max(1, Math.ceil(inside.length / 10)));
+      const fg = [0, 1, 2].map((c) => dark.reduce((s, p) => s + p[c], 0) / dark.length);
+      out.push({
+        text,
+        x: ((x0 + x1) / 2 / W) * 100,
+        y: ((y0 + y1) / 2 / H) * 100,
+        w: (bw / W) * 100,
+        h: (bh / H) * 100,
+        bg: hex(bg),
+        fg: hex(fg),
+      });
+    }
+    return out;
+  } finally {
+    await worker.terminate().catch(() => undefined);
+  }
+}
+
+// A short fingerprint of a picture, so saved labels belong to the right one
+export function pictureSignature(src: string): string {
+  let h = 0;
+  const step = Math.max(1, Math.floor(src.length / 4000));
+  for (let i = 0; i < src.length; i += step) h = (h * 31 + src.charCodeAt(i)) | 0;
+  return `${src.length}-${h >>> 0}`;
+}
