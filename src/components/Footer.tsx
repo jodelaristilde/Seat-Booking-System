@@ -4,54 +4,13 @@ import Image from "next/image";
 
 const Footer = () => {
   return (
-    <footer className="bg-white dark:bg-zinc-900 py-6 sm:py-2 border-t border-zinc-100 dark:border-zinc-800">
+    <footer className="bg-white dark:bg-zinc-900 py-2 border-t border-zinc-100 dark:border-zinc-800">
       <div className="mx-4 sm:mx-16">
-        {/* Mobile Layout - Modern, Card-like Design */}
-        <div className="sm:hidden flex flex-col gap-8">
-          {/* Brand Name for Mobile */}
-          <div className="text-center">
-            <Link
-              href="/"
-              className="flex justify-center items-center space-x-2"
-            >
-              <Image
-                src="/logo.svg"
-                unoptimized
-                alt="Seating4U Logo"
-                width={150}
-                height={80}
-              />
-            </Link>
-          </div>
-
-          {/* Contact Info Card for Mobile */}
-          <div className="bg-zinc-50 dark:bg-zinc-800 p-6 rounded-2xl space-y-4">
-            <div className="flex flex-col gap-3 items-center">
-              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                seating4you@gmail.com
-              </p>
-              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                (417) 893-0047
-              </p>
-            </div>
-          </div>
-
-          {/* Credits for Mobile */}
-          <div className="space-y-4">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-black dark:text-white">
-                Created by Jodel Aristilde
-              </p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                (2BrothersMovement)
-              </p>
-            </div>
-
-            <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-              © 2025
-            </p>
-          </div>
-        </div>
+        {/* Phones: one short line */}
+        <p className="sm:hidden text-center text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+          Created by <span className="font-semibold text-zinc-700 dark:text-zinc-200">Jodel Aristilde</span> ·{" "}
+          <a href="tel:+14178930047" className="font-semibold text-zinc-700 dark:text-zinc-200">417-893-0047</a>
+        </p>
 
         {/* Desktop Layout - Unchanged */}
         <div className="hidden sm:flex flex-row items-center justify-between gap-6">
