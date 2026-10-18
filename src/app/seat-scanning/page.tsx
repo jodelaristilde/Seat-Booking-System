@@ -422,8 +422,9 @@ export default function SeatScanning() {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-zinc-950">
       {/* Main Content */}
-      {/* phones: start right at the top (no big empty band); bigger screens: centred */}
-      <div className="relative flex min-h-[100dvh] flex-col items-center justify-start px-3 pb-4 pt-3 sm:justify-center sm:p-6 lg:p-8">
+      {/* centred top to bottom in the part of the screen you can actually see
+          (100dvh leaves out the phone browser's own bars) */}
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-3 py-3 sm:p-6 lg:p-8">
         <div className="mx-auto w-full max-w-md space-y-3 sm:space-y-6">
           {/* Header */}
           <motion.div
