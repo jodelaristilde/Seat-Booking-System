@@ -1650,7 +1650,7 @@ const handleTableClick = () => {
               Desk note <span className="font-semibold text-red-600">(required)</span>
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {["Paid by Zelle", "Paid by check", "Paid cash", "None"].map((o) => (
+              {["None"].map((o) => (
                 <button
                   key={o}
                   type="button"
@@ -1668,7 +1668,7 @@ const handleTableClick = () => {
               value={deskAnswer}
               maxLength={200}
               onChange={(e) => setDeskAnswer(e.target.value)}
-              placeholder="Or write what happened (e.g. paid $250 cash, receipt #12)"
+              placeholder="Write what happened (e.g. paid $250 by Zelle)"
               className={deskAnswer.trim() ? "border-green-400" : "border-red-300"}
             />
           </div>
