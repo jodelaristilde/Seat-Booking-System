@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     const seat = await db.seat.findUnique({ where: { id: seatId }, select: { userId: true, table: { select: { eventId: true } } } })
     if (seat && (await isHeld(seat.table?.eventId, seat.userId))) {
-      return NextResponse.json({ success: false, message: "Please see the welcome desk." }, { status: 403 })
+      return NextResponse.json({ success: false, message: "Please see the desk." }, { status: 403 })
     }
 
     const updatedSeat = await db.seat.update({
