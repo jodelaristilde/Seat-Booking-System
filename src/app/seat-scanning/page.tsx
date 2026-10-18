@@ -216,6 +216,15 @@ export default function SeatScanning() {
 
   // Fetch floor map
   const fetchFloorMap = async () => {
+    // Phones: open the map full screen and turn it sideways so it's big.
+    // (Android allows locking to landscape; iPhone gets the map turned for it.)
+    try {
+      if (window.matchMedia("(max-width: 900px)").matches && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen?.();
+      }
+    } catch {
+      /* not allowed here: the map still opens */
+    }
     setLoadingFloorMap(true);
     try {
       const response = await fetch(
@@ -745,54 +754,17 @@ export default function SeatScanning() {
         </DialogContent>
       </Dialog>
 
-      {/* Floor Map Dialog */}
-      <Dialog open={isFloorMapOpen} onOpenChange={setIsFloorMapOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-white dark:bg-zinc-900 border-0 rounded-2xl overflow-hidden">
-          <div className="relative w-full h-full">
-            {/* Close button */}
-            <Button
-              onClick={() => setIsFloorMapOpen(false)}
-              variant="outline"
-              size="icon"
-              className="absolute top-4 right-4 z-10 h-12 w-12 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-zinc-900"
-            >
-              <X className="h-6 w-6" />
-            </Button>
-
-            {/* Title */}
-            <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg">
-              <h3 className="text-xl sm:text-2xl font-bold text-zinc-800 dark:text-zinc-200">
-                {way ? way.table.name : t.floorPlan}
-              </h3>
-              {way && (
-                <p className="text-sm text-green-700 font-medium">
-                  {way.entrances.length ? t.followLine : t.circled}
-                </p>
-              )}
-            </div>
-
-            {/* Floor map image */}
-            <div className="w-full h-[90vh] overflow-auto p-4 pt-24">
-              {floorMapImage ? (
-                <div className="relative w-full">
-                  <img
-                    src={floorMapImage.data}
-                    alt="Floor Plan"
-                    className="w-full h-auto object-contain"
-                  />
-                  {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-lg text-zinc-500">
-                    No floor map available
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Floor map: full screen, turned sideways on a phone held upright */}
+      {isFloorMapOpen && (
+        <MapViewer
+          src={floorMapImage?.data ?? null}
+          title={way ? way.table.name : t.floorPlan}
+          hint={way ? (way.entrances.length ? t.followLine : t.circled) : ""}
+          onClose={() => setIsFloorMapOpen(false)}
+        >
+          {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
+        </MapViewer>
+      )}
     </div>
   );
 }
@@ -953,5 +925,110 @@ function WayLine({
         className={p < 1 ? undefined : "way-dash"}
       />
     </svg>
+  );
+}
+
+// Full-screen floor map for the guest's phone. A wide plan on a phone held
+// upright is shown turned sideways so it fills the screen (Android also locks
+// the screen to landscape); turn the phone and it reads normally.
+function MapViewer({
+  src,
+  title,
+  hint,
+  onClose,
+  children,
+}: {
+  src: string | null;
+  title: string;
+  hint: string;
+  onClose: () => void;
+  children?: React.ReactNode;
+}) {
+  const [ratio, setRatio] = useState(1.4);
+  const [vw, setVw] = useState(() => (typeof window === "undefined" ? 400 : window.innerWidth));
+  const [vh, setVh] = useState(() => (typeof window === "undefined" ? 800 : window.innerHeight));
+  useEffect(() => {
+    const on = () => {
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
+    };
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+    };
+  }, []);
+  // Android: lock to landscape while the map is open (only works full screen)
+  useEffect(() => {
+    if (ratio <= 1.1) return;
+    const o = (screen as Screen & { orientation?: { lock?: (x: string) => Promise<void>; unlock?: () => void } }).orientation;
+    o?.lock?.("landscape").catch(() => undefined);
+    return () => {
+      try {
+        o?.unlock?.();
+      } catch {
+        /* nothing to undo */
+      }
+    };
+  }, [ratio]);
+  const close = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => undefined);
+    onClose();
+  };
+  // turn the map when the phone is upright and the plan is wide
+  const turned = vh > vw && ratio > 1.1;
+  const boxW = turned ? vh : vw; // the space the map has, once turned
+  const boxH = turned ? vw : vh;
+  const top = 64; // title bar
+  const fitW = Math.min(boxW - 16, (boxH - top - 12) * ratio);
+  const fitH = fitW / ratio;
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-zinc-100">
+      <div
+        className="absolute left-1/2 top-1/2"
+        style={{
+          width: boxW,
+          height: boxH,
+          transform: `translate(-50%, -50%)${turned ? " rotate(90deg)" : ""}`,
+        }}
+      >
+        {/* title + close */}
+        <div className="absolute inset-x-0 top-0 z-10 flex h-16 items-center gap-3 bg-white/95 px-4 shadow">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xl font-bold text-zinc-800">{title}</div>
+            {hint && <div className="truncate text-sm font-medium text-green-700">{hint}</div>}
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-white text-2xl leading-none shadow"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        {/* the map, as big as it fits */}
+        {src ? (
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: top + 6, width: fitW, height: fitH }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt="Floor plan"
+              className="absolute inset-0 h-full w-full select-none"
+              draggable={false}
+              onLoad={(e) => {
+                const im = e.currentTarget;
+                if (im.naturalWidth && im.naturalHeight) setRatio(im.naturalWidth / im.naturalHeight);
+              }}
+            />
+            {children}
+          </div>
+        ) : (
+          <p className="pt-24 text-center text-lg text-zinc-500">No floor map available</p>
+        )}
+      </div>
+    </div>
   );
 }
