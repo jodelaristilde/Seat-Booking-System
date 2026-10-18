@@ -422,13 +422,14 @@ export default function SeatScanning() {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-zinc-950">
       {/* Main Content */}
-      <div className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="w-full max-w-md mx-auto space-y-6">
+      {/* phones: start right at the top (no big empty band); bigger screens: centred */}
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-start px-3 pb-4 pt-3 sm:justify-center sm:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-md space-y-3 sm:space-y-6">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-2xl shadow-lime-500/10"
+            className="flex items-center justify-between bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl px-4 py-3 sm:p-6 shadow-2xl shadow-lime-500/10"
           >
             {/* Logo */}
             <Link
