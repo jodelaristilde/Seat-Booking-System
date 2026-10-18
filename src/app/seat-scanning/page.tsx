@@ -445,19 +445,23 @@ export default function SeatScanning() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-0 shadow-2xl shadow-lime-500/10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-xl sm:text-2xl text-zinc-800 dark:text-zinc-200">
+            {/* Bright green card, same style as the pop-ups */}
+            <Card className="relative overflow-hidden rounded-2xl border-[3px] border-lime-400 bg-gradient-to-br from-lime-50 via-white to-emerald-50 shadow-2xl shadow-lime-500/25">
+              <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
+              <CardHeader className="pb-2">
+                <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-700">
+                  <MapPin className="h-5 w-5" /> {eventName || "Seating4U"}
+                </p>
+                <CardTitle className="text-3xl font-extrabold leading-tight text-emerald-950">
                   {t.findSeat}
                 </CardTitle>
-                {eventName && <p className="text-base text-zinc-500">{eventName}</p>}
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label
                       htmlFor="name"
-                      className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400"
+                      className="text-lg font-semibold text-emerald-900"
                     >
                       {t.searchName}
                     </Label>
@@ -473,7 +477,7 @@ export default function SeatScanning() {
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         disabled={isLoading}
-                        className={`pl-10 h-14 text-base sm:text-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-lime-500/20 transition-all rounded-xl ${
+                        className={`pl-10 h-16 text-lg font-medium border-2 border-lime-300 bg-white shadow-inner focus:border-emerald-500 focus:ring-4 focus:ring-lime-300/40 transition-all rounded-xl ${
                           canListen ? "pr-16" : ""
                         }`}
                       />
