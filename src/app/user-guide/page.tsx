@@ -74,6 +74,7 @@ export default function UserGuide() {
     ["day", "Event day: check-in"],
     ["extras", "Event day extras"],
     ["fix", "Fixing mistakes"],
+    ["team", "Ready check, staff & kitchen"],
   ];
 
   return (
@@ -205,13 +206,34 @@ export default function UserGuide() {
             <Steps
               items={[
                 "Click <b>New → Import Guests</b>.",
-                { text: "Choose your Excel file. The first row must have the headings <b>First Name</b> and <b>Last Name</b>.", tip: "Optional columns: <b>Table</b> (seats them right away), <b>Meal</b> (Chicken, Fish, Veg…) and <b>VIP</b> (put yes)." },
+                { text: "Choose your Excel file. The first row must have the headings <b>First Name</b> and <b>Last Name</b>.", tip: "Optional columns: <b>Table</b> (seats them right away), <b>Meal</b> (Chicken, Fish, Veg…), <b>Allergy</b> (Nuts, Gluten…) and <b>VIP</b> (put yes)." },
                 "Your guests appear in the list, ready to be seated.",
               ]}
             />
           </Card>
-          <Card title="Add one guest">
-            <Steps items={["Click <b>New → New Guest</b>.", "Type the first and last name, then save."]} />
+          <Card title="Add one guest (also last minute)">
+            <Steps
+              items={[
+                "Click <b>New → New Guest</b> and type the first and last name.",
+                { text: "Optional: pick a <b>Table</b> (each shows its empty seats), tap a <b>Meal</b>, type an <b>Allergy</b>, tick <b>VIP</b>.", tip: "Table full? An extra seat is added for them." },
+                "Guest standing at the desk? Tick <b>Here now: check them in</b>. Then click <b>Add Guest</b>.",
+              ]}
+            />
+          </Card>
+          <Card title="Add meals, allergies or VIP later (from Excel)">
+            <Steps
+              items={[
+                "Click <b>New → Import Guests</b>, then the <b>Update meals / allergies</b> tab.",
+                { text: "Choose an Excel file with <b>First Name</b>, <b>Last Name</b> and any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>.", tip: "Guests are found by name (accents don't matter). Nobody is added twice, and empty cells change nothing." },
+                "Names that are not on your list are shown, so you can fix the spelling or add them.",
+              ]}
+            />
+          </Card>
+          <Card title="Meals, allergies and VIP one by one">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• Point at a table (menu showing). Next to each guest: the <b>★</b> (VIP), a <b>Meal</b> box and an <b>Allergy</b> box (red when filled in). Press Enter to save.</li>
+              <li>• <b>★ Make the whole table VIP</b> at the top of the list stars everyone at once, and the table gets a gold <b>★ VIP</b> badge on the plan.</li>
+            </ul>
           </Card>
         </Section>
 
@@ -281,7 +303,7 @@ export default function UserGuide() {
             />
             <div className="mt-4">
               <Note>
-                In full screen you can also point at a table: the card lists who hasn&apos;t arrived yet. Tick the box next to each guest as they come in.
+                In full screen you can also point at a table: the card lists who hasn&apos;t arrived yet, with their meal and allergy. Tick the box next to each guest as they come in, or click <b>Whole table arrived</b> when a family walks in together.
               </Note>
             </div>
           </Card>
@@ -318,7 +340,46 @@ export default function UserGuide() {
               <li>• <b>Wrong floor plan picture</b>: upload the right one with <b>FLOOR MAP</b>. Your tables stay.</li>
               <li>• <b>Table added by mistake</b> while drawing: <b>Undo last</b>, or point at it later and click 🗑️.</li>
               <li>• <b>Screen looks old</b>: press <b>Ctrl + Shift + R</b> to reload.</li>
+              <li>• <b>Two tables on the same spot</b>: a red note on the plan names them. Click <b>Move tables</b>, drag one to its real spot, then <b>Save layout</b>.</li>
+              <li>• <b>Searching without accents</b> works: <i>Nadege</i> finds Nadège, <i>Fils Aime</i> finds Fils-Aimé.</li>
             </ul>
+          </Card>
+        </Section>
+
+        <Section id="team" number={8} title="Ready check, staff & kitchen">
+          <Card title="Ready check (the night before)">
+            <Steps
+              items={[
+                "Open the menu (☰) and click <b>Ready check</b>.",
+                "It lists anything that could go wrong at the door: tables on top of each other, guests on the list twice, guests without a table or meal, empty tables, no entrance set.",
+                "Each problem says how to fix it. Click <b>Check again</b> until it says <b>All set</b>.",
+              ]}
+            />
+          </Card>
+          <Card title="Door list (paper backup)">
+            <Steps
+              items={[
+                "Menu (☰) → <b>Door list (print)</b>: every guest A–Z with table, seat, VIP, meal and allergy, and a box to tick.",
+                "Click <b>Print door list</b> the morning of the event. If the Wi-Fi or a laptop fails, the desk keeps going on paper.",
+              ]}
+            />
+          </Card>
+          <Card title="Check-in only accounts for your staff">
+            <Steps
+              items={[
+                "Log in as <b>admin</b>, open the menu (☰) → <b>Manage Users</b>.",
+                "Create the account with <b>Check-in only (staff)</b> ticked, or click <b>Full access</b> next to an existing account to switch it.",
+                { text: "Staff can check guests in, add a last-minute guest and set meals, allergies and VIP. They cannot delete anything or change tables, the floor plan or the guest list import.", tip: "A change takes effect the next time that person logs in." },
+              ]}
+            />
+          </Card>
+          <Card title="Kitchen screen for the caterer">
+            <Steps
+              items={[
+                "Menu (☰) → <b>Kitchen screen</b> on a tablet or TV in the kitchen (log in with a staff account).",
+                "It shows the meals to serve now for guests who have <b>arrived</b>, table by table, with allergies in red, plus what is still expected. It updates by itself.",
+              ]}
+            />
           </Card>
         </Section>
 
@@ -331,7 +392,8 @@ export default function UserGuide() {
               <ul className="space-y-2 text-sm text-zinc-600">
                 <li>• Set up the tables first, then seat guests.</li>
                 <li>• Do a practice run: check in 2–3 test guests on a phone and watch them appear in Arrived.</li>
-                <li>• Click <b>Export in Excel</b> (Guest Names) the night before, as a backup.</li>
+                <li>• Run the <b>Ready check</b> and print the <b>Door list</b> the night before.</li>
+                <li>• Give your desk helpers <b>check-in only</b> accounts.</li>
               </ul>
             </div>
             <div className="rounded-xl border border-zinc-200 bg-white p-6">
