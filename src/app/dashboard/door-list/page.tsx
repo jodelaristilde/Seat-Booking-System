@@ -37,6 +37,7 @@ const letterOf = (s: string) => {
 export default function DoorList() {
   const [rows, setRows] = useState<Row[]>([]);
   const [allergies, setAllergies] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [eventName, setEventName] = useState("");
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -46,12 +47,14 @@ export default function DoorList() {
   useEffect(() => {
     (async () => {
       try {
-        const [s, g, e, al] = await Promise.all([
+        const [s, g, e, al, nt] = await Promise.all([
           fetch("/api/get-seat").then((r) => r.json()),
           fetch("/api/get-guests").then((r) => r.json()),
           fetch("/api/events").then((r) => r.json()),
           fetch("/api/allergies").then((r) => r.json()).catch(() => ({})),
+          fetch("/api/guest-notes").then((r) => r.json()).catch(() => ({})),
         ]);
+        if (nt?.success && nt.data) setNotes(nt.data);
         const seats: SeatRow[] = s.success ? s.data : [];
         const guests: Guest[] = g.success ? g.data : [];
         if (al?.success) setAllergies(al.data);
@@ -147,6 +150,9 @@ export default function DoorList() {
                         {r.meal}
                         {allergies[r.id] && <b className="ml-1 text-red-700">⚠ {allergies[r.id]}</b>}
                       </span>
+                    )}
+                    {notes[r.id] && (
+                      <span className="block text-[11px] font-bold text-amber-800">📝 {notes[r.id]}</span>
                     )}
                   </span>
                   <span className={`whitespace-nowrap text-right font-bold ${r.table ? "" : "text-red-700"}`}>

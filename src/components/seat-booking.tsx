@@ -54,6 +54,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useGuests } from "../hooks/useGuests";
+import { useGuestNotes } from "../hooks/useGuestNotes";
 import { useSeats } from "../hooks/useSeats";
 import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
@@ -977,8 +978,32 @@ const handleTableClick = () => {
     }
   };
 
+  // Guests with a note: the desk sees the note and decides (Yes / No)
+  const { notes } = useGuestNotes();
+  const [holdAsk, setHoldAsk] = useState<{ seatId: string; name: string; table: string; note: string } | null>(null);
+  const noteOfSeat = (seatId: string) => {
+    const seat =
+      bookedSeats.find((s) => s.id === seatId) ??
+      tables.flatMap((t) => t.seats).find((s) => s.id === seatId);
+    const uid = seat?.user?.id;
+    if (!seat || !uid || !notes[uid]) return null;
+    return {
+      seatId,
+      name: `${seat.user?.firstname ?? ""} ${seat.user?.lastname ?? ""}`.trim(),
+      table: seat.table?.name ?? "",
+      note: notes[uid],
+    };
+  };
+
   // A whole table (or group) arrives at once
-  const handleArriveMany = async (seatIds: string[]) => {
+  const handleArriveMany = async (allSeatIds: string[]) => {
+    // guests with a note are checked in one by one (the desk reads the note first)
+    const held = allSeatIds.map(noteOfSeat).filter(Boolean) as { name: string }[];
+    const seatIds = allSeatIds.filter((id) => !noteOfSeat(id));
+    if (held.length)
+      toast.warning(`${held.map((h) => h.name).join(", ")} ${held.length === 1 ? "has" : "have"} a note`, {
+        description: "Tick them one by one to read the note first.",
+      });
     if (!seatIds.length) return;
     try {
       const response = await fetch("/api/update-seat-received", {
@@ -1004,7 +1029,19 @@ const handleTableClick = () => {
     }
   };
 
+  // Ticking a guest in: if they have a note, ask first
   const handleToggleReceived = async (seatId: string, isReceived: boolean) => {
+    if (isReceived) {
+      const ask = noteOfSeat(seatId);
+      if (ask) {
+        setHoldAsk(ask);
+        return;
+      }
+    }
+    return checkInSeat(seatId, isReceived);
+  };
+
+  const checkInSeat = async (seatId: string, isReceived: boolean) => {
     try {
       const response = await fetch("/api/update-seat-received", {
         method: "PUT",
@@ -1492,6 +1529,7 @@ const handleTableClick = () => {
                 bookedSeats={bookedSeats}
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
+                onCheckInNow={(id) => checkInSeat(id, true)}
                 onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
                 compact={isFullScreen || isStaff}
                 readOnly={isStaff}
@@ -1507,6 +1545,7 @@ const handleTableClick = () => {
             bookedSeats={bookedSeats}
             onDeleteBooking={handleDeleteBooking}
             onToggleReceived={handleToggleReceived}
+            onCheckInNow={(id) => checkInSeat(id, true)}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
             compact={isStaff}
             readOnly={isStaff}
@@ -1587,6 +1626,35 @@ const handleTableClick = () => {
         onClose={() => setBulkTableDialogOpen(false)}
         onSuccess={handleBulkTableSuccess}
       />
+
+      {/* A guest with a note: read it, then give them their seat or not */}
+      <Dialog open={!!holdAsk} onOpenChange={(o) => !o && setHoldAsk(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>📝 Note for {holdAsk?.name}</DialogTitle>
+            <DialogDescription>{holdAsk?.table}</DialogDescription>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-lg font-semibold text-amber-950">
+            {holdAsk?.note}
+          </div>
+          <p className="text-base font-medium">Give them their seat and check them in?</p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" className="h-11 flex-1" onClick={() => setHoldAsk(null)}>
+              No, not now
+            </Button>
+            <Button
+              className="h-11 flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                const a = holdAsk;
+                setHoldAsk(null);
+                if (a) checkInSeat(a.seatId, true);
+              }}
+            >
+              Yes, check in
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AddGuestForm
         isOpen={isAddGuestOpen}

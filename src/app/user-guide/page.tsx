@@ -248,6 +248,16 @@ export default function UserGuide() {
               ]}
             />
           </Card>
+          <Card title="A note for the desk (guest sees no seat until the desk says yes)">
+            <Steps
+              items={[
+                { text: "Add a <b>Note</b> column to your Excel (or type a note in <b>New Guest</b>, or click 📝 next to the guest on the table card).", tip: "You can still seat the guest at a table as usual." },
+                "On their phone, that guest does <b>not</b> see a seat: they are asked to see the front desk.",
+                "At the desk, searching their name in Guest Names shows the note with <b>Give them their seat and check them in? Yes / No</b>. Ticking their box asks the same.",
+                "<b>Yes</b> checks them in. <b>No</b> leaves them waiting. To remove a note, click 📝 and clear it.",
+              ]}
+            />
+          </Card>
           <Card title="Meals, allergies and VIP one by one">
             <ul className="space-y-2 text-zinc-700">
               <li>• Point at a table (menu showing). Next to each guest: the <b>★</b> (VIP), a <b>Meal</b> box and an <b>Allergy</b> box (red when filled in). Press Enter to save.</li>

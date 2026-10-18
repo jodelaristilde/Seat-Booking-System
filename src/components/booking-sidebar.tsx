@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { matches } from "@/lib/fold";
+import { useGuestNotes } from "@/hooks/useGuestNotes";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Seat } from "@/types/booking";
 import { ChevronLeft, ChevronRight, Download, Search, Trash2, User } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import PasswordVerificationDialog from "./password-verification-dialog";
@@ -21,6 +22,8 @@ interface BookingSidebarProps {
   compact?: boolean;
   // check-in only account: no "remove from seat" bins
   readOnly?: boolean;
+  // check a guest in straight away (after reading their note)
+  onCheckInNow?: (seatId: string) => void;
 }
 
 export function BookingSidebar({
@@ -30,7 +33,10 @@ export function BookingSidebar({
   onDeleteAll,
   compact = false,
   readOnly = false,
+  onCheckInNow,
 }: BookingSidebarProps) {
+  // guests with a note (seat hidden from their phone until the desk says yes)
+  const { notes } = useGuestNotes();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQueries, setSearchQueries] = useState({
     name: "",
@@ -255,8 +261,8 @@ export function BookingSidebar({
                         </td>
                       </tr>
                     ) : (
+                    <Fragment key={seat.id}>
                     <tr
-                      key={seat.id}
                       className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""}`}
                     >
                       <td className="py-0.5 pr-1.5 align-middle">
@@ -274,7 +280,14 @@ export function BookingSidebar({
                           {seat.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
                           {seat.user?.firstname} {seat.user?.lastname}
                         </span>
-
+                        {seat.user && notes[seat.user.id] && (
+                          <span
+                            className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-800"
+                            title={notes[seat.user.id]}
+                          >
+                            📝 Note
+                          </span>
+                        )}
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
@@ -294,6 +307,37 @@ export function BookingSidebar({
                         </button>}
                       </td>
                     </tr>
+                    {/* Searched for a guest with a note: show it right here, with Yes / No */}
+                    {searchQueries.name.trim() && seat.user && notes[seat.user.id] && (
+                      <tr>
+                        <td colSpan={4} className="pb-2 pt-0.5">
+                          <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-2 shadow">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                              📝 Note for {seat.user.firstname} {seat.user.lastname}
+                            </p>
+                            <p className="whitespace-pre-wrap text-sm font-semibold text-amber-950">{notes[seat.user.id]}</p>
+                            <p className="mt-1.5 text-xs font-medium text-zinc-700">Give them their seat ({seat.table.name}) and check them in?</p>
+                            <div className="mt-1 flex gap-2">
+                              <button
+                                type="button"
+                                className="flex-1 rounded-md bg-green-600 px-2 py-1 text-sm font-semibold text-white hover:bg-green-700"
+                                onClick={() => (onCheckInNow ? onCheckInNow(seat.id) : onToggleReceived(seat.id, true))}
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                className="flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm font-semibold hover:bg-zinc-50"
+                                onClick={() => setSearchQueries((p) => ({ ...p, name: "" }))}
+                              >
+                                No
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                     )
                   )}
                 </tbody>
@@ -343,6 +387,8 @@ export function BookingSidebar({
       onDeleteAll,
       compact,
       readOnly,
+      notes,
+      onCheckInNow,
       filteredBookings,
       visibleBookings,
       isDeleteBookingDialogOpen,

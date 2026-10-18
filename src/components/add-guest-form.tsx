@@ -22,6 +22,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
   const [table, setTable] = useState("")
   const [meal, setMeal] = useState("")
   const [allergy, setAllergy] = useState("")
+  const [note, setNoteText] = useState("")
   const [vip, setVip] = useState(false)
   const [arrived, setArrived] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -36,6 +37,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
     setTable("")
     setMeal("")
     setAllergy("")
+    setNoteText("")
     setVip(false)
     setArrived(false)
   }
@@ -63,6 +65,13 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
       const data = await response.json()
 
       if (data.success) {
+        if (note.trim() && data.data?.id) {
+          await fetch("/api/guest-notes", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: data.data.id, note }),
+          }).catch(() => undefined)
+        }
         if (allergy.trim() && data.data?.id) {
           await fetch("/api/allergies", {
             method: "PUT",
@@ -190,6 +199,21 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
               onChange={(e) => setAllergy(e.target.value)}
               placeholder="e.g. Nuts, shellfish, gluten"
               className={allergy.trim() ? "border-red-300 bg-red-50 text-red-700" : ""}
+            />
+          </div>
+
+          {/* Note: the guest's phone won't show the seat; the desk reads it first */}
+          <div className="space-y-2">
+            <label htmlFor="guest-note" className="text-sm font-medium">
+              Note <span className="font-normal text-zinc-500">(optional, shown to the desk)</span>
+            </label>
+            <Input
+              id="guest-note"
+              value={note}
+              maxLength={300}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="e.g. See the organizer before seating"
+              className={note.trim() ? "border-amber-300 bg-amber-50" : ""}
             />
           </div>
 

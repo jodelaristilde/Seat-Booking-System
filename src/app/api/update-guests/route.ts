@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { activeEventId } from "@/lib/event";
 import { setAllergy } from "@/lib/allergies";
+import { setNote } from "@/lib/guestNotes";
 import { db } from "@/lib/db";
 import { fold } from "@/lib/fold";
 import { NextResponse } from "next/server";
@@ -10,7 +11,7 @@ import { NextResponse } from "next/server";
 // Fills in meal / allergy / VIP for guests ALREADY on the list of the open
 // event, matched by first + last name (accents and capitals ignored).
 // Never adds guests, so nobody is doubled. Empty cells change nothing.
-type Row = { firstname?: unknown; lastname?: unknown; meal?: unknown; allergy?: unknown; vip?: unknown };
+type Row = { firstname?: unknown; lastname?: unknown; meal?: unknown; allergy?: unknown; vip?: unknown; note?: unknown };
 const str = (v: unknown) => (v === undefined || v === null ? "" : String(v).trim());
 const YES = ["yes", "y", "x", "1", "true", "vip", "oui", "si", "wi"];
 const NO = ["no", "n", "0", "false", "non"];
@@ -46,11 +47,13 @@ export async function POST(req: Request) {
       if (YES.includes(vipRaw)) data.vip = true;
       else if (NO.includes(vipRaw)) data.vip = false;
       const allergy = str(r.allergy);
+      const note = str(r.note);
       for (const id of ids) {
         if (Object.keys(data).length) await db.users.update({ where: { id }, data });
         if (allergy) await setAllergy(eventId, id, allergy);
+        if (note) await setNote(eventId, id, note);
       }
-      if (Object.keys(data).length || allergy) updated += ids.length;
+      if (Object.keys(data).length || allergy || note) updated += ids.length;
     }
     return NextResponse.json({ success: true, updated, notFound });
   } catch (error) {

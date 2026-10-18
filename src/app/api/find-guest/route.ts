@@ -4,6 +4,7 @@ import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { matches } from "@/lib/fold";
+import { heldKeys } from "@/lib/guestNotes";
 
 // Used by the public "find my seat" page.
 // Returns at most 5 matches and needs at least 2 letters,
@@ -48,10 +49,17 @@ export async function GET(request: Request) {
       ? await db.event.findMany({ where: { id: { in: evIds } }, select: { id: true, name: true } })
       : [];
     const nameOf = new Map(events.map((e: { id: string; name: string }) => [e.id, e.name] as const));
-    const data = guests.map((g: { eventId: string | null }) => ({
-      ...g,
-      eventName: g.eventId ? nameOf.get(g.eventId) ?? null : null,
-    }));
+    // Guests with a note are sent to the welcome desk: their seat is hidden
+    // until the desk checks them in
+    const held = await heldKeys();
+    const data = guests.map((g: { id: string; eventId: string | null; seat: { isReceived: boolean }[] }) => {
+      const hold = held.has(`${g.eventId}:${g.id}`) && !g.seat?.some((s) => s.isReceived);
+      return {
+        ...g,
+        ...(hold ? { seat: [] } : {}),
+        eventName: g.eventId ? nameOf.get(g.eventId) ?? null : null,
+      };
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

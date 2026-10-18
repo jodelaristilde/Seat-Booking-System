@@ -23,6 +23,7 @@ interface Guest {
   vip?: string;
   meal?: string;
   allergy?: string;
+  note?: string;
 }
 
 export function ImportGuestsforWeb() {
@@ -94,6 +95,7 @@ export function ImportGuestsforWeb() {
         return;
       }
       const allergyItems: { id: string; allergy: string }[] = [];
+      const noteItems: { id: string; note: string }[] = [];
 
       const importedGuests: Guest[] = [];
       const failedGuests: Guest[] = [];
@@ -104,6 +106,7 @@ export function ImportGuestsforWeb() {
         try {
           const added = await addGuest(guest);
           if (guest.allergy && added?.data?.id) allergyItems.push({ id: added.data.id, allergy: guest.allergy });
+          if (guest.note && added?.data?.id) noteItems.push({ id: added.data.id, note: guest.note });
           importedGuests.push(guest);
         } catch (error) {
           failedGuests.push(guest);
@@ -120,6 +123,13 @@ export function ImportGuestsforWeb() {
         });
       }
 
+      if (noteItems.length) {
+        await fetch("/api/guest-notes", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: noteItems }),
+        }).catch(() => undefined);
+      }
       if (allergyItems.length) {
         await fetch("/api/allergies", {
           method: "PUT",
@@ -186,6 +196,7 @@ export function ImportGuestsforWeb() {
             const meal = row.meal ?? row.Meal ?? row.MEAL ?? row["Meal Choice"];
             const allergy =
               row.allergy ?? row.Allergy ?? row.Allergies ?? row.allergies ?? row.ALLERGY ?? row["Dietary"] ?? row["Diet"];
+            const note = row.note ?? row.Note ?? row.NOTE ?? row.Notes ?? row.notes ?? row.Message ?? row.message;
             return {
               firstname: String(firstname).trim(),
               lastname: String(lastname).trim(),
@@ -193,6 +204,7 @@ export function ImportGuestsforWeb() {
               ...(vip !== undefined && String(vip).trim() ? { vip: String(vip).trim() } : {}),
               ...(meal !== undefined && String(meal).trim() ? { meal: String(meal).trim() } : {}),
               ...(allergy !== undefined && String(allergy).trim() ? { allergy: String(allergy).trim() } : {}),
+              ...(note !== undefined && String(note).trim() ? { note: String(note).trim() } : {}),
             };
           });
 
@@ -209,10 +221,10 @@ export function ImportGuestsforWeb() {
   const downloadSampleFile = (fileType: "xlsx" | "csv") => {
     // "Table" is optional: fill it in and guests are seated on import
     const data = [
-      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", Allergy: "", VIP: "" },
-      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", Allergy: "Nuts", VIP: "" },
-      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", Allergy: "", VIP: "yes" },
-      { firstname: "Paul", lastname: "Murphy", Table: "", Meal: "", Allergy: "", VIP: "" },
+      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", Allergy: "", VIP: "", Note: "" },
+      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", Allergy: "Nuts", VIP: "", Note: "" },
+      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", Allergy: "", VIP: "yes", Note: "" },
+      { firstname: "Paul", lastname: "Murphy", Table: "2", Meal: "", Allergy: "", VIP: "", Note: "See the organizer before seating" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -286,7 +298,7 @@ export function ImportGuestsforWeb() {
           {mode === "update" ? (
             <p className="text-sm text-zinc-600">
               For guests <b>already on your list</b>. Upload an Excel file with <b>First Name</b>, <b>Last Name</b> and
-              any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>. Each guest is found by name (accents don&apos;t matter)
+              any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>, <b>Note</b>. Each guest is found by name (accents don&apos;t matter)
               and their meal, allergy or VIP is filled in. <b>Nobody is added twice</b>, and empty cells change nothing.
             </p>
           ) : (
@@ -294,7 +306,8 @@ export function ImportGuestsforWeb() {
             Your Excel file needs the columns <b>First Name</b> and <b>Last Name</b>. Add a <b>Table</b> column
             (like <i>5</i> or <i>Head Table</i>) and each guest is seated at that table right away; missing tables
             are created. Leave it empty to seat them later. Optional too: a <b>Meal</b> column (Chicken, Fish, Veg…),
-            an <b>Allergy</b> column and a <b>VIP</b> column (put <i>yes</i> for VIP guests).
+            an <b>Allergy</b> column, a <b>VIP</b> column (put <i>yes</i> for VIP guests) and a <b>Note</b> column: a guest
+            with a note does not see their seat on the phone; the desk sees the note and decides.
           </p>
           )}
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">

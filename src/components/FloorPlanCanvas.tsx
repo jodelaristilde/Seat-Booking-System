@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { matches as nameMatches } from "@/lib/fold";
 import { useAllergies } from "@/hooks/useAllergies";
+import { useGuestNotes } from "@/hooks/useGuestNotes";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -233,6 +234,8 @@ export function FloorPlanCanvas({
   }, [zoomId, cardMode]);
   // allergies (kept apart from the meal, shown in red)
   const { allergies, saveAllergy } = useAllergies();
+  // notes (the guest's phone hides the seat; the desk reads the note first)
+  const { notes: guestNotes, saveNote } = useGuestNotes();
   // VIP star / meal choice for one guest
   const updateGuest = async (id: string, data: { vip?: boolean; meal?: string | null }) => {
     try {
@@ -2626,6 +2629,28 @@ export function FloorPlanCanvas({
                             }}
                             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                           />
+                          {/* note: click to add / change it */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!s.user) return;
+                              zoomPinned.current = true;
+                              const cur = guestNotes[s.user.id] ?? "";
+                              const v = window.prompt(
+                                `Note for ${s.user.firstname} ${s.user.lastname}.\nWhile there is a note, their phone does not show the seat; the desk sees the note and decides.\nLeave empty to remove it.`,
+                                cur
+                              );
+                              if (v !== null && v.trim() !== cur) saveNote(s.user.id, v);
+                            }}
+                            className={`rounded px-1 text-xs leading-5 ${
+                              s.user && guestNotes[s.user.id]
+                                ? "bg-amber-100 font-bold text-amber-800"
+                                : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                            }`}
+                            title={(s.user && guestNotes[s.user.id]) || "Add a note for the desk"}
+                          >
+                            📝
+                          </button>
                           {!staff && <button
                             type="button"
                             onClick={() => removeFromSeat(s.id)}
@@ -2759,6 +2784,11 @@ export function FloorPlanCanvas({
                               {s.user && allergies[s.user.id] && (
                                 <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-bold text-red-700" title="Allergy">
                                   ⚠ {allergies[s.user.id]}
+                                </span>
+                              )}
+                              {s.user && guestNotes[s.user.id] && !s.isReceived && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-800" title={guestNotes[s.user.id]}>
+                                  📝 Note
                                 </span>
                               )}
                               {s.isReceived && (
