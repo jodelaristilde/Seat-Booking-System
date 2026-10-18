@@ -99,7 +99,9 @@ export async function enhancePicture(
   const img = await loadImage(src);
   const longest = Math.max(img.naturalWidth, img.naturalHeight);
   // Aim for about 1800px on the long side: sharp on screens, light enough to store
-  const scale = longest < 1800 ? Math.min(2.5, 1800 / longest) : Math.min(1, 2400 / longest);
+  // more pixels = sharper when the picture is stretched over a big screen
+  // (kept at 2400 px so the upload stays under the server's size limit)
+  const scale = longest < 2400 ? Math.min(3, 2400 / longest) : Math.min(1, 2400 / longest);
   const W = Math.max(1, Math.round(img.naturalWidth * scale));
   const H = Math.max(1, Math.round(img.naturalHeight * scale));
 
@@ -206,8 +208,8 @@ export async function enhancePicture(
   const mimeType = isDrawing ? "image/png" : "image/jpeg";
   let data = canvas.toDataURL(mimeType, 0.9);
   let size = Math.round(((data.length - data.indexOf(",") - 1) * 3) / 4);
-  if (size > 8 * 1024 * 1024) {
-    data = canvas.toDataURL("image/jpeg", 0.85);
+  if (size > 3 * 1024 * 1024) {
+    data = canvas.toDataURL("image/jpeg", 0.9);
     size = Math.round(((data.length - data.indexOf(",") - 1) * 3) / 4);
     return { data, mimeType: "image/jpeg", size, width: W, height: H };
   }

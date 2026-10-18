@@ -24,6 +24,7 @@ import {
   RectangleHorizontal,
   Loader2,
   ZoomIn,
+  Expand,
   Volume2,
   VolumeX,
   Check,
@@ -82,6 +83,7 @@ const SIZE_KEY = "floorPlanTableSize";
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
 const FS_ARRIVED_KEY = "floorPlanFullScreenArrived";
+const STRETCH_KEY = "floorPlanStretch";
 const ZOOM_KEY = "floorPlanHoverZoom";
 const SHAPES: Shape[] = ["round", "square", "rectangle"];
 // Tabletop size as a share of a drawn outline (chairs included). The seat
@@ -169,6 +171,17 @@ export function FloorPlanCanvas({
   // The venue picture is only a guide: hidden unless you ask for it,
   // and shown faintly while drawing, moving or checking tables.
   const [showPicture, setShowPicture] = useState(true);
+  // Stretch the floor plan picture to fill the box edge to edge, top to bottom
+  // (on by default; "Keep shape" shows it without stretching). Remembered.
+  const [stretch, setStretch] = useState(true);
+  useEffect(() => {
+    if (readStored(STRETCH_KEY) === "off") setStretch(false);
+  }, []);
+  const toggleStretch = () =>
+    setStretch((v) => {
+      writeStored(STRETCH_KEY, v ? "off" : "on");
+      return !v;
+    });
   // Just the table shapes by default; seat bubbles on request
   const [showSeats, setShowSeats] = useState(false);
   // Hover a table to see it big (seats, guests, who arrived). Can be turned off.
@@ -1436,8 +1449,11 @@ export function FloorPlanCanvas({
 
   // Stretch that view to the exact shape of the space on screen, so the room
   // fills it with no empty bands, on any monitor
+  // Stretched: the whole picture fills the box exactly (tables keep their % spots)
+  const stretched = stretch && !!picture && showPicture && !working && !!avail && avail.w >= 50;
   const fitted = (() => {
     if (!avail || avail.w < 50) return null;
+    if (stretched) return { x: 0, y: 0, w: 100, h: 100, width: avail.w, height: avail.h };
     const target = avail.w / avail.h;
     let { x, y, w, h } = view;
     const current = (w / h) * aspect;
@@ -1657,6 +1673,18 @@ export function FloorPlanCanvas({
               aria-pressed={showPicture}
             >
               <ImageIcon className="w-4 h-4" />
+            </Button>
+          )}
+          {picture && showPicture && (
+            <Button
+              size="icon"
+              variant={stretch ? "default" : "outline"}
+              onClick={toggleStretch}
+              title={stretch ? "Stretch to fit: On (click to keep the true shape)" : "Stretch to fit: Off"}
+              aria-label="Stretch to fit"
+              aria-pressed={stretch}
+            >
+              <Expand className="w-4 h-4" />
             </Button>
           )}
           </>)}
@@ -1909,6 +1937,17 @@ export function FloorPlanCanvas({
             {showPicture ? "Hide picture" : "Show picture"}
           </Button>
         )}
+        {picture && showPicture && !reviewing && !drawing && !editing && (
+          <Button
+            size="sm"
+            variant={stretch ? "default" : "outline"}
+            onClick={toggleStretch}
+            title={stretch ? "Show the picture with its true shape" : "Stretch the picture to fill the box"}
+          >
+            <Expand className="w-4 h-4 mr-2" />
+            {stretch ? "Stretch to fit: On" : "Stretch to fit: Off"}
+          </Button>
+        )}
       </div>
 
       )}
@@ -2128,7 +2167,7 @@ export function FloorPlanCanvas({
         className="absolute"
         style={{
           width: `${10000 / show.w}%`,
-          aspectRatio: String(aspect),
+          ...(stretched ? { height: "100%" } : { aspectRatio: String(aspect) }),
           ...(tableNumPx ? ({ "--table-num": `${tableNumPx}px` } as React.CSSProperties) : {}),
           left: `${(-show.x / show.w) * 100}%`,
           top: `${(-show.y / show.h) * 100}%`,
@@ -2143,8 +2182,10 @@ export function FloorPlanCanvas({
             src={picture}
             alt="Floor plan"
             className={`absolute inset-0 w-full h-full object-fill pointer-events-none select-none ${
-              reviewing || drawing || editing ? "opacity-90" : "opacity-80"
+              reviewing || drawing || editing ? "opacity-90" : "opacity-100"
             }`}
+            // a little extra contrast so lines and labels read clearly
+            style={{ filter: "contrast(1.08) saturate(1.05)" }}
             draggable={false}
           />
         )}
