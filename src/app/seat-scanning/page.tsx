@@ -266,6 +266,28 @@ export default function SeatScanning() {
       .slice(0, 5); // Limit to 5 results
   }, [searchValue, allUsers]);
 
+  // "Refresh" on the Seat not available pop-up: ask again (the desk may have released the seat)
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshSeat = async () => {
+    if (!selectedUser) return;
+    setRefreshing(true);
+    try {
+      const q = `${selectedUser.firstname} ${selectedUser.lastname}`;
+      const res = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? "" : "&all=1"}`);
+      const data = await res.json();
+      const me = (data?.data as User[] | undefined)?.find((u) => u.id === selectedUser.id);
+      if (me?.seat?.length) {
+        await handleUserSelect(me);
+      } else {
+        toast(t.stillNotAssigned);
+      }
+    } catch {
+      toast(t.stillNotAssigned);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleUserSelect = async (user: User) => {
     // General QR code: from now on this phone uses the guest's own event
     if (!eventId && user.eventId) chooseEvent(user.eventId);
@@ -306,8 +328,7 @@ export default function SeatScanning() {
       });
     } else {
       setSearchResult(null);
-      setNoSeatFound(true);
-      toast.error(t.noBooking);
+      setNoSeatFound(true); // the Seat not available pop-up says it
     }
   };
 
@@ -669,38 +690,6 @@ export default function SeatScanning() {
   </CardContent>
 </Card>
               </motion.div>
-            ) : noSeatFound ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="border-0 shadow-2xl shadow-lime-500/10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
-                  <CardContent className="p-8">
-                    <div className="flex flex-col items-center text-center space-y-6">
-                      <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                        <HelpCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <div className="space-y-3">
-                        <h3 className="text-2xl sm:text-3xl font-semibold text-zinc-800 dark:text-zinc-200">
-                          {t.notAvailable}
-                        </h3>
-                        <p className="text-lg sm:text-xl text-red-700 dark:text-zinc-400 leading-relaxed">
-                          {t.notAssigned}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="mt-4 h-14 text-lg px-8 bg-white dark:bg-zinc-900 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                        onClick={() => setNoSeatFound(false)}
-                      >
-                        {t.searchAgain}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
             ) : null}
           </AnimatePresence>
         </div>
@@ -753,6 +742,48 @@ export default function SeatScanning() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Seat not available: stays until the guest refreshes or closes it */}
+      {noSeatFound && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-sm rounded-2xl border-[3px] border-amber-300 bg-amber-50 p-5 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setNoSeatFound(false)}
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-2xl leading-none text-amber-900 hover:bg-amber-100"
+              aria-label={t.close}
+            >
+              ×
+            </button>
+            <p className="flex items-center gap-2 pr-8 text-sm font-bold uppercase tracking-wide text-amber-700">
+              <HelpCircle className="h-5 w-5" /> {t.notAvailable}
+            </p>
+            {selectedUser && (
+              <p className="mt-1 text-lg font-bold text-amber-950">
+                {selectedUser.firstname} {selectedUser.lastname}
+              </p>
+            )}
+            <p className="mt-2 text-lg font-semibold leading-snug text-amber-950">{t.notAssigned}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={refreshSeat}
+                disabled={refreshing}
+                className="h-14 rounded-xl bg-green-600 text-xl font-bold text-white shadow hover:bg-green-700 disabled:opacity-60"
+              >
+                {refreshing ? "…" : t.refresh}
+              </button>
+              <button
+                type="button"
+                onClick={() => setNoSeatFound(false)}
+                className="h-14 rounded-xl border border-zinc-300 bg-white text-xl font-bold text-zinc-900 shadow-sm hover:bg-zinc-50"
+              >
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floor map: full screen, turned sideways on a phone held upright */}
       {isFloorMapOpen && (
