@@ -93,6 +93,25 @@ export default function UserGuide() {
       </div>
 
       <div className="mx-auto max-w-4xl px-6 py-10">
+        {/* Video walkthrough */}
+        <section className="mb-12">
+          <h2 className="mb-1 text-2xl font-light text-black">Watch: how to use Seating4U</h2>
+          <p className="mb-4 text-sm text-zinc-500">A 2½-minute video with voice, from setting up the room to the kitchen screen.</p>
+          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
+            <video
+              className="block aspect-video w-full"
+              src="/videos/seating4u-how-to-use.mp4"
+              poster="/videos/seating4u-how-to-use.jpg"
+              controls
+              preload="metadata"
+              playsInline
+            >
+              Your browser can&apos;t play this video.{" "}
+              <a href="/videos/seating4u-how-to-use.mp4">Download it here</a>.
+            </video>
+          </div>
+        </section>
+
         {/* Contents */}
         <nav className="mb-12 rounded-xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">In this guide</p>
