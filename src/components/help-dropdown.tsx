@@ -16,10 +16,12 @@ export function HelpButton() {
     <>
       <Button
         variant="outline"
-        size="icon"
         onClick={() => setIsOpen(true)}
+        className="h-8 sm:h-9 gap-1.5 px-2 sm:px-3 text-sm font-semibold"
+        title="Help, user guide and video"
       >
         <HelpCircle className="h-5 w-5" />
+        Help
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl">
