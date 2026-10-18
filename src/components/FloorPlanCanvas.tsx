@@ -171,11 +171,12 @@ export function FloorPlanCanvas({
   // The venue picture is only a guide: hidden unless you ask for it,
   // and shown faintly while drawing, moving or checking tables.
   const [showPicture, setShowPicture] = useState(true);
-  // Stretch the floor plan picture to fill the box edge to edge, top to bottom
-  // (on by default; "Keep shape" shows it without stretching). Remembered.
-  const [stretch, setStretch] = useState(true);
+  // Stretch the floor plan picture to fill the box edge to edge, top to bottom.
+  // Off by default: stretching also stretches the writing on the picture, so
+  // normally it keeps its true shape, as big as the screen allows. Remembered.
+  const [stretch, setStretch] = useState(false);
   useEffect(() => {
-    if (readStored(STRETCH_KEY) === "off") setStretch(false);
+    if (readStored(STRETCH_KEY) === "on") setStretch(true);
   }, []);
   const toggleStretch = () =>
     setStretch((v) => {
