@@ -62,6 +62,8 @@ interface FloorPlanCanvasProps {
   onToggleArrived?: (seatId: string, arrived: boolean) => void;
   // check in several seats at once (whole table)
   onArriveMany?: (seatIds: string[]) => void;
+  // check-in only account: no drawing, moving or removing
+  staff?: boolean;
 }
 
 // One table while checking the picture
@@ -155,6 +157,7 @@ export function FloorPlanCanvas({
   invited,
   onToggleArrived,
   onArriveMany,
+  staff = false,
 }: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState<Record<string, Pos>>({});
@@ -1569,21 +1572,25 @@ export function FloorPlanCanvas({
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">
             <PanelRightOpen className="w-4 h-4" />
           </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => {
-              setDrawnIds([]);
-              setDrawing(true);
-            }}
-            title="Draw tables"
-            aria-label="Draw tables"
-          >
-            <PenLine className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="outline" onClick={startEditing} title="Move tables" aria-label="Move tables">
-            <Move className="w-4 h-4" />
-          </Button>
+          {!staff && (
+            <>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => {
+                  setDrawnIds([]);
+                  setDrawing(true);
+                }}
+                title="Draw tables"
+                aria-label="Draw tables"
+              >
+                <PenLine className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="outline" onClick={startEditing} title="Move tables" aria-label="Move tables">
+                <Move className="w-4 h-4" />
+              </Button>
+            </>
+          )}
           {onGuestNamesChange && (
             <Button
               size="icon"
@@ -1665,7 +1672,7 @@ export function FloorPlanCanvas({
             <PanelLeftClose className="w-4 h-4 mr-2" /> Hide menu
           </Button>
         )}
-        {drawing ? (
+        {staff ? null : drawing ? (
           <>
             <Button onClick={finishDrawing} size="sm" disabled={drawBusy || saving}>
               <Save className="w-4 h-4 mr-2" /> Done drawing
@@ -2494,7 +2501,7 @@ export function FloorPlanCanvas({
                             }}
                             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                           />
-                          <button
+                          {!staff && <button
                             type="button"
                             onClick={() => removeFromSeat(s.id)}
                             className="rounded p-0.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
@@ -2502,7 +2509,7 @@ export function FloorPlanCanvas({
                             aria-label="Remove from table"
                           >
                             <X className="h-4 w-4" />
-                          </button>
+                          </button>}
                         </li>
                       ))}
                   </ul>
@@ -2647,7 +2654,7 @@ export function FloorPlanCanvas({
               )}
 
               {/* Add several guests to this table at once (Seat guests mode) */}
-              {cardMode === "seat" && seats.length > booked.length && (() => {
+              {cardMode === "seat" && !staff && seats.length > booked.length && (() => {
                 const free = seats.length - booked.length;
                 const q = addQuery.trim().toLowerCase();
                 const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);

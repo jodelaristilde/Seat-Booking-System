@@ -149,6 +149,8 @@ const SeatBooking = () => {
   const [isDeleteAllTablesDialogOpen, setIsDeleteAllTablesDialogOpen] =
     useState(false);
   const { data: session } = useSession();
+  // check-in only account: hide everything that deletes or changes tables
+  const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
   const {
     guests: allGuests,
     loading: guestsLoading,
@@ -720,7 +722,7 @@ const handleTableClick = () => {
             </span>
 
             {/* Action Buttons - Shows on Hover */}
-            {isHovered && !isFullScreen && (
+            {isHovered && !isFullScreen && !isStaff && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1157,7 +1159,7 @@ const handleTableClick = () => {
                   </Tooltip>
                 </TooltipProvider>
 
-                <FloorMapUploader />
+                {!isStaff && <FloorMapUploader />}
 
                 <WashupButton />
 
@@ -1181,12 +1183,14 @@ const handleTableClick = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       {/* Mobile-friendly action items */}
+                      {!isStaff && (
                       <DropdownMenuItem
                         onClick={() => setIsAssignGuestsDialogOpen(true)}
                       >
                         <UserCheck2 className="mr-2 w-4 h-4" /> Assign Multiple
                         Guests
                       </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem asChild>
                         <Link
                           href="/seat-scanning"
@@ -1245,32 +1249,38 @@ const handleTableClick = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setIsAddTableOpen(true)}
-                      >
-                        New Table
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={handleBulkTableCreation}
-                      >
-                        Bulk Create Tables
-                      </DropdownMenuItem>
+                      {!isStaff && (
+                        <>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => setIsAddTableOpen(true)}
+                          >
+                            New Table
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={handleBulkTableCreation}
+                          >
+                            Bulk Create Tables
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setIsAddGuestOpen(true)}
                       >
                         New Guest
                       </DropdownMenuItem>
-                      <ImportGuestsforWeb />
-                      <DropdownMenuItem
-                        className="cursor-pointer text-red-600"
-                        onClick={() => setIsDeleteAllTablesDialogOpen(true)}
-                      >
-                        <Trash className="w-4 h-4 mr-2" />
-                        Delete All Tables
-                      </DropdownMenuItem>
+                      {!isStaff && <ImportGuestsforWeb />}
+                      {!isStaff && (
+                        <DropdownMenuItem
+                          className="cursor-pointer text-red-600"
+                          onClick={() => setIsDeleteAllTablesDialogOpen(true)}
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Delete All Tables
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
 
@@ -1432,6 +1442,7 @@ const handleTableClick = () => {
                 invited={totalGuests}
                 onToggleArrived={handleToggleReceived}
                 onArriveMany={handleArriveMany}
+                staff={isStaff}
                 onTablesChanged={refreshSeats}
                 roomOnly={isFullScreen}
                 onRoomOnlyChange={setIsFullScreen}
@@ -1469,7 +1480,8 @@ const handleTableClick = () => {
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
                 onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
-                compact={isFullScreen}
+                compact={isFullScreen || isStaff}
+                readOnly={isStaff}
               />
             </motion.div>
           )}
@@ -1483,6 +1495,8 @@ const handleTableClick = () => {
             onDeleteBooking={handleDeleteBooking}
             onToggleReceived={handleToggleReceived}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
+            compact={isStaff}
+            readOnly={isStaff}
           />
           {/* the floor plan puts the Arrived list here on phones */}
           <div id="arrived-under-guests" className="px-2" />

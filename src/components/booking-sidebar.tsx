@@ -19,6 +19,8 @@ interface BookingSidebarProps {
   onDeleteAll: () => void;
   // Full-screen floor plan: just the names, no Export / Delete All buttons
   compact?: boolean;
+  // check-in only account: no "remove from seat" bins
+  readOnly?: boolean;
 }
 
 export function BookingSidebar({
@@ -27,6 +29,7 @@ export function BookingSidebar({
   onToggleReceived,
   onDeleteAll,
   compact = false,
+  readOnly = false,
 }: BookingSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQueries, setSearchQueries] = useState({
@@ -277,7 +280,7 @@ export function BookingSidebar({
                         {seat.table.name}
                       </td>
                       <td className="py-0.5 align-middle">
-                        <button
+                        {!readOnly && <button
                           type="button"
                           onClick={() => {
                             setSeatToDelete(seat.id);
@@ -288,7 +291,7 @@ export function BookingSidebar({
                           aria-label="Remove from this seat"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                     )
@@ -339,6 +342,7 @@ export function BookingSidebar({
       onToggleReceived,
       onDeleteAll,
       compact,
+      readOnly,
       filteredBookings,
       visibleBookings,
       isDeleteBookingDialogOpen,

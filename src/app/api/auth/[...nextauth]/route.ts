@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth"
 import NextAuth from "next-auth/next"
 import { hashPassword, isHashed, verifyPassword } from "@/lib/password"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { roleOf } from "@/lib/roles"
 
 const prisma = new PrismaClient()
 
@@ -37,7 +38,9 @@ const authOptions: NextAuthOptions = {
           })
         }
 
-        return { id: user.id, email: user.email, name: user.name }
+        // "staff" = check-in only (set by the admin in Manage Users)
+        const role = user.email === "admin" ? "full" : await roleOf(user.id)
+        return { id: user.id, email: user.email, name: user.name, role }
       },
     }),
   ],
@@ -51,12 +54,14 @@ const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.role = (user as { role?: string }).role === "staff" ? "staff" : "full"
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         ;(session.user ).id = token.id
+        ;(session.user as { role?: string }).role = token.role ?? "full"
       }
       return session
     },
@@ -69,6 +74,7 @@ declare module "next-auth" {
       name?: string | null
       email?: string | null
       image?: string | null
+      role?: string
     }
   }
 }
@@ -76,6 +82,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
+    role?: string
   }
 }
 

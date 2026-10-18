@@ -13,6 +13,7 @@ interface User {
   email: string
   name: string | null
   password: string
+  staff?: boolean
 }
 
 export default function ManageUsers() {
@@ -55,6 +56,7 @@ export default function ManageUsers() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const name = formData.get("name") as string
+    const staff = formData.get("staff") === "on"
 
     try {
       // Check for existing user
@@ -73,6 +75,7 @@ export default function ManageUsers() {
           email,
           password,
           name,
+          staff,
         }),
       })
 
@@ -136,6 +139,26 @@ export default function ManageUsers() {
     } catch (error) {
       console.log(error)
       toast.error("Failed to update password")
+    }
+  }
+
+  // check-in only (staff) or full access
+  const setAccess = async (user: User, staff: boolean) => {
+    try {
+      const res = await fetch("/api/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: user.id, staff }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success(
+        staff
+          ? `${user.email} is now check-in only. It takes effect the next time they log in.`
+          : `${user.email} has full access again (after they log in again).`,
+      )
+      fetchUsers()
+    } catch (error) {
+      toast.error(`Could not change access - ${error}`)
     }
   }
 
@@ -216,6 +239,13 @@ export default function ManageUsers() {
                 </div>
               </div>
             </div>
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="staff" className="h-4 w-4" />
+              <span>
+                <b>Check-in only (staff)</b>: can check guests in, add a last-minute guest and set meals, but cannot
+                delete anything or change tables
+              </span>
+            </label>
             <div>
               <button
                 type="submit"
@@ -273,6 +303,9 @@ export default function ManageUsers() {
                     Password
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    Access
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
                     Actions
                   </th>
                 </tr>
@@ -325,6 +358,23 @@ export default function ManageUsers() {
                         <span className="rounded-lg bg-zinc-100 px-3 py-1 font-mono text-zinc-700">
                           {user.password}
                         </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      {user.email === "admin" ? (
+                        <span className="text-sm text-zinc-500">Full (admin)</span>
+                      ) : (
+                        <button
+                          onClick={() => setAccess(user, !user.staff)}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                            user.staff
+                              ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                              : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
+                          }`}
+                          title={user.staff ? "Click to give full access" : "Click to make check-in only"}
+                        >
+                          {user.staff ? "Check-in only" : "Full access"}
+                        </button>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">

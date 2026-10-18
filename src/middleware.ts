@@ -20,6 +20,19 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
 ]
 
+// What a check-in-only ("staff") account may change. Everything else that
+// changes data (deleting, tables, floor plan, imports, events, users) is refused.
+const STAFF_API: { path: string; methods: string[] }[] = [
+  { path: "/api/update-seat-received", methods: ["PUT"] }, // tick a guest in / undo
+  { path: "/api/seat-checkin", methods: ["POST"] },
+  { path: "/api/add-guest", methods: ["POST"] }, // last-minute guest
+  { path: "/api/guest-update", methods: ["PUT"] }, // meal / VIP
+  { path: "/api/allergies", methods: ["PUT"] },
+  { path: "/api/change-password", methods: ["POST", "PUT", "PATCH"] }, // their own password
+]
+const staffMayChange = (path: string, method: string) =>
+  STAFF_API.some((r) => (path === r.path || path.startsWith(r.path + "/")) && r.methods.includes(method))
+
 const isPublicApi = (path: string, method: string) =>
   PUBLIC_API.some(
     (r) =>
@@ -90,6 +103,12 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
       return NextResponse.json(
         { success: false, message: "Please log in first" },
         { status: 401 }
+      )
+    }
+    if (token.role === "staff" && req.method !== "GET" && !staffMayChange(path, req.method)) {
+      return NextResponse.json(
+        { success: false, message: "Check-in staff accounts can't do this. Ask the event organizer." },
+        { status: 403 }
       )
     }
     return NextResponse.next()

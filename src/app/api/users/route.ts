@@ -2,6 +2,7 @@ import { authOptions } from "@/lib/auth.config";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { staffIds } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,8 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(users);
+    const staff = await staffIds();
+    return NextResponse.json(users.map((u: { id: string }) => ({ ...u, staff: staff.has(u.id) })));
   } catch {
     return new NextResponse("Internal error", { status: 500 });
   }

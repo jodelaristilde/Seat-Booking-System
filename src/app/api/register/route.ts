@@ -3,13 +3,14 @@ import { hashPassword } from "@/lib/password";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { setStaff } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, name } = body;
+    const { email, password, name, staff } = body;
 
     if (!email || !password) {
       return new NextResponse("Missing required fields", { status: 400 });
@@ -33,6 +34,8 @@ export async function POST(request: Request) {
         name,
       },
     });
+
+    if (staff === true) await setStaff(user.id, true);
 
     // Never send the password back
     return NextResponse.json({ id: user.id, email: user.email, name: user.name });
