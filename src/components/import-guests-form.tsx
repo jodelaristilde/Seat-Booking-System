@@ -232,7 +232,14 @@ export function ImportGuestsforWeb() {
     XLSX.utils.book_append_sheet(wb, ws, "Guests");
 
     if (fileType === "xlsx") {
-      XLSX.writeFile(wb, "sample_guests.xlsx");
+      // the ready-made template (headers, drop-downs and instructions)
+      const a = document.createElement("a");
+      a.href = "/templates/Seating4U-guest-template.xlsx";
+      a.download = "Seating4U-guest-template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
     } else {
       XLSX.writeFile(wb, "sample_guests.csv");
     }
@@ -320,7 +327,7 @@ export function ImportGuestsforWeb() {
                 onClick={() => downloadSampleFile("xlsx")}
               >
                 <Download className="h-4 w-4 mr-2" />
-                XLSX Sample
+                Excel template
               </Button>
               <Button
                 variant="outline"

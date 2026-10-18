@@ -239,7 +239,7 @@ export default function SeatingChart() {
                 <>
                   <ol className="text-sm">
                     {t.guests.map((g) => (
-                      <li key={g.id} className="flex justify-between gap-2">
+                      <li key={g.id} className="flex flex-wrap justify-between gap-x-2">
                         <span>
                           {g.user!.vip && "★ "}
                           {g.user!.firstname} {g.user!.lastname}
@@ -250,6 +250,14 @@ export default function SeatingChart() {
                             <b className="ml-1 text-red-700">⚠ {allergies[g.user!.id]}</b>
                           )}
                         </span>
+                        {(notes[g.user!.id] || answers[g.user!.id]) && (
+                          <span className="block w-full text-[11px] leading-tight">
+                            {notes[g.user!.id] && <b className="text-amber-800">📝 {notes[g.user!.id]}</b>}
+                            {answers[g.user!.id] && (
+                              <b className="ml-1 text-green-800">✓ Desk: {answers[g.user!.id].text}</b>
+                            )}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ol>
