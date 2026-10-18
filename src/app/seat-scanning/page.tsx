@@ -282,10 +282,24 @@ export default function SeatScanning() {
   // microphone problem: a centred pop-up explains the fix
   const [micHelp, setMicHelp] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(false);
+  // iPhone / iPad: the browser's voice search needs a setting turned on, but
+  // the keyboard's own 🎤 works right away, so the button opens the keyboard
+  const [isIos, setIsIos] = useState(false);
+  const [kbHint, setKbHint] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
-    setCanListen(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+    const ios =
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    setIsIos(ios);
+    setCanListen(ios || !!(w.SpeechRecognition || w.webkitSpeechRecognition));
   }, []);
+  const openKeyboardMic = () => {
+    nameInputRef.current?.focus();
+    setKbHint(true);
+    window.setTimeout(() => setKbHint(false), 9000);
+  };
   const startListening = () => {
     const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
     const R = w.SpeechRecognition || w.webkitSpeechRecognition;
@@ -479,6 +493,7 @@ export default function SeatScanning() {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-zinc-400" />
                       <Input
+                        ref={nameInputRef}
                         id="name"
                         placeholder={
                           isLoading
@@ -496,7 +511,7 @@ export default function SeatScanning() {
                       {canListen && (
                         <button
                           type="button"
-                          onClick={listening ? stopListening : startListening}
+                          onClick={isIos ? openKeyboardMic : listening ? stopListening : startListening}
                           className={`absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full ${
                             listening ? "animate-pulse bg-red-600 text-white" : "bg-lime-600 text-white hover:bg-lime-700"
                           }`}
@@ -509,6 +524,11 @@ export default function SeatScanning() {
                     </div>
                     {listening && (
                       <p className="mt-1 text-center text-base font-semibold text-red-600">{t.listening}</p>
+                    )}
+                    {kbHint && (
+                      <p className="mt-2 rounded-xl border-2 border-sky-400 bg-sky-50 px-3 py-2 text-center text-base font-bold text-sky-900">
+                        {t.useKeyboardMic}
+                      </p>
                     )}
 
                     {/* Search Results */}
