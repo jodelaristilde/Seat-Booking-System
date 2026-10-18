@@ -873,7 +873,7 @@ export default function SeatScanning() {
       {/* Seat not available: stays until the guest refreshes or closes it */}
       {noSeatFound && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
-          <div className="relative w-full max-w-sm rounded-2xl border-[3px] border-amber-300 bg-amber-50 p-5 shadow-2xl">
+          <div className="relative w-full max-w-sm rounded-2xl border-4 border-amber-400 bg-amber-50 p-5 text-center shadow-2xl">
             <button
               type="button"
               onClick={() => setNoSeatFound(false)}
@@ -882,15 +882,15 @@ export default function SeatScanning() {
             >
               ×
             </button>
-            <p className="flex items-center gap-2 pr-8 text-sm font-bold uppercase tracking-wide text-amber-700">
+            <p className="flex items-center justify-center gap-2 px-8 text-base font-extrabold uppercase tracking-wide text-amber-700">
               <HelpCircle className="h-5 w-5" /> {t.notAvailable}
             </p>
             {selectedUser && (
-              <p className="mt-1 text-lg font-bold text-amber-950">
+              <p className="mt-2 text-2xl font-extrabold leading-tight text-amber-950">
                 {selectedUser.firstname} {selectedUser.lastname}
               </p>
             )}
-            <p className="mt-2 text-lg font-semibold leading-snug text-amber-950">{t.notAssigned}</p>
+            <p className="text-lg font-bold leading-snug text-amber-950">{t.notAssigned}</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
