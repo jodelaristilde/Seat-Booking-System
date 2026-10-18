@@ -43,6 +43,7 @@ import {
   Grid3x3,
   Map as MapIcon,
   Printer,
+  ClipboardCheck,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -1178,6 +1179,11 @@ const handleTableClick = () => {
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/seating-chart">
                           <Printer className="mr-2 w-4 h-4" /> Seating chart &amp; report
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/ready-check">
+                          <ClipboardCheck className="mr-2 w-4 h-4" /> Ready check
                         </Link>
                       </DropdownMenuItem>
                       {session?.user?.email === "admin" && (
