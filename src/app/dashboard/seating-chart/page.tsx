@@ -176,6 +176,12 @@ export default function SeatingChart() {
         >
           <Download className="h-4 w-4" /> After-event report (Excel)
         </button>
+        <Link
+          href="/dashboard/door-list"
+          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
+        >
+          Door list (A–Z, tick boxes)
+        </Link>
         <span className="text-xs text-zinc-500">
           Tip: in the print window choose &quot;Save as PDF&quot; to email it to the venue.
         </span>
