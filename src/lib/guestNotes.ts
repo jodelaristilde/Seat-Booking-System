@@ -37,3 +37,28 @@ export async function isHeld(eventId: string | null | undefined, guestId: string
   const row = await db.setting.findUnique({ where: { key: keyOf(eventId, guestId) } });
   return !!row?.value;
 }
+
+// What the desk wrote when it said "Yes" to a guest with a note
+// ("Paid by Zelle", "Cash", "None"…), with who and when.
+// Kept in the Setting table ("deskres:<eventId>:<guestId>").
+export type DeskAnswer = { text: string; by: string; at: string };
+
+export async function deskAnswersFor(eventId: string): Promise<Record<string, DeskAnswer>> {
+  const prefix = `deskres:${eventId}:`;
+  const rows = await db.setting.findMany({ where: { key: { startsWith: prefix } } });
+  const out: Record<string, DeskAnswer> = {};
+  for (const r of rows as { key: string; value: string }[]) {
+    try {
+      out[r.key.slice(prefix.length)] = JSON.parse(r.value);
+    } catch {
+      /* skip a broken row */
+    }
+  }
+  return out;
+}
+
+export async function setDeskAnswer(eventId: string, guestId: string, a: DeskAnswer) {
+  const key = `deskres:${eventId}:${guestId}`;
+  const value = JSON.stringify(a);
+  await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
+}

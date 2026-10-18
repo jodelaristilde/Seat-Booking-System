@@ -323,7 +323,7 @@ export function BookingSidebar({
                                 className="flex-1 rounded-md bg-green-600 px-2 py-1 text-sm font-semibold text-white hover:bg-green-700"
                                 onClick={() => (onCheckInNow ? onCheckInNow(seat.id) : onToggleReceived(seat.id, true))}
                               >
-                                Yes
+                                Yes…
                               </button>
                               <button
                                 type="button"

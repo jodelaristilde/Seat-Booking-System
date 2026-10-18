@@ -28,6 +28,7 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/add-guest", methods: ["POST"] }, // last-minute guest
   { path: "/api/guest-update", methods: ["PUT"] }, // meal / VIP
   { path: "/api/allergies", methods: ["PUT"] },
+  { path: "/api/guest-notes/answer", methods: ["POST"] }, // the desk's required answer before seating a guest with a note
   { path: "/api/events", methods: ["PUT"] }, // open another event (renaming is refused in the route)
   { path: "/api/change-password", methods: ["POST", "PUT", "PATCH"] }, // their own password
 ]

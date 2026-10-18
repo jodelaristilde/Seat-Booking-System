@@ -38,6 +38,8 @@ export default function SeatingChart() {
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [allergies, setAllergies] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, { text: string; by: string; at: string }>>({});
 
   useEffect(() => {
     (async () => {
@@ -49,6 +51,11 @@ export default function SeatingChart() {
           fetch("/api/allergies").then((r) => r.json()).catch(() => ({})),
         ]);
         if (al?.success) setAllergies(al.data);
+        const nt = await fetch("/api/guest-notes").then((r) => r.json()).catch(() => null);
+        if (nt?.success) {
+          setNotes(nt.data ?? {});
+          setAnswers(nt.answers ?? {});
+        }
         if (s.success) setSeats(s.data);
         if (g.success) setGuests(g.data);
         if (e.success) {
@@ -126,6 +133,11 @@ export default function SeatingChart() {
         Allergy: allergies[s.user!.id] ?? "",
         VIP: s.user!.vip ? "Yes" : "",
         Arrived: s.isReceived ? "Yes" : "No",
+        Note: notes[s.user!.id] ?? "",
+        "Desk note": answers[s.user!.id]?.text ?? "",
+        "Desk note by": answers[s.user!.id]
+          ? `${answers[s.user!.id].by}, ${new Date(answers[s.user!.id].at).toLocaleString()}`
+          : "",
       })),
       ...unseated.map((g) => ({
         "Last Name": g.lastname,
@@ -136,10 +148,13 @@ export default function SeatingChart() {
         Allergy: allergies[g.id] ?? "",
         VIP: g.vip ? "Yes" : "",
         Arrived: "No seat",
+        Note: notes[g.id] ?? "",
+        "Desk note": answers[g.id]?.text ?? "",
+        "Desk note by": answers[g.id] ? `${answers[g.id].by}, ${new Date(answers[g.id].at).toLocaleString()}` : "",
       })),
     ];
     const ws2 = XLSX.utils.json_to_sheet(rows);
-    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 22 }, { wch: 5 }, { wch: 9 }];
+    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 22 }, { wch: 5 }, { wch: 9 }, { wch: 36 }, { wch: 28 }, { wch: 28 }];
     XLSX.utils.book_append_sheet(wb, ws2, "All guests");
     // No-shows
     const ws3 = XLSX.utils.json_to_sheet(

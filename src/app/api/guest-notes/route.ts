@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { activeEventId } from "@/lib/event";
-import { notesFor, setNote } from "@/lib/guestNotes";
+import { deskAnswersFor, notesFor, setNote } from "@/lib/guestNotes";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
@@ -9,7 +9,9 @@ import { NextResponse } from "next/server";
 // PUT { id, note } or { items: [{ id, note }] }   ("" removes the note)
 export async function GET() {
   try {
-    return NextResponse.json({ success: true, data: await notesFor(await activeEventId()) });
+    const eventId = await activeEventId();
+    const [data, answers] = await Promise.all([notesFor(eventId), deskAnswersFor(eventId)]);
+    return NextResponse.json({ success: true, data, answers });
   } catch (error) {
     console.error("Guest notes:", error);
     return NextResponse.json({ success: false, message: "Could not load notes" }, { status: 500 });

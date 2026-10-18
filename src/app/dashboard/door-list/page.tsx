@@ -38,6 +38,7 @@ export default function DoorList() {
   const [rows, setRows] = useState<Row[]>([]);
   const [allergies, setAllergies] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, { text: string }>>({});
   const [eventName, setEventName] = useState("");
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -55,6 +56,7 @@ export default function DoorList() {
           fetch("/api/guest-notes").then((r) => r.json()).catch(() => ({})),
         ]);
         if (nt?.success && nt.data) setNotes(nt.data);
+        if (nt?.success && nt.answers) setAnswers(nt.answers);
         const seats: SeatRow[] = s.success ? s.data : [];
         const guests: Guest[] = g.success ? g.data : [];
         if (al?.success) setAllergies(al.data);
@@ -153,6 +155,9 @@ export default function DoorList() {
                     )}
                     {notes[r.id] && (
                       <span className="block text-[11px] font-bold text-amber-800">📝 {notes[r.id]}</span>
+                    )}
+                    {answers[r.id] && (
+                      <span className="block text-[11px] font-bold text-green-800">✓ Desk: {answers[r.id].text}</span>
                     )}
                   </span>
                   <span className={`whitespace-nowrap text-right font-bold ${r.table ? "" : "text-red-700"}`}>

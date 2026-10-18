@@ -979,8 +979,14 @@ const handleTableClick = () => {
   };
 
   // Guests with a note: the desk sees the note and decides (Yes / No)
-  const { notes } = useGuestNotes();
-  const [holdAsk, setHoldAsk] = useState<{ seatId: string; name: string; table: string; note: string } | null>(null);
+  const { notes, saveAnswer } = useGuestNotes();
+  const [holdAsk, setHoldAsk] = useState<{ seatId: string; userId: string; name: string; table: string; note: string } | null>(null);
+  // the desk must write how it was settled before giving the seat
+  const [deskAnswer, setDeskAnswer] = useState("");
+  const [savingAnswer, setSavingAnswer] = useState(false);
+  useEffect(() => {
+    if (holdAsk) setDeskAnswer("");
+  }, [holdAsk]);
   const noteOfSeat = (seatId: string) => {
     const seat =
       bookedSeats.find((s) => s.id === seatId) ??
@@ -989,6 +995,7 @@ const handleTableClick = () => {
     if (!seat || !uid || !notes[uid]) return null;
     return {
       seatId,
+      userId: uid,
       name: `${seat.user?.firstname ?? ""} ${seat.user?.lastname ?? ""}`.trim(),
       table: seat.table?.name ?? "",
       note: notes[uid],
@@ -1529,7 +1536,7 @@ const handleTableClick = () => {
                 bookedSeats={bookedSeats}
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
-                onCheckInNow={(id) => checkInSeat(id, true)}
+                onCheckInNow={(id) => handleToggleReceived(id, true)}
                 onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
                 compact={isFullScreen || isStaff}
                 readOnly={isStaff}
@@ -1545,7 +1552,7 @@ const handleTableClick = () => {
             bookedSeats={bookedSeats}
             onDeleteBooking={handleDeleteBooking}
             onToggleReceived={handleToggleReceived}
-            onCheckInNow={(id) => checkInSeat(id, true)}
+            onCheckInNow={(id) => handleToggleReceived(id, true)}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
             compact={isStaff}
             readOnly={isStaff}
@@ -1637,6 +1644,34 @@ const handleTableClick = () => {
           <div className="whitespace-pre-wrap rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-lg font-semibold text-amber-950">
             {holdAsk?.note}
           </div>
+          {/* required: how it was settled */}
+          <div className="space-y-1.5">
+            <label htmlFor="desk-answer" className="text-sm font-bold">
+              Desk note <span className="font-semibold text-red-600">(required)</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {["Paid by Zelle", "Paid by check", "Paid cash", "None"].map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setDeskAnswer(o)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                    deskAnswer === o ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white hover:bg-zinc-50"
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+            <Input
+              id="desk-answer"
+              value={deskAnswer}
+              maxLength={200}
+              onChange={(e) => setDeskAnswer(e.target.value)}
+              placeholder="Or write what happened (e.g. paid $250 cash, receipt #12)"
+              className={deskAnswer.trim() ? "border-green-400" : "border-red-300"}
+            />
+          </div>
           <p className="text-base font-medium">Give them their seat and check them in?</p>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="h-11 flex-1" onClick={() => setHoldAsk(null)}>
@@ -1644,13 +1679,23 @@ const handleTableClick = () => {
             </Button>
             <Button
               className="h-11 flex-1 bg-green-600 hover:bg-green-700"
-              onClick={() => {
+              disabled={!deskAnswer.trim() || savingAnswer}
+              title={deskAnswer.trim() ? "" : "Write the desk note first"}
+              onClick={async () => {
                 const a = holdAsk;
+                if (!a || !deskAnswer.trim()) return;
+                setSavingAnswer(true);
+                const ok = await saveAnswer(a.userId, deskAnswer.trim());
+                setSavingAnswer(false);
+                if (!ok) {
+                  toast.error("Could not save the desk note. Try again.");
+                  return;
+                }
                 setHoldAsk(null);
-                if (a) checkInSeat(a.seatId, true);
+                checkInSeat(a.seatId, true);
               }}
             >
-              Yes, check in
+              {savingAnswer ? "Saving…" : "Yes, check in"}
             </Button>
           </DialogFooter>
         </DialogContent>

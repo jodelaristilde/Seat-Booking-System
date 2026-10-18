@@ -254,7 +254,8 @@ export default function UserGuide() {
                 { text: "Add a <b>Note</b> column to your Excel (or type a note in <b>New Guest</b>, or click 📝 next to the guest on the table card).", tip: "You can still seat the guest at a table as usual." },
                 "On their phone, that guest does <b>not</b> see a seat: they are asked to see the front desk.",
                 "At the desk, searching their name in Guest Names shows the note with <b>Give them their seat and check them in? Yes / No</b>. Ticking their box asks the same.",
-                "<b>Yes</b> checks them in. <b>No</b> leaves them waiting. To remove a note, click 📝 and clear it.",
+                { text: "Before <b>Yes</b>, the desk must write a <b>Desk note</b>: tap <b>Paid by Zelle</b>, <b>Paid by check</b>, <b>Paid cash</b> or <b>None</b>, or type what happened. Then <b>Yes</b> checks them in. <b>No</b> leaves them waiting.", tip: "The desk note, who wrote it and when are in the Excel report (Seating chart → After-event report) and on the Door list." },
+                "To remove a note, click 📝 next to the guest on the table card and clear it.",
               ]}
             />
           </Card>
