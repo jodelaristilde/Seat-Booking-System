@@ -37,15 +37,18 @@ export default function SeatingChart() {
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allergies, setAllergies] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, g, e] = await Promise.all([
+        const [s, g, e, al] = await Promise.all([
           fetch("/api/get-seat").then((r) => r.json()),
           fetch("/api/get-guests").then((r) => r.json()),
           fetch("/api/events").then((r) => r.json()),
+          fetch("/api/allergies").then((r) => r.json()).catch(() => ({})),
         ]);
+        if (al?.success) setAllergies(al.data);
         if (s.success) setSeats(s.data);
         if (g.success) setGuests(g.data);
         if (e.success) {
@@ -97,15 +100,20 @@ export default function SeatingChart() {
       ["Without a seat", unseated.length],
       [],
       ["Meals (all guests)", mealSummary(guests) || "-"],
+      ["Allergies", Object.keys(allergies).length ? `${Object.keys(allergies).length} guests (see All guests)` : "-"],
       [],
-      ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive", "Meals"],
+      ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive", "Meals", "Allergies"],
       ...tables.map((t) => {
         const a = t.guests.filter((g) => g.isReceived).length;
-        return [t.name, t.seats, t.guests.length, a, t.guests.length - a, mealSummary(t.guests.map((g) => g.user!))];
+        const al = t.guests
+          .filter((g) => allergies[g.user!.id])
+          .map((g) => `${g.user!.firstname} ${g.user!.lastname}: ${allergies[g.user!.id]}`)
+          .join("; ");
+        return [t.name, t.seats, t.guests.length, a, t.guests.length - a, mealSummary(t.guests.map((g) => g.user!)), al];
       }),
     ];
     const ws1 = XLSX.utils.aoa_to_sheet(summary);
-    ws1["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 }];
+    ws1["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 }, { wch: 40 }];
     XLSX.utils.book_append_sheet(wb, ws1, "Summary");
     // Every guest
     const rows = [
@@ -115,6 +123,7 @@ export default function SeatingChart() {
         Table: s.table.name,
         Seat: s.seat,
         Meal: s.user!.meal ?? "",
+        Allergy: allergies[s.user!.id] ?? "",
         VIP: s.user!.vip ? "Yes" : "",
         Arrived: s.isReceived ? "Yes" : "No",
       })),
@@ -124,12 +133,13 @@ export default function SeatingChart() {
         Table: "",
         Seat: "",
         Meal: g.meal ?? "",
+        Allergy: allergies[g.id] ?? "",
         VIP: g.vip ? "Yes" : "",
         Arrived: "No seat",
       })),
     ];
     const ws2 = XLSX.utils.json_to_sheet(rows);
-    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 5 }, { wch: 9 }];
+    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 22 }, { wch: 5 }, { wch: 9 }];
     XLSX.utils.book_append_sheet(wb, ws2, "All guests");
     // No-shows
     const ws3 = XLSX.utils.json_to_sheet(
@@ -213,7 +223,12 @@ export default function SeatingChart() {
                           {g.user!.vip && "★ "}
                           {g.user!.firstname} {g.user!.lastname}
                         </span>
-                        {g.user!.meal && <span className="text-xs text-zinc-500">{g.user!.meal}</span>}
+                        <span className="whitespace-nowrap text-xs">
+                          {g.user!.meal && <span className="text-zinc-500">{g.user!.meal}</span>}
+                          {allergies[g.user!.id] && (
+                            <b className="ml-1 text-red-700">⚠ {allergies[g.user!.id]}</b>
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ol>

@@ -21,6 +21,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
   const [lastname, setLastname] = useState("")
   const [table, setTable] = useState("")
   const [meal, setMeal] = useState("")
+  const [allergy, setAllergy] = useState("")
   const [vip, setVip] = useState(false)
   const [arrived, setArrived] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -34,6 +35,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
     setLastname("")
     setTable("")
     setMeal("")
+    setAllergy("")
     setVip(false)
     setArrived(false)
   }
@@ -61,6 +63,13 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
       const data = await response.json()
 
       if (data.success) {
+        if (allergy.trim() && data.data?.id) {
+          await fetch("/api/allergies", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: data.data.id, allergy }),
+          }).catch(() => undefined)
+        }
         const who = `${firstname.trim()} ${lastname.trim()}`
         toast.success(
           data.seatedAt
@@ -165,7 +174,22 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
               value={meal}
               maxLength={40}
               onChange={(e) => setMeal(e.target.value)}
-              placeholder="Or type another meal (e.g. Vegan, no nuts)"
+              placeholder="Or type another meal (e.g. Vegan)"
+            />
+          </div>
+
+          {/* Allergy (optional), shown in red to the caterer */}
+          <div className="space-y-2">
+            <label htmlFor="guest-allergy" className="text-sm font-medium">
+              Allergy <span className="font-normal text-zinc-500">(optional)</span>
+            </label>
+            <Input
+              id="guest-allergy"
+              value={allergy}
+              maxLength={60}
+              onChange={(e) => setAllergy(e.target.value)}
+              placeholder="e.g. Nuts, shellfish, gluten"
+              className={allergy.trim() ? "border-red-300 bg-red-50 text-red-700" : ""}
             />
           </div>
 

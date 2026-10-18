@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { matches as nameMatches } from "@/lib/fold";
+import { useAllergies } from "@/hooks/useAllergies";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -203,6 +204,8 @@ export function FloorPlanCanvas({
     if (zoomId && cardMode === "seat" && !allGuests) loadGuests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomId, cardMode]);
+  // allergies (kept apart from the meal, shown in red)
+  const { allergies, saveAllergy } = useAllergies();
   // VIP star / meal choice for one guest
   const updateGuest = async (id: string, data: { vip?: boolean; meal?: string | null }) => {
     try {
@@ -2452,9 +2455,28 @@ export function FloorPlanCanvas({
                           >
                             ★
                           </button>
-                          <span className="flex-1 font-medium text-zinc-800">
+                          <span className="min-w-0 flex-1 truncate font-medium text-zinc-800">
                             {`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"}
                           </span>
+                          {/* allergy: red when filled in */}
+                          <input
+                            key={`${s.id}-al-${(s.user && allergies[s.user.id]) ?? ""}`}
+                            defaultValue={(s.user && allergies[s.user.id]) ?? ""}
+                            placeholder="Allergy"
+                            maxLength={60}
+                            className={`w-20 rounded border px-1.5 py-0.5 text-xs ${
+                              s.user && allergies[s.user.id]
+                                ? "border-red-300 bg-red-50 font-semibold text-red-700"
+                                : "border-zinc-200"
+                            }`}
+                            title={(s.user && allergies[s.user.id]) || "Allergy or dietary note (shown in red to the caterer)"}
+                            onFocus={() => (zoomPinned.current = true)}
+                            onBlur={(e) => {
+                              const v = e.target.value.trim();
+                              if (s.user && v !== (allergies[s.user.id] ?? "")) saveAllergy(s.user.id, v);
+                            }}
+                            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                          />
                           {/* meal choice */}
                           <input
                             key={`${s.id}-${s.user?.meal ?? ""}`}
@@ -2497,10 +2519,20 @@ export function FloorPlanCanvas({
                   const m = b.user?.meal?.trim();
                   if (m) counts.set(m, (counts.get(m) ?? 0) + 1);
                 }
-                return counts.size ? (
-                  <p className="mt-2 text-xs text-zinc-600">
-                    <b>Meals:</b> {[...counts.entries()].map(([m, n]) => `${n} ${m}`).join(" · ")}
-                  </p>
+                const al = booked.filter((b) => b.user && allergies[b.user.id]);
+                return counts.size || al.length ? (
+                  <>
+                    {counts.size > 0 && (
+                      <p className="mt-2 text-xs text-zinc-600">
+                        <b>Meals:</b> {[...counts.entries()].map(([m, n]) => `${n} ${m}`).join(" · ")}
+                      </p>
+                    )}
+                    {al.length > 0 && (
+                      <p className="mt-1 text-xs font-semibold text-red-700">
+                        ⚠ Allergies: {al.map((b) => `${b.user!.firstname} (${allergies[b.user!.id]})`).join(" · ")}
+                      </p>
+                    )}
+                  </>
                 ) : null;
               })()}
 
@@ -2572,6 +2604,11 @@ export function FloorPlanCanvas({
                               {s.user?.meal && (
                                 <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700" title="Meal">
                                   {s.user.meal}
+                                </span>
+                              )}
+                              {s.user && allergies[s.user.id] && (
+                                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-bold text-red-700" title="Allergy">
+                                  ⚠ {allergies[s.user.id]}
                                 </span>
                               )}
                               {s.isReceived && (
