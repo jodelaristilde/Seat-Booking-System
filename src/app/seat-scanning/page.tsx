@@ -302,8 +302,18 @@ export default function SeatScanning() {
         if (said) setSearchValue(said);
       };
       rec.onerror = (e) => {
-        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") toast.error(t.micBlocked);
         setListening(false);
+        const ua = navigator.userAgent;
+        const iphone = /iPhone|iPad|iPod/i.test(ua);
+        const inApp = /FBAN|FBAV|Instagram|Line\/|wv\)|GSA\//i.test(ua);
+        const err = e?.error ?? "";
+        if (err === "no-speech" || err === "aborted") return toast(t.micNothing);
+        // show the fix for 8 seconds, so there is time to read it
+        const show = (msg: string) => toast.error(msg, { duration: 8000 });
+        if (inApp) return show(t.micInApp);
+        if (err === "service-not-allowed" && iphone) return show(t.micIphone);
+        if (err === "not-allowed" || err === "service-not-allowed") return show(t.micDenied);
+        show(t.micBlocked);
       };
       rec.onend = () => setListening(false);
       recRef.current = rec;
@@ -311,7 +321,7 @@ export default function SeatScanning() {
       rec.start();
     } catch {
       setListening(false);
-      toast.error(t.micBlocked);
+      toast.error(t.micBlocked, { duration: 8000 });
     }
   };
   const stopListening = () => {
