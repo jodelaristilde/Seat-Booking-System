@@ -351,6 +351,19 @@ export default function SeatScanning() {
     setListening(false);
   };
 
+  // "Close" on the group card: everyone is checked in, back to an empty search
+  const closeGroup = () => {
+    setGroupMode(null);
+    setGroup([]);
+    setGroupQuery("");
+    setSelectedUser(null);
+    setSearchResult(null);
+    setSeatIsReceived(false);
+    setTableNotes(null);
+    setSearchValue("");
+    window.setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
+
   // "Close" on the Seat not available pop-up: back to an empty search
   const closeNoSeat = () => {
     setNoSeatFound(false);
@@ -711,12 +724,7 @@ export default function SeatScanning() {
             {t.done}
           </Button>
         </div>
-      ) : seatIsReceived && groupMode === "done" ? (
-        // The whole group, with their tables
-        <div className="space-y-4">
-          <ArrivedList items={sortedGroup} title={t.arrivedHeader} />
-        </div>
-      ) : seatIsReceived ? (
+      ) : seatIsReceived && groupMode === "done" ? null : seatIsReceived ? (
         // Show seat details after check-in
         <>
           <div className="flex justify-center items-center gap-3 flex-col pb-4">
@@ -871,6 +879,37 @@ export default function SeatScanning() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Done with the group: just the names and their tables, until Close */}
+      {groupMode === "done" && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-4 border-green-500 bg-white shadow-2xl">
+            <div className="bg-green-600 px-5 py-3 text-center">
+              <p className="text-sm font-bold uppercase tracking-wide text-green-100">{t.arrivedHeader} ✓</p>
+              <p className="text-2xl font-extrabold text-white">{t.yourGroup}</p>
+            </div>
+            <ul className="max-h-[55dvh] divide-y divide-green-100 overflow-y-auto px-4">
+              {sortedGroup.map((g) => (
+                <li key={g.seatId} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-lg font-semibold text-zinc-900">{g.name}</span>
+                  <span className="whitespace-nowrap rounded-lg bg-green-100 px-2.5 py-1 text-lg font-extrabold text-green-800">
+                    {g.table}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="p-4">
+              <button
+                type="button"
+                onClick={closeGroup}
+                className="h-14 w-full rounded-xl bg-green-600 text-xl font-bold text-white shadow hover:bg-green-700"
+              >
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Microphone problem: centred, bold outline, until OK */}
       {micHelp && (
