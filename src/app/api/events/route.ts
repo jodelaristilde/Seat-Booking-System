@@ -49,6 +49,42 @@ export async function POST(req: Request) {
     await activeEventId(); // make sure older data is already filed under an event
     const date = typeof body?.date === "string" && body.date.trim() ? body.date.trim().slice(0, 40) : null;
     const event = await db.event.create({ data: { name, date } });
+    // Optional: start from another event's room (same venue): floor plan picture,
+    // tables (empty seats), entrance and the words read from the picture. No guests.
+    const from = typeof body?.copyFrom === "string" ? body.copyFrom : "";
+    if (from) {
+      const src = await db.event.findUnique({ where: { id: from } });
+      if (src) {
+        const img = await db.image.findFirst({ where: { eventId: from }, orderBy: { createdAt: "desc" } });
+        if (img) {
+          await db.image.create({
+            data: { filename: img.filename, data: img.data, mimeType: img.mimeType, original: img.original, size: img.size, eventId: event.id },
+          });
+        }
+        const tables = await db.table.findMany({ where: { eventId: from }, include: { Seat: true } });
+        for (const t of tables as {
+          name: string; notes: string | null; posX: number | null; posY: number | null; shape: string;
+          sizeW: number | null; sizeH: number | null; Seat: unknown[];
+        }[]) {
+          await db.table.create({
+            data: {
+              name: t.name, notes: t.notes, posX: t.posX, posY: t.posY, shape: t.shape, sizeW: t.sizeW, sizeH: t.sizeH,
+              eventId: event.id,
+              Seat: { create: Array.from({ length: Math.max(1, t.Seat.length) }, (_, i) => ({ seat: i + 1, isBooked: false, isReceived: false })) },
+            },
+          });
+        }
+        if (src.entrances) await db.event.update({ where: { id: event.id }, data: { entrances: src.entrances as never } });
+        const labels = await db.setting.findUnique({ where: { key: `labels:${from}` } });
+        if (labels) {
+          await db.setting.upsert({
+            where: { key: `labels:${event.id}` },
+            update: { value: labels.value },
+            create: { key: `labels:${event.id}`, value: labels.value },
+          });
+        }
+      }
+    }
     return withEventCookie(NextResponse.json({ success: true, event }), event.id);
   } catch (error) {
     console.error("Events POST:", error);

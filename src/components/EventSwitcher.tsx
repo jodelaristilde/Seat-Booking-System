@@ -18,6 +18,8 @@ export function EventSwitcher() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDate, setNewDate] = useState("");
+  // start from another event's room (same venue)
+  const [copyFrom, setCopyFrom] = useState("");
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
@@ -88,7 +90,7 @@ export function EventSwitcher() {
   };
   const createEvent = async () => {
     if (!newName.trim()) return toast.error("Please give the event a name");
-    if (await call("POST", { name: newName, date: newDate }, `"${newName.trim()}" created`)) window.location.reload();
+    if (await call("POST", { name: newName, date: newDate, copyFrom }, `"${newName.trim()}" created`)) window.location.reload();
   };
   const rename = async (id: string) => {
     if (!renameText.trim()) return;
@@ -249,17 +251,37 @@ export function EventSwitcher() {
                 className="min-w-0 flex-1 rounded border px-2 py-1.5 text-sm"
               />
               <input
+                type="date"
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
-                placeholder="Date (optional)"
-                className="w-36 rounded border px-2 py-1.5 text-sm"
+                title="Event date: after it, guests can no longer look up seats on their phone"
+                className="w-40 rounded border px-2 py-1.5 text-sm"
               />
               <Button size="sm" onClick={createEvent} disabled={busy}>
                 <Plus className="mr-1 h-4 w-4" /> Create
               </Button>
             </div>
+            <label className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-zinc-700">Same venue? Copy the room from:</span>
+              <select
+                value={copyFrom}
+                onChange={(e) => setCopyFrom(e.target.value)}
+                className="rounded border px-2 py-1 text-sm"
+              >
+                <option value="">Nothing (start empty)</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                    {ev.date ? ` (${ev.date})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
             <p className="mt-2 text-xs text-zinc-500">
-              The new event starts empty and opens on this computer. Other computers keep their own event.
+              {copyFrom
+                ? "The floor plan, tables (empty seats) and entrance are copied. Guests are not. "
+                : "The new event starts empty. "}
+              It opens on this computer; other computers keep their own event.
             </p>
           </div>
         </DialogContent>
