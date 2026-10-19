@@ -52,7 +52,8 @@ import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { addPending, isOffline, readPending, writePending, type Pending } from "@/lib/offlineQueue";
 import { toast } from "sonner";
 import { useGuests } from "../hooks/useGuests";
 import { useGuestNotes } from "../hooks/useGuestNotes";
@@ -78,11 +79,56 @@ import { FloorPlanCanvas } from "./FloorPlanCanvas";
 
 const SeatBooking = () => {
   const {
-    seats: initialSeats,
+    seats: serverSeats,
     loading,
     error,
     fetchSeats: refreshSeats,
   } = useSeats();
+  // Check-ins saved on this computer while the internet was down: shown as
+  // done straight away, and sent as soon as the connection is back
+  const [pending, setPending] = useState<Pending[]>([]);
+  useEffect(() => setPending(readPending()), []);
+  const initialSeats = useMemo(() => {
+    if (!pending.length) return serverSeats;
+    const p = new Map(pending.map((x) => [x.seatId, x.isReceived]));
+    return serverSeats.map((s) => (p.has(s.id) ? { ...s, isReceived: p.get(s.id)! } : s));
+  }, [serverSeats, pending]);
+  const flushing = useRef(false);
+  const flushPending = useCallback(async () => {
+    if (flushing.current) return;
+    const list = readPending();
+    if (!list.length) return;
+    flushing.current = true;
+    const left: Pending[] = [];
+    for (const p of list) {
+      try {
+        const r = await fetch("/api/update-seat-received", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(p),
+        });
+        if (!r.ok && r.status >= 500) left.push(p);
+      } catch {
+        left.push(p);
+      }
+    }
+    writePending(left);
+    setPending(left);
+    flushing.current = false;
+    if (left.length < list.length) {
+      toast.success(`Back online: ${list.length - left.length} saved check-in${list.length - left.length === 1 ? "" : "s"} sent`);
+      refreshSeats();
+    }
+  }, [refreshSeats]);
+  useEffect(() => {
+    flushPending();
+    const t = window.setInterval(flushPending, 8000);
+    window.addEventListener("online", flushPending);
+    return () => {
+      window.clearInterval(t);
+      window.removeEventListener("online", flushPending);
+    };
+  }, [flushPending]);
   const [isBulkTableDialogOpen, setBulkTableDialogOpen] = useState(false);
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [tables, setTables] = useState<TableData[]>([]);
@@ -1031,6 +1077,22 @@ const handleTableClick = () => {
       setBookedSeats((prev) => prev.map((seat) => (ids.has(seat.id) ? { ...seat, isReceived: true } : seat)));
       toast.success(`${seatIds.length} guest${seatIds.length === 1 ? "" : "s"} checked in`);
     } catch (error) {
+      if (isOffline(error)) {
+        const at = new Date().toISOString();
+        setPending(addPending(seatIds.map((id) => ({ seatId: id, isReceived: true, at }))));
+        const ids = new Set(seatIds);
+        setTables((prev) =>
+          prev.map((table) => ({
+            ...table,
+            seats: table.seats.map((seat) => (ids.has(seat.id) ? { ...seat, isReceived: true } : seat)),
+          }))
+        );
+        setBookedSeats((prev) => prev.map((seat) => (ids.has(seat.id) ? { ...seat, isReceived: true } : seat)));
+        toast.warning("No internet: saved on this computer", {
+          description: "It will be sent automatically when the connection is back.",
+        });
+        return;
+      }
       toast.error("Could not check in the table", {
         description: error instanceof Error ? error.message : undefined,
       });
@@ -1089,6 +1151,20 @@ const handleTableClick = () => {
         );
       }
     } catch (error) {
+      if (isOffline(error)) {
+        setPending(addPending([{ seatId, isReceived, at: new Date().toISOString() }]));
+        setTables((prev) =>
+          prev.map((table) => ({
+            ...table,
+            seats: table.seats.map((seat) => (seat.id === seatId ? { ...seat, isReceived } : seat)),
+          }))
+        );
+        setBookedSeats((prev) => prev.map((seat) => (seat.id === seatId ? { ...seat, isReceived } : seat)));
+        toast.warning("No internet: saved on this computer", {
+          description: "It will be sent automatically when the connection is back.",
+        });
+        return;
+      }
       toast.error("Failed to update seat arrived status", {
         description:
           error instanceof Error ? error.message : "Unknown error occurred",
@@ -1639,6 +1715,14 @@ const handleTableClick = () => {
         onClose={() => setBulkTableDialogOpen(false)}
         onSuccess={handleBulkTableSuccess}
       />
+
+      {/* Offline: check-ins waiting to be sent */}
+      {pending.length > 0 && (
+        <div className="fixed bottom-3 left-1/2 z-[80] -translate-x-1/2 rounded-full border-2 border-amber-400 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-lg">
+          📶 No internet: {pending.length} check-in{pending.length === 1 ? "" : "s"} saved on this computer. They will be sent
+          automatically.
+        </div>
+      )}
 
       {/* A guest with a note: read it, then give them their seat or not */}
       <Dialog open={!!holdAsk} onOpenChange={(o) => !o && setHoldAsk(null)}>
