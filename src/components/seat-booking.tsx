@@ -1350,6 +1350,11 @@ const handleTableClick = () => {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link href="/dashboard/print-cards">
+                          <Printer className="mr-2 w-4 h-4" /> Table signs & place cards
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/dashboard/door-list">
                           <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
                         </Link>
