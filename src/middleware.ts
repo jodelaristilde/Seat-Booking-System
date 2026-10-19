@@ -18,6 +18,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/register", methods: ["POST"] }, // the route itself checks who is allowed
   { path: "/api/wayfind", methods: ["GET"] }, // guest phone: line from the entrance to their table (no names)
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
+  { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
 ]
 
 // What a check-in-only ("staff") account may change. Everything else that

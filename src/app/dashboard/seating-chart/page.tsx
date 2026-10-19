@@ -40,6 +40,7 @@ export default function SeatingChart() {
   const [allergies, setAllergies] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, { text: string; by: string; at: string }>>({});
+  const [rsvps, setRsvps] = useState<Record<string, { coming: "yes" | "no" }>>({});
 
   useEffect(() => {
     (async () => {
@@ -51,6 +52,8 @@ export default function SeatingChart() {
           fetch("/api/allergies").then((r) => r.json()).catch(() => ({})),
         ]);
         if (al?.success) setAllergies(al.data);
+        const rl = await fetch("/api/rsvp-links").then((r) => r.json()).catch(() => null);
+        if (rl?.success) setRsvps(rl.rsvps ?? {});
         const nt = await fetch("/api/guest-notes").then((r) => r.json()).catch(() => null);
         if (nt?.success) {
           setNotes(nt.data ?? {});
@@ -107,6 +110,12 @@ export default function SeatingChart() {
       ["Without a seat", unseated.length],
       [],
       ["Meals (all guests)", mealSummary(guests) || "-"],
+      [
+        "RSVP",
+        `${Object.values(rsvps).filter((r) => r.coming === "yes").length} yes · ${
+          Object.values(rsvps).filter((r) => r.coming === "no").length
+        } no · ${guests.length - Object.keys(rsvps).length} no answer`,
+      ],
       ["Allergies", Object.keys(allergies).length ? `${Object.keys(allergies).length} guests (see All guests)` : "-"],
       [],
       ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive", "Meals", "Allergies"],
@@ -133,6 +142,7 @@ export default function SeatingChart() {
         Allergy: allergies[s.user!.id] ?? "",
         VIP: s.user!.vip ? "Yes" : "",
         Arrived: s.isReceived ? "Yes" : "No",
+        RSVP: rsvps[s.user!.id]?.coming ?? "",
         Note: notes[s.user!.id] ?? "",
         "Desk note": answers[s.user!.id]?.text ?? "",
         "Desk note by": answers[s.user!.id]
@@ -148,6 +158,7 @@ export default function SeatingChart() {
         Allergy: allergies[g.id] ?? "",
         VIP: g.vip ? "Yes" : "",
         Arrived: "No seat",
+        RSVP: rsvps[g.id]?.coming ?? "",
         Note: notes[g.id] ?? "",
         "Desk note": answers[g.id]?.text ?? "",
         "Desk note by": answers[g.id] ? `${answers[g.id].by}, ${new Date(answers[g.id].at).toLocaleString()}` : "",
@@ -166,6 +177,25 @@ export default function SeatingChart() {
     XLSX.utils.book_append_sheet(wb, ws3, "Did not arrive");
     const safe = (eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
     XLSX.writeFile(wb, `${safe} - report ${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // Everyone's personal RSVP link, to text or email
+  const downloadRsvpLinks = async () => {
+    const j = await fetch("/api/rsvp-links").then((r) => r.json()).catch(() => null);
+    if (!j?.success) return;
+    const ws = XLSX.utils.json_to_sheet(
+      (j.data as { firstname: string; lastname: string; rsvp: string; link: string }[]).map((g) => ({
+        "Last Name": g.lastname,
+        "First Name": g.firstname,
+        RSVP: g.rsvp,
+        "Personal RSVP link": g.link,
+      }))
+    );
+    ws["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 8 }, { wch: 80 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "RSVP links");
+    const safe = (eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
+    XLSX.writeFile(wb, `${safe} - RSVP links.xlsx`);
   };
 
   if (loading) return <p className="p-8 text-zinc-500">Loading…</p>;
@@ -190,6 +220,13 @@ export default function SeatingChart() {
           className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
         >
           <Download className="h-4 w-4" /> After-event report (Excel)
+        </button>
+        <button
+          onClick={downloadRsvpLinks}
+          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
+          title="Each guest's personal link to answer yes / no, meal and allergy"
+        >
+          <Download className="h-4 w-4" /> RSVP links (Excel)
         </button>
         <Link
           href="/dashboard/door-list"
