@@ -169,9 +169,9 @@ export default function ReadyCheck() {
       // 8. entrance for the phone's green line
       const hasEntrance = Array.isArray(ent?.entrances) && ent.entrances.length > 0;
       out.push({
-        title: "Entrance for the guest phone map",
+        title: "Entrance for the guest phone map (required)",
         ok: hasEntrance,
-        level: "info",
+        level: "error",
         okText: "Entrance set: guests see a green line to their table.",
         problem: "No entrance is set, so guests' phones only circle their table (no green line).",
         items: [],

@@ -388,10 +388,14 @@ export function FloorPlanCanvas({
   // ---- Entrance(s): where guests come in (the phone draws the way from here) ----
   const [settingEntrance, setSettingEntrance] = useState(false);
   const [entrances, setEntrances] = useState<{ x: number; y: number }[]>([]);
+  const [entrancesLoaded, setEntrancesLoaded] = useState(false);
   useEffect(() => {
     fetch("/api/event-entrance")
       .then((r) => r.json())
-      .then((j) => j.success && setEntrances(j.entrances))
+      .then((j) => {
+        if (j.success) setEntrances(j.entrances);
+        setEntrancesLoaded(true);
+      })
       .catch(() => undefined);
   }, []);
   const saveEntrances = async (next: { x: number; y: number }[]) => {
@@ -1206,6 +1210,14 @@ export function FloorPlanCanvas({
       setSaving(false);
     }
     setDrawnIds([]);
+    // Required next step: where guests come in (their phone draws the way from there)
+    if (picture && entrances.length === 0 && tables.length > 0) {
+      setSettingEntrance(true);
+      toast.message("Next step (required): set the entrance", {
+        description: "Click the door on the floor plan where guests come in.",
+        duration: 8000,
+      });
+    }
   };
 
   // ---------- dragging (tables and review shapes) ----------
@@ -2018,8 +2030,30 @@ export function FloorPlanCanvas({
               Clear all
             </Button>
           )}
-          <Button size="sm" onClick={() => setSettingEntrance(false)}>
+          {entrances.length === 0 && (
+            <Button size="sm" variant="ghost" onClick={() => setSettingEntrance(false)} title="The reminder stays until it is set">
+              Later
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => setSettingEntrance(false)}
+            disabled={entrances.length === 0}
+            title={entrances.length === 0 ? "Click the door on the plan first" : ""}
+          >
             Done
+          </Button>
+        </div>
+      )}
+      {/* Required: an entrance, so guests' phones can show the way to their table */}
+      {!working && !roomOnly && !staff && entrancesLoaded && picture && tables.length > 0 && entrances.length === 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+          <DoorOpen className="h-4 w-4 shrink-0" />
+          <span className="flex-1">
+            <b>Required: set the entrance.</b> Guests&apos; phones use it to draw the way from the door to their table.
+          </span>
+          <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => setSettingEntrance(true)}>
+            Set entrance
           </Button>
         </div>
       )}
