@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { TableData } from "@/types/booking";
 import {
   findShapes,
@@ -414,6 +415,23 @@ export function FloorPlanCanvas({
   };
 
   const working = drawing || editing || reviewing || settingEntrance;
+
+  // Required next step after tables are set up (drawn, read from the picture,
+  // moved or added one by one): a pop-up asking for the entrance.
+  const [askEntrance, setAskEntrance] = useState(false);
+  const tableWork = drawing || editing || reviewing;
+  const wasTableWork = useRef(false);
+  const prevTableCount = useRef<number | null>(null);
+  useEffect(() => {
+    const finished = wasTableWork.current && !tableWork;
+    wasTableWork.current = tableWork;
+    const prev = prevTableCount.current;
+    prevTableCount.current = tables.length;
+    if (!entrancesLoaded || roomOnly || staff || tableWork || settingEntrance) return;
+    if (tables.length === 0 || entrances.length > 0) return;
+    const added = prev !== null && tables.length > prev;
+    if (finished || added) setAskEntrance(true);
+  }, [tableWork, tables.length, entrancesLoaded, entrances.length, roomOnly, staff, settingEntrance]);
   const wasWorking = useRef(false);
   useEffect(() => {
     if (working && !wasWorking.current) onRoomOnlyChange?.(true);
@@ -1211,13 +1229,7 @@ export function FloorPlanCanvas({
     }
     setDrawnIds([]);
     // Required next step: where guests come in (their phone draws the way from there)
-    if (picture && entrances.length === 0 && tables.length > 0) {
-      setSettingEntrance(true);
-      toast.message("Next step (required): set the entrance", {
-        description: "Click the door on the floor plan where guests come in.",
-        duration: 8000,
-      });
-    }
+    // the entrance pop-up opens by itself once drawing is done (see askEntrance)
   };
 
   // ---------- dragging (tables and review shapes) ----------
@@ -2045,8 +2057,36 @@ export function FloorPlanCanvas({
           </Button>
         </div>
       )}
+      <Dialog open={askEntrance} onOpenChange={setAskEntrance}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DoorOpen className="h-5 w-5 text-green-700" /> Next step (required): the entrance
+            </DialogTitle>
+            <DialogDescription>
+              Your tables are set. Now click the <b>door</b> on the floor plan where guests come in. Guests&apos; phones
+              draw a green line from that door to their table.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAskEntrance(false)}>
+              Later
+            </Button>
+            <Button
+              className="bg-green-700 hover:bg-green-800"
+              onClick={() => {
+                setAskEntrance(false);
+                setSettingEntrance(true);
+                setTimeout(() => roomColRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+              }}
+            >
+              Set entrance now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Required: an entrance, so guests' phones can show the way to their table */}
-      {!working && !roomOnly && !staff && entrancesLoaded && picture && tables.length > 0 && entrances.length === 0 && (
+      {!working && !roomOnly && !staff && entrancesLoaded && tables.length > 0 && entrances.length === 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
           <DoorOpen className="h-4 w-4 shrink-0" />
           <span className="flex-1">
