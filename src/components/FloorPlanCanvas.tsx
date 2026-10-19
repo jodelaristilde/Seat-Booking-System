@@ -85,6 +85,8 @@ interface ReviewItem {
 }
 
 const SIZE_KEY = "floorPlanTableSize";
+// tables count when "Later" was clicked on the entrance pop-up (survives the floor plan being rebuilt)
+let entranceLater: number | null = null;
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
 const FS_ARRIVED_KEY = "floorPlanFullScreenArrived";
@@ -416,22 +418,21 @@ export function FloorPlanCanvas({
 
   const working = drawing || editing || reviewing || settingEntrance;
 
-  // Required next step after tables are set up (drawn, read from the picture,
-  // moved or added one by one): a pop-up asking for the entrance.
-  const [askEntrance, setAskEntrance] = useState(false);
-  const tableWork = drawing || editing || reviewing;
-  const wasTableWork = useRef(false);
-  const prevTableCount = useRef<number | null>(null);
-  useEffect(() => {
-    const finished = wasTableWork.current && !tableWork;
-    wasTableWork.current = tableWork;
-    const prev = prevTableCount.current;
-    prevTableCount.current = tables.length;
-    if (!entrancesLoaded || roomOnly || staff || tableWork || settingEntrance) return;
-    if (tables.length === 0 || entrances.length > 0) return;
-    const added = prev !== null && tables.length > prev;
-    if (finished || added) setAskEntrance(true);
-  }, [tableWork, tables.length, entrancesLoaded, entrances.length, roomOnly, staff, settingEntrance]);
+  // Required next step once there are tables: a pop-up asking for the entrance.
+  // Based on what is on screen (tables, no entrance), not on events, because the
+  // floor plan is rebuilt when drawing ends. "Later" hides it until the tables change
+  // or tables are drawn/moved again.
+  const [askTick, setAskTick] = useState(0);
+  const askEntrance =
+    entrancesLoaded && !roomOnly && !staff && !working && tables.length > 0 && entrances.length === 0 &&
+    entranceLater !== tables.length;
+  const setAskEntrance = (open: boolean) => {
+    if (!open) {
+      entranceLater = tables.length;
+      setAskTick((t) => t + 1);
+    }
+  };
+  void askTick;
   const wasWorking = useRef(false);
   useEffect(() => {
     if (working && !wasWorking.current) onRoomOnlyChange?.(true);
@@ -1229,7 +1230,7 @@ export function FloorPlanCanvas({
     }
     setDrawnIds([]);
     // Required next step: where guests come in (their phone draws the way from there)
-    // the entrance pop-up opens by itself once drawing is done (see askEntrance)
+    entranceLater = null; // ask for the entrance again now that drawing is done
   };
 
   // ---------- dragging (tables and review shapes) ----------
