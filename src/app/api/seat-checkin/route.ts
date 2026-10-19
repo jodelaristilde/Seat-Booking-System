@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { isHeld } from "@/lib/guestNotes"
 import { isOpenForGuests } from "@/lib/guestAccess"
 import { logEntries } from "@/lib/history"
+import { companionSeatIds } from "@/lib/party"
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Please see the desk." }, { status: 403 })
     }
 
+    const party = await companionSeatIds(seatId)
+    if (party.length) await db.seat.updateMany({ where: { id: { in: party } }, data: { isReceived: true } })
     const updatedSeat = await db.seat.update({
       where: { id: seatId },
       data: { isReceived: true },

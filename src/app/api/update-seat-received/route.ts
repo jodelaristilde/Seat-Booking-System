@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { clientTime, logEntries, whoIs } from "@/lib/history"
+import { companionSeatIds } from "@/lib/party"
 
 export async function PUT(req: NextRequest) {
   try {
@@ -31,6 +32,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: true, count: r.count })
     }
 
+    // the main guest of a party: their companions come with them
+    const party = await companionSeatIds(seatId)
+    if (party.length) {
+      await db.seat.updateMany({ where: { id: { in: party } }, data: { isReceived: !!isReceived } })
+    }
+
     const updatedSeat = await db.seat.update({
       where: {
         id: seatId,
@@ -52,12 +59,14 @@ export async function PUT(req: NextRequest) {
         guest: `${updatedSeat.user?.firstname ?? ""} ${updatedSeat.user?.lastname ?? ""}`.trim(),
         table: updatedSeat.table?.name,
         seatId: updatedSeat.id,
+        detail: party.length ? `with their party (+${party.length})` : undefined,
       },
     ])
 
     return NextResponse.json({
       success: true,
       data: updatedSeat,
+      partySeatIds: party,
     })
   } catch (error) {
     console.error("Error updating seat received status:", error)

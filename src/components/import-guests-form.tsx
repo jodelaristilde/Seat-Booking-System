@@ -24,6 +24,7 @@ interface Guest {
   meal?: string;
   allergy?: string;
   note?: string;
+  party?: number;
 }
 
 export function ImportGuestsforWeb() {
@@ -197,6 +198,7 @@ export function ImportGuestsforWeb() {
             const allergy =
               row.allergy ?? row.Allergy ?? row.Allergies ?? row.allergies ?? row.ALLERGY ?? row["Dietary"] ?? row["Diet"];
             const note = row.note ?? row.Note ?? row.NOTE ?? row.Notes ?? row.notes ?? row.Message ?? row.message;
+            const party = Number(row["Party Size"] ?? row["Party size"] ?? row.Party ?? row.party ?? row["Party"] ?? "");
             return {
               firstname: String(firstname).trim(),
               lastname: String(lastname).trim(),
@@ -205,6 +207,7 @@ export function ImportGuestsforWeb() {
               ...(meal !== undefined && String(meal).trim() ? { meal: String(meal).trim() } : {}),
               ...(allergy !== undefined && String(allergy).trim() ? { allergy: String(allergy).trim() } : {}),
               ...(note !== undefined && String(note).trim() ? { note: String(note).trim() } : {}),
+              ...(party > 1 ? { party: Math.min(20, Math.round(party)) } : {}),
             };
           });
 

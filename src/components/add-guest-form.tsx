@@ -22,6 +22,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
   const [table, setTable] = useState("")
   const [meal, setMeal] = useState("")
   const [allergy, setAllergy] = useState("")
+  const [party, setParty] = useState(1)
   const [note, setNoteText] = useState("")
   const [vip, setVip] = useState(false)
   const [arrived, setArrived] = useState(false)
@@ -37,6 +38,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
     setTable("")
     setMeal("")
     setAllergy("")
+    setParty(1)
     setNoteText("")
     setVip(false)
     setArrived(false)
@@ -58,6 +60,7 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
           table: table || undefined,
           meal: meal.trim() || undefined,
           vip,
+          party,
           arrived: !!table && arrived,
         }),
       })
@@ -219,6 +222,22 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
             />
           </div>
           </div>
+
+          {/* Party size: the people coming with them get their own seats at the same table */}
+          <label className="flex items-center gap-2 text-sm">
+            <span className="font-medium">Party size</span>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={party}
+              onChange={(e) => setParty(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+              className="h-9 w-16 rounded-md border px-2"
+            />
+            <span className="text-xs text-zinc-500">
+              {party > 1 ? `${firstname || "Guest"} + ${party - 1} (seated together, checked in together)` : "just this guest"}
+            </span>
+          </label>
 
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <label className="flex cursor-pointer items-center gap-2 text-sm">

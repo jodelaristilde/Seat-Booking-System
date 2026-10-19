@@ -2,10 +2,11 @@ import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { logEntries } from "@/lib/history";
+import { setParty } from "@/lib/party";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-// POST { firstname, lastname, table?, seats?, vip?, meal?, arrived? }
+// POST { firstname, lastname, table?, seats?, vip?, meal?, arrived?, party? }
 // Adds a guest to the open event. With "table" (a name like "Table 5", or
 // just "5"), the guest is also seated there: the table is found (or made,
 // with `seats` seats, 10 by default) and the guest takes the first empty seat.
@@ -33,10 +34,11 @@ export async function POST(request: NextRequest) {
 
     // Optional: seat the guest at a table straight away
     const rawTable = body.table === undefined || body.table === null ? "" : String(body.table).trim();
+    const arrived = body.arrived === true; // a last-minute guest standing at the desk
+    const perTable = Math.min(40, Math.max(1, Math.round(Number(body.seats) || 10)));
     let seatedAt: string | null = null;
-    if (rawTable) {
+    const seatAt = async (guestId: string) => {
       const tableName = /^\d+$/.test(rawTable) ? `Table ${Number(rawTable)}` : rawTable.slice(0, 60);
-      const perTable = Math.min(40, Math.max(1, Math.round(Number(body.seats) || 10)));
       let table = await db.table.findFirst({
         where: { eventId, name: { equals: tableName, mode: "insensitive" } },
         include: { Seat: { orderBy: { seat: "asc" } } },
@@ -54,31 +56,41 @@ export async function POST(request: NextRequest) {
         });
       }
       const free = table.Seat.find((s: { isBooked: boolean }) => !s.isBooked);
-      // a last-minute guest standing at the desk can be checked in right away
-      const arrived = body.arrived === true;
       if (free) {
-        await db.seat.update({ where: { id: free.id }, data: { isBooked: true, userId: newGuest.id, isReceived: arrived } });
+        await db.seat.update({ where: { id: free.id }, data: { isBooked: true, userId: guestId, isReceived: arrived } });
       } else {
         // table is full: add one more seat for this guest
         const next = table.Seat.reduce((m: number, s: { seat: number }) => Math.max(m, s.seat), 0) + 1;
         await db.seat.create({
-          data: { tableId: table.id, seat: next, isBooked: true, isReceived: arrived, userId: newGuest.id },
+          data: { tableId: table.id, seat: next, isBooked: true, isReceived: arrived, userId: guestId },
         });
       }
-      seatedAt = table.name;
-      if (arrived) {
-        const tok = await getToken({ req: request }).catch(() => null);
-        await logEntries(eventId, [
-          {
-            at: new Date().toISOString(),
-            by: (tok?.name as string) || (tok?.email as string) || "desk",
-            action: "added",
-            guest: `${firstname} ${lastname}`,
-            table: table.name,
-            detail: "last-minute guest, checked in",
-          },
-        ]);
-      }
+      return table.name as string;
+    };
+    if (rawTable) seatedAt = await seatAt(newGuest.id);
+
+    // Party size: "Jodel Aristilde +1", "+2"… at the same table, checked in with them
+    const party = Math.min(20, Math.max(1, Math.round(Number(body.party) || 1)));
+    const companions: string[] = [];
+    for (let i = 1; i < party; i++) {
+      const c = await db.users.create({ data: { firstname, lastname: `${lastname} +${i}`, eventId, meal: null } });
+      companions.push(c.id);
+      if (rawTable) await seatAt(c.id);
+    }
+    if (companions.length) await setParty(eventId, newGuest.id, companions);
+
+    if (rawTable && arrived) {
+      const tok = await getToken({ req: request }).catch(() => null);
+      await logEntries(eventId, [
+        {
+          at: new Date().toISOString(),
+          by: (tok?.name as string) || (tok?.email as string) || "desk",
+          action: "added",
+          guest: `${firstname} ${lastname}${companions.length ? ` (+${companions.length})` : ""}`,
+          table: seatedAt ?? undefined,
+          detail: "last-minute guest, checked in",
+        },
+      ]);
     }
 
     return NextResponse.json({ success: true, data: newGuest, seatedAt });

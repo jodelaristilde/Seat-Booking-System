@@ -1127,20 +1127,23 @@ const handleTableClick = () => {
       const result = await response.json();
 
       if (result.success) {
+        // the guest, plus their party (+1, children) if they have one
+        const ids = new Set<string>([seatId, ...((result.partySeatIds as string[] | undefined) ?? [])]);
         // functional updates: two quick ticks never undo each other
         setTables((prev) =>
           prev.map((table) => ({
             ...table,
             seats: table.seats.map((seat) =>
-              seat.id === seatId ? { ...seat, isReceived } : seat
+              ids.has(seat.id) ? { ...seat, isReceived } : seat
             ),
           }))
         );
         setBookedSeats((prev) =>
           prev.map((seat) =>
-            seat.id === seatId ? { ...seat, isReceived } : seat
+            ids.has(seat.id) ? { ...seat, isReceived } : seat
           )
         );
+        if (ids.size > 1 && isReceived) toast.success(`With their party: ${ids.size} people checked in`);
 
         toast.success(
           `Seat ${isReceived ? "marked as arrived" : "unmarked as arrived"}`
