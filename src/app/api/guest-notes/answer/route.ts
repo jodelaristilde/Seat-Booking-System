@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { activeEventId } from "@/lib/event";
 import { setDeskAnswer } from "@/lib/guestNotes";
+import { logEntries } from "@/lib/history";
 import { db } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
@@ -20,6 +21,10 @@ export async function POST(req: NextRequest) {
     const token = await getToken({ req });
     const by = (token?.name as string) || (token?.email as string) || "desk";
     await setDeskAnswer(eventId, guest.id, { text, by, at: new Date().toISOString() });
+    const g = await db.users.findUnique({ where: { id: guest.id }, select: { firstname: true, lastname: true } });
+    await logEntries(eventId, [
+      { at: new Date().toISOString(), by, action: "desk-note", guest: `${g?.firstname ?? ""} ${g?.lastname ?? ""}`.trim(), detail: text },
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Desk answer:", error);

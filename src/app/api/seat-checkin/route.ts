@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { isHeld } from "@/lib/guestNotes"
 import { isOpenForGuests } from "@/lib/guestAccess"
+import { logEntries } from "@/lib/history"
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +23,18 @@ export async function POST(req: Request) {
     const updatedSeat = await db.seat.update({
       where: { id: seatId },
       data: { isReceived: true },
+      include: { table: true, user: true },
     })
+    await logEntries(updatedSeat.table?.eventId, [
+      {
+        at: new Date().toISOString(),
+        by: "Guest's phone",
+        action: "arrived",
+        guest: `${updatedSeat.user?.firstname ?? ""} ${updatedSeat.user?.lastname ?? ""}`.trim(),
+        table: updatedSeat.table?.name,
+        seatId: updatedSeat.id,
+      },
+    ])
 
     return NextResponse.json({ success: true, data: updatedSeat })
   } catch (error) {

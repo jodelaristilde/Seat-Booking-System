@@ -1,12 +1,15 @@
 import { activeEventId } from "@/lib/event";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { logEntries } from "@/lib/history";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 
 // POST { firstname, lastname, table?, seats?, vip?, meal?, arrived? }
 // Adds a guest to the open event. With "table" (a name like "Table 5", or
 // just "5"), the guest is also seated there: the table is found (or made,
 // with `seats` seats, 10 by default) and the guest takes the first empty seat.
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const firstname = typeof body.firstname === "string" ? body.firstname.trim() : "";
@@ -63,6 +66,19 @@ export async function POST(request: Request) {
         });
       }
       seatedAt = table.name;
+      if (arrived) {
+        const tok = await getToken({ req: request }).catch(() => null);
+        await logEntries(eventId, [
+          {
+            at: new Date().toISOString(),
+            by: (tok?.name as string) || (tok?.email as string) || "desk",
+            action: "added",
+            guest: `${firstname} ${lastname}`,
+            table: table.name,
+            detail: "last-minute guest, checked in",
+          },
+        ]);
+      }
     }
 
     return NextResponse.json({ success: true, data: newGuest, seatedAt });
