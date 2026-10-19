@@ -75,6 +75,7 @@ export default function UserGuide() {
     ["extras", "Event day extras"],
     ["fix", "Fixing mistakes"],
     ["team", "Ready check, staff & kitchen"],
+    ["more", "RSVP, printing, history & after the event"],
   ];
 
   return (
@@ -422,6 +423,67 @@ export default function UserGuide() {
           </Card>
         </Section>
 
+        <Section id="more" number={9} title="RSVP, party size, printing, history & after the event">
+          <Card title="Online RSVP">
+            <Steps
+              items={[
+                "Seating chart page → <b>RSVP links (Excel)</b>: every guest gets their own personal link.",
+                "Text or email each guest their link. They answer <b>Yes / No</b>, pick a meal and type any allergy.",
+                "Answers show in the RSVP column on the Seating chart page and in the report. A link only works for that one guest.",
+              ]}
+            />
+          </Card>
+          <Card title="Party size (+1s and children)">
+            <Steps
+              items={[
+                "When adding a guest, set <b>Party size</b> (for example 3). The extra people get their own seats at the same table, named like <i>Smith +1</i>.",
+                "In the Excel import, use the <b>Party Size</b> column.",
+                "When one person of the party is checked in (at the desk or on their phone), the whole party is checked in together.",
+              ]}
+            />
+          </Card>
+          <Card title="Same venue again? Copy the room">
+            <Steps
+              items={[
+                "Click the event name at the top → create a new event.",
+                "Under <b>Same venue? Copy the room from</b>, pick the old event. The floor plan, tables, entrance and labels are copied, with empty seats.",
+              ]}
+            />
+          </Card>
+          <Card title="Table signs & place cards">
+            <Steps
+              items={[
+                "Menu (☰) → <b>Table signs &amp; place cards</b>.",
+                "<b>Table signs</b>: one big table number per page, with a QR code guests scan to find their seat.",
+                "<b>Place cards</b>: fold-over name cards, 8 per page. Tick <b>Show the meal</b> to help the servers. VIPs get a ★.",
+              ]}
+            />
+          </Card>
+          <Card title="Wi-Fi drops at the desk">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• Keep checking guests in. The dashboard remembers them and shows an <b>amber bar</b> at the bottom: &quot;check-ins waiting to send&quot;.</li>
+              <li>• When the Wi-Fi comes back, they are sent by themselves. Do not close the browser tab until the amber bar is gone.</li>
+            </ul>
+          </Card>
+          <Card title="History: who checked in whom, with undo">
+            <Steps
+              items={[
+                "Menu (☰) → <b>History</b>: every check-in with the time and who did it (a staff login or the guest&apos;s own phone), plus desk notes.",
+                "Checked in the wrong person? Click <b>Undo</b> on that line.",
+              ]}
+            />
+          </Card>
+          <Card title="After the event: summary & close out">
+            <Steps
+              items={[
+                "Menu (☰) → <b>Arrival summary &amp; close out</b>: how many came, a chart of arrivals every 15 minutes, who did not come per table, and the meals actually served (handy for the caterer&apos;s bill).",
+                "Click <b>Print / save as PDF</b> to keep it.",
+                { text: "Click <b>Close out event</b>: a full backup Excel downloads (all guests, notes, desk notes, allergies, RSVP, check-in times and history), then guest check-in closes.", tip: "You can reopen guest check-in any time: click the event name at the top." },
+              ]}
+            />
+          </Card>
+        </Section>
+
         {/* Tips */}
         <section className="mb-16">
           <h2 className="mb-6 border-b border-zinc-200 pb-3 text-2xl font-light text-black">Tips</h2>
@@ -441,6 +503,7 @@ export default function UserGuide() {
                 <li>• Put the dashboard in full screen on a big screen at the desk.</li>
                 <li>• Place the QR code where guests line up.</li>
                 <li>• Keep a second device logged in, just in case.</li>
+                <li>• After the event: <b>Arrival summary &amp; close out</b>.</li>
               </ul>
             </div>
           </div>
