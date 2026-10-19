@@ -47,6 +47,7 @@ import {
   ListChecks,
   ChefHat,
   History,
+  BarChart3,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -1360,6 +1361,11 @@ const handleTableClick = () => {
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/door-list">
                           <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/summary">
+                          <BarChart3 className="mr-2 w-4 h-4" /> Arrival summary &amp; close out
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
