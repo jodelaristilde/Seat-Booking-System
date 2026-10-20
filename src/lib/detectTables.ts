@@ -111,6 +111,38 @@ export async function findShapes(src: string): Promise<{
     regions.push(r);
   }
 
+  // Tables filled with a dark colour (navy, black) are "ink" themselves:
+  // label solid ink blobs too, so they can be found as tables.
+  const inkLabel = new Int32Array(W * H).fill(-1);
+  let inkId = 0;
+  for (let start = 0; start < W * H; start++) {
+    if (!ink[start] || inkLabel[start] !== -1) continue;
+    const r: Region = { area: 0, minX: W, minY: H, maxX: 0, maxY: 0, touchesEdge: false };
+    let top = 0;
+    stack[top++] = start;
+    inkLabel[start] = inkId;
+    while (top > 0) {
+      const p = stack[--top];
+      const x = p % W;
+      const y = (p - x) / W;
+      r.area++;
+      if (x < r.minX) r.minX = x;
+      if (x > r.maxX) r.maxX = x;
+      if (y < r.minY) r.minY = y;
+      if (y > r.maxY) r.maxY = y;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) r.touchesEdge = true;
+      if (x > 0 && ink[p - 1] && inkLabel[p - 1] === -1) { inkLabel[p - 1] = inkId; stack[top++] = p - 1; }
+      if (x < W - 1 && ink[p + 1] && inkLabel[p + 1] === -1) { inkLabel[p + 1] = inkId; stack[top++] = p + 1; }
+      if (y > 0 && ink[p - W] && inkLabel[p - W] === -1) { inkLabel[p - W] = inkId; stack[top++] = p - W; }
+      if (y < H - 1 && ink[p + W] && inkLabel[p + W] === -1) { inkLabel[p + W] = inkId; stack[top++] = p + W; }
+    }
+    inkId++;
+    // only solid blobs (a filled table), not lines, walls or letters
+    const bw = r.maxX - r.minX + 1;
+    const bh = r.maxY - r.minY + 1;
+    if (r.area / (bw * bh) > 0.6 && r.area > W * H * 0.0015) regions.push(r);
+  }
+
   const total = W * H;
   type Cand = Region & { bw: number; bh: number; fill: number; aspect: number };
   const cands: Cand[] = regions
@@ -213,16 +245,29 @@ export async function readTextInShapes(
       cx.fillStyle = "#fff";
       cx.fillRect(0, 0, crop.width, crop.height);
       cx.drawImage(canvas, sx, sy, sw, sh, 10, 10, sw * k, sh * k);
+      const plain = cleanForReading(crop, s.shape === "round");
       let text = "";
-      try {
-        const r = await worker.recognize(crop);
-        const raw = r.data.text
-          .replace(/[^A-Za-z0-9 #&'\-]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-        text = acceptReading(raw, r.data.confidence ?? 0);
-      } catch {
-        text = "";
+      // 1) the cleaned crop as a line of text, 2) as one word,
+      // 3) numbers only (a lone "8" or "21" is often missed otherwise)
+      const tries: [HTMLCanvasElement, Record<string, string>][] = [
+        [plain, { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" }],
+        [plain, { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "" }],
+        [plain, { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" }],
+        [crop, { tessedit_pageseg_mode: "6", tessedit_char_whitelist: "" }],
+      ];
+      for (const [img, params] of tries) {
+        try {
+          await worker.setParameters(params);
+          const r = await worker.recognize(img);
+          const raw = r.data.text
+            .replace(/[^A-Za-z0-9 #&'\-]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+          text = acceptReading(raw, r.data.confidence ?? 0);
+        } catch {
+          text = "";
+        }
+        if (text) break;
       }
       out.push({ ...s, text });
       onProgress?.(i + 1, shapes.length);
@@ -231,6 +276,83 @@ export async function readTextInShapes(
   } finally {
     await worker.terminate().catch(() => undefined);
   }
+}
+
+// Make the writing black on white: works for white, grey, coloured and dark
+// tables (white numbers on a navy or black table are flipped).
+function cleanForReading(src: HTMLCanvasElement, round: boolean): HTMLCanvasElement {
+  const W = src.width;
+  const H = src.height;
+  const out = document.createElement("canvas");
+  out.width = W;
+  out.height = H;
+  const o = out.getContext("2d", { willReadFrequently: true })!;
+  o.drawImage(src, 0, 0);
+  const img = o.getImageData(0, 0, W, H);
+  const d = img.data;
+  const lum = new Uint8Array(W * H);
+  const hist = new Array(256).fill(0);
+  // the 10px white margin around the crop is not part of the table: leave it out
+  const inside = (x: number, y: number) => x >= 12 && y >= 12 && x < W - 12 && y < H - 12;
+  let count = 0;
+  for (let i = 0; i < W * H; i++) {
+    const l = Math.round((d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000);
+    lum[i] = l;
+    if (inside(i % W, Math.floor(i / W))) { hist[l]++; count++; }
+  }
+  // Otsu: the split that best separates writing from the table colour
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, best = 0, cut = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    const wF = count - wB;
+    if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > best) { best = between; cut = t; }
+  }
+  // The table colour is what fills the middle area; writing is the other side
+  let dark = 0, n = 0;
+  const x0 = Math.round(W * (round ? 0.25 : 0.15)), x1 = Math.round(W * (round ? 0.75 : 0.85));
+  const y0 = Math.round(H * 0.15), y1 = Math.round(H * 0.85);
+  for (let y = y0; y < y1; y++)
+    for (let x = x0; x < x1; x++) {
+      n++;
+      if (lum[y * W + x] <= cut) dark++;
+    }
+  const invert = n > 0 && dark / n > 0.5;
+  const ink = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    let on = inside(i % W, Math.floor(i / W)) && lum[i] <= cut;
+    if (invert) on = inside(i % W, Math.floor(i / W)) && lum[i] > cut;
+    ink[i] = on ? 1 : 0;
+  }
+  // Anything touching the edge of the crop is the table's border or the
+  // paper around it, not the writing: clear it
+  const stack: number[] = [];
+  for (let x = 0; x < W; x++) for (const y of [12, H - 13]) if (y >= 0 && y < H && ink[y * W + x]) stack.push(y * W + x);
+  for (let y = 0; y < H; y++) for (const x of [12, W - 13]) if (x >= 0 && x < W && ink[y * W + x]) stack.push(y * W + x);
+  while (stack.length) {
+    const p = stack.pop()!;
+    if (!ink[p]) continue;
+    ink[p] = 0;
+    const x = p % W;
+    if (x > 0) stack.push(p - 1);
+    if (x < W - 1) stack.push(p + 1);
+    if (p >= W) stack.push(p - W);
+    if (p < W * (H - 1)) stack.push(p + W);
+  }
+  for (let i = 0; i < W * H; i++) {
+    const v = ink[i] ? 0 : 255;
+    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+    d[i * 4 + 3] = 255;
+  }
+  o.putImageData(img, 0, 0);
+  return out;
 }
 
 // The reader sometimes "sees" letters in chair drawings or lines.
@@ -384,13 +506,23 @@ export async function shapeAtPoint(src: string, xPct: number, yPct: number): Pro
 
 // The most common colour near the click, ignoring dark text and lines
 function dominantColour(px: Uint8ClampedArray, W: number, H: number, cx: number, cy: number) {
-  const R = Math.max(4, Math.round(Math.min(W, H) * 0.012));
+  // wide enough that a click right on the table number still sees the table colour
+  const R = Math.max(6, Math.round(Math.min(W, H) * 0.03));
   const counts = new Map<number, { n: number; r: number; g: number; b: number }>();
+  // mostly dark around the click = a dark-coloured table: use its colour
+  let darkN = 0, allN = 0;
+  for (let y = Math.max(0, cy - R); y <= Math.min(H - 1, cy + R); y++)
+    for (let x = Math.max(0, cx - R); x <= Math.min(W - 1, cx + R); x++) {
+      const o = (y * W + x) * 4;
+      allN++;
+      if ((px[o] * 299 + px[o + 1] * 587 + px[o + 2] * 114) / 1000 < 70) darkN++;
+    }
+  const darkArea = allN > 0 && darkN / allN > 0.5;
   for (let y = Math.max(0, cy - R); y <= Math.min(H - 1, cy + R); y++)
     for (let x = Math.max(0, cx - R); x <= Math.min(W - 1, cx + R); x++) {
       const o = (y * W + x) * 4;
       const r = px[o], g = px[o + 1], b = px[o + 2];
-      if ((r * 299 + g * 587 + b * 114) / 1000 < 70) continue; // text / lines
+      if ((r * 299 + g * 587 + b * 114) / 1000 < 70 && !darkArea) continue; // text / lines
       const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
       const c = counts.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
       c.n++; c.r += r; c.g += g; c.b += b;
