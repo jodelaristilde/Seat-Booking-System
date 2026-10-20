@@ -1199,6 +1199,19 @@ function darkShare(canvas: HTMLCanvasElement): number {
 export async function numberAtPoint(src: string, xPct: number, yPct: number): Promise<{ shape: DetectedShape; name: string } | null> {
   const img = await loadImage(src);
   const W = img.naturalWidth, H = img.naturalHeight;
+  // 1) a number in a small circle (white ring, dark inside, like on nightclub
+  //    plans, or the other way round): find the circle around the click and read
+  //    only what is inside it
+  const ring = circleAtPoint(img, xPct, yPct);
+  if (ring) {
+    try {
+      const name = nameFromText(await readCircle(ring));
+      // the circle is only the label: give the table a usual size around it
+      if (name) return { name, shape: { ...ring.shape, w: Math.max(4, ring.shape.w), h: Math.max((4 * W) / H, ring.shape.h) } };
+    } catch {
+      /* fall through */
+    }
+  }
   // a window around the click (6% of the plan each way)
   const half = Math.round(Math.max(W, H) * 0.06);
   const cx = Math.round((xPct / 100) * W), cy = Math.round((yPct / 100) * H);
@@ -1235,4 +1248,190 @@ export async function numberAtPoint(src: string, xPct: number, yPct: number): Pr
       likelyTable: true,
     },
   };
+}
+
+
+// The small closed area around the click (a numbered circle): fill outward from
+// the click through pixels like the one clicked (dark inside a white ring, or
+// light inside a dark ring) until the ring stops it. Digits inside are skipped
+// over, so clicking right on the number works too.
+type Circle = { shape: DetectedShape; canvas: HTMLCanvasElement; box: { x: number; y: number; w: number; h: number }; darkInside: boolean };
+function circleAtPoint(img: HTMLImageElement, xPct: number, yPct: number): Circle | null {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  const lum = (i: number) => (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+  const cx = Math.round((xPct / 100) * (W - 1)), cy = Math.round((yPct / 100) * (H - 1));
+  const limit = Math.round(Math.max(W, H) * 0.06); // a number circle is small
+  // which side is the inside: the most common brightness right around the click
+  let darkN = 0, n = 0;
+  const r0 = Math.max(4, Math.round(Math.max(W, H) * 0.006));
+  for (let y = cy - r0; y <= cy + r0; y++)
+    for (let x = cx - r0; x <= cx + r0; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      n++;
+      if (lum(y * W + x) < 128) darkN++;
+    }
+  const darkInside = darkN >= n / 2;
+  const inside = (i: number) => (darkInside ? lum(i) < 128 : lum(i) >= 128);
+  // start from the inside pixel nearest the click (the click may be on a digit)
+  let start = -1;
+  for (let r = 0; r <= 6 && start < 0; r++)
+    for (let dy = -r; dy <= r && start < 0; dy++)
+      for (let dx = -r; dx <= r && start < 0; dx++) {
+        const x = cx + dx, y = cy + dy;
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        if (inside(y * W + x)) start = y * W + x;
+      }
+  if (start < 0) return null;
+  const seen = new Uint8Array(W * H);
+  const stack: number[] = [start];
+  seen[start] = 1;
+  let minX = W, minY = H, maxX = 0, maxY = 0, area = 0;
+  while (stack.length) {
+    const p = stack.pop()!;
+    const x = p % W, y = (p - x) / W;
+    area++;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+    if (maxX - minX > limit * 2 || maxY - minY > limit * 2) return null; // not closed in: the background
+    for (const q of [p - 1, p + 1, p - W, p + W]) {
+      if (q < 0 || q >= W * H || seen[q]) continue;
+      if ((q === p - 1 && x === 0) || (q === p + 1 && x === W - 1)) continue;
+      if (inside(q)) {
+        seen[q] = 1;
+        stack.push(q);
+      }
+    }
+  }
+  const bw = maxX - minX + 1, bh = maxY - minY + 1;
+  if (bw < 8 || bh < 8 || bw / bh > 1.8 || bh / bw > 1.8) return null; // too small, or not round-ish
+  return {
+    canvas,
+    box: { x: minX, y: minY, w: bw, h: bh },
+    darkInside,
+    shape: {
+      key: `c${minX}_${minY}`,
+      x: ((minX + bw / 2) / W) * 100,
+      y: ((minY + bh / 2) / H) * 100,
+      w: (bw / W) * 100,
+      h: (bh / H) * 100,
+      shape: "round",
+      likelyTable: true,
+      text: "",
+    },
+  };
+}
+
+
+// Read the number inside a circle found by circleAtPoint: only its inside,
+// enlarged, the writing made black on white, the rest of the circle blanked.
+async function readCircle(c: Circle): Promise<string> {
+  const { x, y, w, h } = c.box;
+  const k = Math.max(2, Math.min(10, 90 / h));
+  const out = document.createElement("canvas");
+  const pad = 16;
+  out.width = Math.round(w * k) + pad * 2;
+  out.height = Math.round(h * k) + pad * 2;
+  const o = out.getContext("2d", { willReadFrequently: true })!;
+  o.fillStyle = "#fff";
+  o.fillRect(0, 0, out.width, out.height);
+  o.imageSmoothingEnabled = true;
+  o.drawImage(c.canvas, x, y, w, h, pad, pad, w * k, h * k);
+  const img = o.getImageData(0, 0, out.width, out.height);
+  const px = img.data;
+  const cx = out.width / 2, cy = out.height / 2, rx = (w * k) / 2, ry = (h * k) / 2;
+  for (let yy = 0; yy < out.height; yy++)
+    for (let xx = 0; xx < out.width; xx++) {
+      const i = (yy * out.width + xx) * 4;
+      const dx = (xx - cx) / rx, dy = (yy - cy) / ry;
+      const inCircle = dx * dx + dy * dy <= 0.92;
+      const l = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000;
+      const writing = inCircle && (c.darkInside ? l >= 140 : l < 115);
+      const v = writing ? 0 : 255;
+      px[i] = px[i + 1] = px[i + 2] = v;
+      px[i + 3] = 255;
+    }
+  o.putImageData(img, 0, 0);
+  // the digits one by one (split where a column is empty): unusual fonts read
+  // much better a digit at a time
+  const ink = (xx: number, yy: number) => px[(yy * out.width + xx) * 4] < 128;
+  const cols: boolean[] = [];
+  for (let xx = 0; xx < out.width; xx++) {
+    let any = false;
+    for (let yy = 0; yy < out.height && !any; yy++) any = ink(xx, yy);
+    cols.push(any);
+  }
+  const runs: [number, number][] = [];
+  for (let xx = 0, st = -1; xx <= out.width; xx++) {
+    const on = xx < out.width && cols[xx];
+    if (on && st < 0) st = xx;
+    if (!on && st >= 0) {
+      if (xx - st > 2) runs.push([st, xx]);
+      st = -1;
+    }
+  }
+  const T = await loadTesseract();
+  const worker = await T.createWorker("eng");
+  try {
+    if (runs.length >= 1 && runs.length <= 3) {
+      let digits = "";
+      for (const [x0, x1] of runs) {
+        let y0 = out.height, y1 = 0;
+        for (let yy = 0; yy < out.height; yy++)
+          for (let xx = x0; xx < x1; xx++)
+            if (ink(xx, yy)) {
+              if (yy < y0) y0 = yy;
+              if (yy > y1) y1 = yy;
+            }
+        const dw = x1 - x0, dh = y1 - y0 + 1;
+        if (dh < 6) continue; // a speck
+        const one = document.createElement("canvas");
+        one.width = dw * 2 + 40;
+        one.height = dh + 40;
+        const oc = one.getContext("2d")!;
+        oc.fillStyle = "#fff";
+        oc.fillRect(0, 0, one.width, one.height);
+        oc.drawImage(out, x0, y0, dw, dh, 20 + Math.round(dw / 2), 20, dw, dh);
+        let d = "";
+        for (const psm of ["8", "10"]) {
+          await worker.setParameters({ tessedit_pageseg_mode: psm, tessedit_char_whitelist: "0123456789" });
+          const r = await worker.recognize(one);
+          const t = r.data.text.replace(/\s+/g, "");
+          if (/^\d$/.test(t)) {
+            d = t;
+            break;
+          }
+        }
+        if (!d) {
+          digits = "";
+          break;
+        }
+        digits += d;
+      }
+      if (/^\d{1,3}$/.test(digits)) return digits;
+    }
+    let best = { t: "", c: -1 };
+    for (const params of [
+      { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789" },
+      { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" },
+      { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" },
+    ]) {
+      await worker.setParameters(params);
+      const r = await worker.recognize(out);
+      const t = r.data.text.replace(/\s+/g, "");
+      const conf = r.data.confidence ?? 0;
+      if (/^\d{1,3}$/.test(t) && conf > best.c) best = { t, c: conf };
+      if (best.c >= 70) break;
+    }
+    return best.t;
+  } finally {
+    await worker.terminate().catch(() => undefined);
+  }
 }
