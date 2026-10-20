@@ -52,6 +52,7 @@ import {
   type PictureLabel,
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
+import { onSetup } from "@/lib/setupEvents";
 
 type Pos = { x: number; y: number };
 
@@ -440,6 +441,9 @@ export function FloorPlanCanvas({
       setAskTick((t) => t + 1);
     }
   };
+  // the setup steps bar: "Find / draw tables" and "Set the entrance"
+  useEffect(() => onSetup("draw-tables", () => setDrawing(true)), []);
+  useEffect(() => onSetup("set-entrance", () => setSettingEntrance(true)), []);
   const askAboutEntranceNow = () => {
     entranceLater = null;
     entranceCheckAfterTables = true;

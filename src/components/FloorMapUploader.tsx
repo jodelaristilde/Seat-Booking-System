@@ -1,5 +1,6 @@
 // components/FloorMapUploader.tsx
 "use client";
+import { onSetup } from "@/lib/setupEvents";
 
 import { useState, useEffect } from "react";
 import { enhancePicture } from "@/lib/enhancePicture";
@@ -28,6 +29,7 @@ interface FloorMapImage {
 
 export function FloorMapUploader() {
   const [open, setOpen] = useState(false);
+  useEffect(() => onSetup("floor-map", () => setOpen(true)), []);
   const [currentImage, setCurrentImage] = useState<FloorMapImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);

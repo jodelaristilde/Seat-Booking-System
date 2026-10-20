@@ -138,6 +138,15 @@ export default function UserGuide() {
               ]}
             />
           </Card>
+          <Card title="Setup, step by step">
+            <Steps
+              items={[
+                "At the top of the dashboard, the <b>setup steps</b> bar walks you through it in order: <b>Event</b> (name and date) → <b>Floor plan</b> → <b>Tables</b> → <b>Entrance</b> → <b>Guests</b> → <b>Seat guests</b> → <b>Check &amp; share</b>.",
+                "Each step has a button that opens the right screen, and ticks itself off (✓) once it is done. Click any step to go back to it.",
+                { text: "Hide the bar with the <b>×</b>. Bring it back from the menu (☰) → <b>Setup steps</b>.", tip: "No floor plan? Click “I don’t have one” and create your tables in bulk instead." },
+              ]}
+            />
+          </Card>
           <Card title="The numbers at the top">
             <div className="grid gap-3 sm:grid-cols-5">
               {[

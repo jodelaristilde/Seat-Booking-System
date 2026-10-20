@@ -45,6 +45,7 @@ import {
   Printer,
   ClipboardCheck,
   ListChecks,
+  ListOrdered,
   ChefHat,
   History,
   BarChart3,
@@ -63,6 +64,8 @@ import { useSeats } from "../hooks/useSeats";
 import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
 import { GuestAccessBanner } from "./GuestAccessBanner";
+import { SetupSteps } from "./SetupSteps";
+import { onSetup } from "@/lib/setupEvents";
 import { AddTableForm } from "./add-table-form";
 import { AssignGuestsDialog } from "./assign-guests-dialog";
 import { BookingSidebar } from "./booking-sidebar";
@@ -202,6 +205,46 @@ const SeatBooking = () => {
   const { data: session } = useSession();
   // check-in only account: hide everything that deletes or changes tables
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
+  // Setup steps bar: its buttons open screens here
+  useEffect(() => onSetup("bulk-tables", () => setBulkTableDialogOpen(true)), []);
+  useEffect(() => {
+    // drawing tables / the entrance happen on the floor plan view
+    const h = (e: Event) => {
+      const t = (e as CustomEvent).detail;
+      if (t === "draw-tables" || t === "set-entrance") {
+        setIsFullScreen(false);
+        setViewMode("plan");
+      }
+    };
+    window.addEventListener("seating4u:open", h);
+    return () => window.removeEventListener("seating4u:open", h);
+  }, []);
+  // height of the banner + setup steps above the room, so the room still fits the screen
+  const topBarsRef = useRef<HTMLDivElement>(null);
+  const [topBarsH, setTopBarsH] = useState(0);
+  const setupBarRef = useRef<HTMLDivElement>(null);
+  const [setupBarH, setSetupBarH] = useState(0);
+  useEffect(() => {
+    const el = setupBarRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setSetupBarH(el.offsetHeight);
+      // the floor plan sizes itself to the window: tell it to measure again
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    const el = topBarsRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setTopBarsH(el.offsetHeight);
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // the open event, so "Scan QR Code" opens the guest page for this event
   const [activeEventIdForLinks, setActiveEventIdForLinks] = useState("");
   useEffect(() => {
@@ -1218,7 +1261,9 @@ const handleTableClick = () => {
 
   return (
     <div className={`bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
-      {!isFullScreen && !isStaff && <GuestAccessBanner />}
+      <div ref={topBarsRef}>
+        {!isFullScreen && !isStaff && <GuestAccessBanner />}
+      </div>
       <AnimatePresence>
         {!isFullScreen && (
           <motion.nav
@@ -1375,6 +1420,14 @@ const handleTableClick = () => {
                         </Link>
                       </DropdownMenuItem>
                       {!isStaff && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}
+                        >
+                          <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
+                        </DropdownMenuItem>
+                      )}
+                      {!isStaff && (
                         <DropdownMenuItem asChild>
                           <Link href="/dashboard/seating-helper">
                             <Sparkles className="mr-2 w-4 h-4" /> Seat everyone &amp; seating rules
@@ -1483,11 +1536,13 @@ const handleTableClick = () => {
           </motion.nav>
         )}
       </AnimatePresence>
+      <div ref={setupBarRef}>{!isFullScreen && !isStaff && <SetupSteps />}</div>
+      {!isStaff && <ImportGuestsforWeb noButton />}
 
       {/* Main Content */}
       <div
         className={`flex flex-col lg:flex-row ${isFullScreen ? "h-screen" : ""}`}
-        style={isFullScreen ? undefined : { height: `calc(100vh - 64px - ${footerH}px)` }}
+        style={isFullScreen ? undefined : { height: `calc(100vh - 64px - ${footerH + topBarsH + setupBarH}px)` }}
       >
         {/* Main Content - Tables */}
         <motion.div
@@ -1600,7 +1655,7 @@ const handleTableClick = () => {
           {/* Scrollable Table Grid */}
           <ScrollArea
             className={isFullScreen ? "h-screen" : ""}
-            style={isFullScreen ? undefined : { height: `calc(100vh - 144px - ${footerH}px)` }}
+            style={isFullScreen ? undefined : { height: `calc(100vh - 144px - ${footerH + topBarsH + setupBarH}px)` }}
           >
             {viewMode === "plan" ? (
               <FloorPlanCanvas

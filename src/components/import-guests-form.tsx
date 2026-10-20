@@ -1,4 +1,5 @@
 "use client";
+import { onSetup } from "@/lib/setupEvents";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Download } from "lucide-react";
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { FileUpload } from "./ui/file-upload";
@@ -27,7 +28,10 @@ interface Guest {
   party?: number;
 }
 
-export function ImportGuestsforWeb() {
+export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } = {}) {
+  // noButton: a copy with no menu button, opened by the setup steps
+  const [open, setOpen] = useState(false);
+  useEffect(() => (noButton ? onSetup("import-guests", () => setOpen(true)) : undefined), [noButton]);
   // "new": add guests from the file. "update": fill in meals / allergies / VIP
   // for guests already on the list (nobody is added twice)
   const [mode, setMode] = useState<"new" | "update">("new");
@@ -273,12 +277,14 @@ export function ImportGuestsforWeb() {
   // };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="w-full !justify-start p-2">
-          Import Guests
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {!noButton && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="w-full !justify-start p-2">
+            Import Guests
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>Import Guests</DialogTitle>
