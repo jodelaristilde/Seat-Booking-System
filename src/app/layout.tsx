@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthGuard from "@/providers/auth-guard";
+import { BrandSync } from "@/components/BrandSync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <AuthGuard>
             <ToasterProvider />
+            <BrandSync />
             {children}
             <Footer />
           </AuthGuard>

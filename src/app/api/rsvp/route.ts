@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { allergiesFor, setAllergy } from "@/lib/allergies";
 import { isOpenForGuests } from "@/lib/guestAccess";
 import { guestFromToken, rsvpsFor, setRsvp } from "@/lib/rsvp";
+import { brandOf } from "@/lib/brand";
 import { NextResponse } from "next/server";
 
 // Public (guest's own link): GET ?t=…  -> name, event, current answers
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
     success: true,
     open,
     guest: { firstname: g.firstname, lastname: g.lastname, meal: g.meal ?? "", allergy: al[g.id] ?? "", coming: rs[g.id]?.coming ?? null },
-    event: { name: ev.name, date: ev.date },
+    event: { name: ev.name, date: ev.date, brand: await brandOf(g.eventId) },
     meals: MEALS,
   });
 }

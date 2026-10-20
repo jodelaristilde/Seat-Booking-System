@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { matches as nameMatches } from "@/lib/fold";
 import { useAllergies } from "@/hooks/useAllergies";
@@ -1729,7 +1730,7 @@ export function FloorPlanCanvas({
         >
           {railOpen && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/logo.svg" alt="Seating4U" className="w-20 h-auto mb-1 select-none" draggable={false} />
+            <BrandLogo className="w-20 h-auto mb-1 select-none" />
           )}
           {railOpen && (<>
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">

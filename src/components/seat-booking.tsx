@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import PasswordVerificationDialog from "@/components/password-verification-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -1295,13 +1296,7 @@ const handleTableClick = () => {
                   href="/"
                   className="flex justify-center items-center space-x-2"
                 >
-                  <Image
-                    src="/logo.svg"
-                    unoptimized
-                    alt="Seating4U Logo"
-                    width={150}
-                    height={80}
-                  />
+                  <BrandLogo width={150} style={{ height: "auto", maxHeight: 56 }} />
                 </Link>
                 <EventSwitcher />
               </div>

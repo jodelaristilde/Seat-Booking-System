@@ -416,6 +416,13 @@ export default function UserGuide() {
               ]}
             />
           </Card>
+          <Card title="Nightclub VIP nights: the VIPService4U look">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• Click the event name at the top. Each event shows <b>Gala / Wedding</b> or <b>Nightclub VIP</b>: click to switch.</li>
+              <li>• A <b>Nightclub VIP</b> event shows the <b>VIPService4U</b> logo and its green colours on your screens and on guests&apos; phones (QR code, seat finder, RSVP).</li>
+              <li>• When you start a new event, pick its <b>Type</b> there too. Everything else works the same.</li>
+            </ul>
+          </Card>
           <Card title="Guests only find seats for the right event">
             <ul className="space-y-2 text-zinc-700">
               <li>• Each event&apos;s own QR code only searches that event.</li>

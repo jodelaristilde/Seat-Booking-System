@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
+import { applyBrand, useBrand } from "@/lib/useBrand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -173,12 +175,17 @@ export default function SeatScanning() {
   const [eventId, setEventId] = useState<string | null>(null);
   // this event is closed to guests (past, or closed by the organizer)
   const [eventClosed, setEventClosed] = useState(false);
+  const brand = useBrand();
   const chooseEvent = (id: string) => {
     setEventId(id);
     // remembers the event on this phone (for "more guests" and the floor map)
     fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
-      .then((j) => j.success && setEventName(j.event.name))
+      .then((j) => {
+        if (!j.success) return;
+        setEventName(j.event.name);
+        applyBrand(j.event.brand);
+      })
       .catch(() => undefined);
   };
   useEffect(() => {
@@ -191,7 +198,10 @@ export default function SeatScanning() {
     fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
       .then((j) => {
-        if (j.success) setEventName(j.event.name);
+        if (j.success) {
+          setEventName(j.event.name);
+          applyBrand(j.event.brand);
+        }
       })
       .catch(() => undefined)
       .finally(() => setIsLoading(false));
@@ -457,13 +467,7 @@ export default function SeatScanning() {
               href="/"
               className="flex justify-center items-center space-x-2"
             >
-              <Image
-                src="/logo.svg"
-                unoptimized
-                alt="Seating4U Logo"
-                width={150}
-                height={200}
-              />
+              <BrandLogo width={150} style={{ height: "auto", maxHeight: 84 }} />
             </Link>
             <div className="flex gap-2">
               <Button
@@ -506,7 +510,7 @@ export default function SeatScanning() {
               <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
               <CardHeader className="pb-2">
                 <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-700">
-                  <MapPin className="h-5 w-5" /> {eventName || "Seating4U"}
+                  <MapPin className="h-5 w-5" /> {eventName || (brand === "vip" ? "VIPService4U" : "Seating4U")}
                 </p>
                 <CardTitle className="text-3xl font-extrabold leading-tight text-emerald-950">
                   {t.findSeat}

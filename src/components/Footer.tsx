@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/BrandLogo";
 import React from "react";
 import Image from "next/image";
 
@@ -20,13 +21,7 @@ const Footer = () => {
               href="/"
               className="flex justify-center items-center space-x-2"
             >
-              <Image
-                src="/logo.svg"
-                unoptimized
-                alt="Seating4U Logo"
-                width={130}
-                height={100}
-              />
+              <BrandLogo width={130} style={{ height: "auto", maxHeight: 60 }} />
             </Link>
           </div>
 

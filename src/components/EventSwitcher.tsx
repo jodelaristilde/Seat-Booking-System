@@ -3,6 +3,7 @@
 // Events: each one has its own floor plan, tables and guests.
 // Shows the open event at the top of the dashboard; click to switch,
 // start a new event, rename or delete one.
+import { applyBrand } from "@/lib/useBrand";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,7 +11,7 @@ import { CalendarDays, ChevronDown, Plus, Trash2, Pencil, Check, QrCode, Downloa
 import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 
-type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number };
+type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number; brand?: "vip" | "seating4u" };
 
 export function EventSwitcher() {
   const [open, setOpen] = useState(false);
@@ -18,6 +19,8 @@ export function EventSwitcher() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDate, setNewDate] = useState("");
+  // Gala / wedding = Seating4U look; Nightclub VIP = VIPService4U look
+  const [newKind, setNewKind] = useState<"seating4u" | "vip">("seating4u");
   // start from another event's room (same venue)
   const [copyFrom, setCopyFrom] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,6 +52,18 @@ export function EventSwitcher() {
     } catch {
       /* keep what we have */
     }
+  };
+  // switch an event between Seating4U and VIPService4U (logo and colours)
+  const setKind = async (e: Ev, brand: "vip" | "seating4u") => {
+    const r = await fetch("/api/event-brand", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: e.id, brand }),
+    }).then((x) => x.json()).catch(() => null);
+    if (!r?.success) return toast.error("Could not change the event type");
+    if (e.id === activeId) applyBrand(brand);
+    toast.success(brand === "vip" ? `${e.name}: VIPService4U look` : `${e.name}: Seating4U look`);
+    load();
   };
   const toggleGuests = async (id: string, open: boolean) => {
     await fetch("/api/events/guest-access", {
@@ -90,7 +105,7 @@ export function EventSwitcher() {
   };
   const createEvent = async () => {
     if (!newName.trim()) return toast.error("Please give the event a name");
-    if (await call("POST", { name: newName, date: newDate, copyFrom }, `"${newName.trim()}" created`)) window.location.reload();
+    if (await call("POST", { name: newName, date: newDate, copyFrom, brand: newKind }, `"${newName.trim()}" created`)) window.location.reload();
   };
   const rename = async (id: string) => {
     if (!renameText.trim()) return;
@@ -169,6 +184,25 @@ export function EventSwitcher() {
                           {e.date ? `${e.date} · ` : ""}
                           {e.tables ?? 0} tables · {e.guests ?? 0} guests
                         </div>
+                        {/* the event's look: Seating4U (gala, wedding) or VIPService4U (nightclub VIP) */}
+                        <div className="mt-1 inline-flex rounded-full border p-0.5 text-[11px] font-semibold" role="group" aria-label="Event type">
+                          <button
+                            type="button"
+                            onClick={() => e.brand === "vip" && setKind(e, "seating4u")}
+                            className={`rounded-full px-2 py-0.5 ${e.brand !== "vip" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+                            title="Gala, wedding…: Seating4U logo and colours"
+                          >
+                            Gala / Wedding
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => e.brand !== "vip" && setKind(e, "vip")}
+                            className={`rounded-full px-2 py-0.5 ${e.brand === "vip" ? "bg-[#134e31] text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+                            title="Nightclub VIP: VIPService4U logo and colours, on your screens and on guests' phones"
+                          >
+                            Nightclub VIP
+                          </button>
+                        </div>{" "}
                         {/* can guests find their seat on their phone? */}
                         {access[e.id] && (
                           <button
@@ -260,6 +294,25 @@ export function EventSwitcher() {
               <Button size="sm" onClick={createEvent} disabled={busy}>
                 <Plus className="mr-1 h-4 w-4" /> Create
               </Button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-zinc-700">Type:</span>
+              <div className="inline-flex rounded-full border p-0.5 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setNewKind("seating4u")}
+                  className={`rounded-full px-3 py-1 ${newKind === "seating4u" ? "bg-zinc-900 text-white" : "text-zinc-600"}`}
+                >
+                  Gala / Wedding (Seating4U)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewKind("vip")}
+                  className={`rounded-full px-3 py-1 ${newKind === "vip" ? "bg-[#134e31] text-white" : "text-zinc-600"}`}
+                >
+                  Nightclub VIP (VIPService4U)
+                </button>
+              </div>
             </div>
             <label className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <span className="text-zinc-700">Same venue? Copy the room from:</span>

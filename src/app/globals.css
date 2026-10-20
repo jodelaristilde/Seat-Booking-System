@@ -76,3 +76,43 @@ body {
     linear-gradient(to bottom, rgb(0 0 0 / 0.1) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+/* ---------- VIPService4U look (nightclub VIP events) ----------
+   <html data-brand="vip"> is set for events marked "Nightclub / VIP".
+   The Seating4U lime becomes the VIP logo's forest green and mint.
+   (Status colours, like green = arrived, stay the same.) */
+html[data-brand="vip"] {
+  --vip-dark: #134e31;
+  --vip-main: #17643d;
+  --vip-hover: #0f3f27;
+  --vip-mid: #1f8a52;
+  --vip-mint: #7ceba6;
+  --vip-mint-soft: #e9faf0;
+  --primary: 151 61% 19%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 151 61% 30%;
+}
+html[data-brand="vip"] body,
+html[data-brand="vip"] .bg-zinc-100 { background-color: #eef8f2; }
+html[data-brand="vip"] .bg-zinc-50 { background-color: #f4fbf7; }
+html[data-brand="vip"] .bg-lime-600,
+html[data-brand="vip"] .bg-lime-500 { background-color: var(--vip-main); color: #fff; }
+html[data-brand="vip"] .hover\:bg-lime-700:hover,
+html[data-brand="vip"] .hover\:bg-lime-600:hover { background-color: var(--vip-hover); }
+html[data-brand="vip"] .bg-lime-50,
+html[data-brand="vip"] .bg-lime-100,
+html[data-brand="vip"] .hover\:bg-lime-50:hover { background-color: var(--vip-mint-soft); }
+html[data-brand="vip"] .text-lime-500,
+html[data-brand="vip"] .text-lime-600,
+html[data-brand="vip"] .text-lime-700,
+html[data-brand="vip"] .text-lime-800,
+html[data-brand="vip"] .text-lime-900 { color: var(--vip-mid); }
+html[data-brand="vip"] .border-lime-300,
+html[data-brand="vip"] .border-lime-400,
+html[data-brand="vip"] .border-lime-500,
+html[data-brand="vip"] .border-lime-600 { border-color: var(--vip-mint); }
+html[data-brand="vip"] .ring-lime-500 { --tw-ring-color: var(--vip-mint); }
+html[data-brand="vip"] .from-lime-500 { --tw-gradient-from: var(--vip-mid) var(--tw-gradient-from-position); --tw-gradient-to: rgb(31 138 82 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html[data-brand="vip"] .to-lime-500 { --tw-gradient-to: var(--vip-dark) var(--tw-gradient-to-position); }
+html[data-brand="vip"] .to-lime-100 { --tw-gradient-to: var(--vip-mint-soft) var(--tw-gradient-to-position); }
+/* the top bar gets a thin mint line, like the logo's swoosh */
+html[data-brand="vip"] nav { border-bottom: 3px solid var(--vip-mint); }

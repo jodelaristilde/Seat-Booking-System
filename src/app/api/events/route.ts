@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { activeEventId, EVENT_COOKIE } from "@/lib/event";
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { brandsFor, setBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export async function GET() {
   try {
     const active = await activeEventId();
     const events = await db.event.findMany({ orderBy: { createdAt: "desc" } });
+    const brands = await brandsFor();
     const counts = await Promise.all(
       events.map(async (e: { id: string }) => ({
         id: e.id,
@@ -32,6 +34,7 @@ export async function GET() {
       events: events.map((e: { id: string; name: string; date: string | null; createdAt: Date }) => ({
         ...e,
         ...counts.find((c) => c.id === e.id),
+        brand: brands[e.id] ?? "seating4u",
       })),
     });
   } catch (error) {
@@ -49,6 +52,7 @@ export async function POST(req: Request) {
     await activeEventId(); // make sure older data is already filed under an event
     const date = typeof body?.date === "string" && body.date.trim() ? body.date.trim().slice(0, 40) : null;
     const event = await db.event.create({ data: { name, date } });
+    if (body?.brand === "vip") await setBrand(event.id, "vip");
     // Optional: start from another event's room (same venue): floor plan picture,
     // tables (empty seats), entrance and the words read from the picture. No guests.
     const from = typeof body?.copyFrom === "string" ? body.copyFrom : "";
