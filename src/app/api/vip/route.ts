@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const ev = await activeEventId();
   const [tables, info, orders, calls, menu, staff] = await Promise.all([
-    db.table.findMany({ where: { eventId: ev }, include: { Seat: { select: { isBooked: true } } } }),
+    db.table.findMany({ where: { eventId: ev }, include: { Seat: { select: { isBooked: true, isReceived: true, userId: true } } } }),
     vipTables(ev),
     vipOrders(ev),
     vipCalls(ev),
@@ -19,7 +19,12 @@ export async function GET() {
   const spent = new Map<string, number>();
   for (const o of orders as VipOrder[]) if (o.status !== "void") spent.set(o.tableId, (spent.get(o.tableId) ?? 0) + (o.total || 0));
   const dayAgo = new Date(Date.now() - 18 * 3600 * 1000).toISOString();
-  type T = { id: string; name: string; Seat: { isBooked: boolean }[] };
+  type T = { id: string; name: string; Seat: { isBooked: boolean; isReceived: boolean; userId: string | null }[] };
+  // the host checked in on their phone (or at the desk): at least 1 in
+  for (const t of tables as T[]) {
+    const i = info[t.id];
+    if (i?.hostGuestId && !i.arrived && t.Seat.some((s) => s.userId === i.hostGuestId && s.isReceived)) i.arrived = 1;
+  }
   return NextResponse.json({
     success: true,
     tables: (tables as T[])
