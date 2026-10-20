@@ -19,6 +19,7 @@ type Preview = {
   tables: { table: string; names: string[] }[];
   groups: { names: string[]; tables: string[]; split: boolean }[];
   notSeated: string[];
+  addedTables?: { name: string; seats: number }[];
 };
 
 const nm = (g: { firstname: string; lastname: string }) => `${g.firstname} ${g.lastname}`.trim();
@@ -97,6 +98,9 @@ export default function SeatingHelper() {
   const [capInput, setCapInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [families, setFamilies] = useState(true);
+  // not enough seats: add tables of this many seats in the same click
+  const [addTables, setAddTables] = useState(true);
+  const [perTable, setPerTable] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState<"" | "preview" | "apply">("");
   const [a, setA] = useState("");
@@ -144,6 +148,12 @@ export default function SeatingHelper() {
     return [...m.values()].sort((x, y) => byTable(x.name, y.name));
   }, [seats]);
   const usual = usualSeats(tableStats.map((t) => t.seats));
+  const freeSeats = tableStats.reduce((n, t) => n + t.seats - t.guests, 0);
+  const short = Math.max(0, unseated - freeSeats); // guests with no empty seat for them
+  const per = Number(perTable) || capacity || usual || 10;
+  useEffect(() => {
+    if (!perTable && (capacity || usual)) setPerTable(String(capacity || usual));
+  }, [capacity, usual, perTable]);
   const tooFull = overTables(tableStats, capacity);
   const broken = ruleProblems(
     rules,
@@ -178,7 +188,11 @@ export default function SeatingHelper() {
       const res = await fetch("/api/auto-seat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ families, apply }),
+        body: JSON.stringify({
+          families,
+          apply,
+          ...(short > 0 && addTables && Number(perTable) > 0 ? { addTables: { seats: Number(perTable) } } : {}),
+        }),
       }).then((x) => x.json());
       if (!res?.success) throw new Error(res?.message);
       setPreview(res);
@@ -243,6 +257,32 @@ export default function SeatingHelper() {
             {unseated} guest{unseated === 1 ? "" : "s"} without a table. Parties (+1s), the rules below{families ? ", and families" : ""} are
             kept together; &quot;keep apart&quot; guests go to different tables. Nobody who already has a seat is moved.
           </p>
+          {short > 0 && (
+            <div className="mb-3 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+              <p className="mb-2">
+                <b>Not enough seats:</b> {unseated} guest{unseated === 1 ? "" : "s"} to seat, but only {freeSeats} empty seat
+                {freeSeats === 1 ? "" : "s"}.
+              </p>
+              <label className="flex flex-wrap items-center gap-2">
+                <input type="checkbox" checked={addTables} onChange={(e) => { setAddTables(e.target.checked); setPreview(null); }} />
+                Add the missing tables, with
+                <input
+                  type="number"
+                  min={1}
+                  max={40}
+                  value={perTable}
+                  onChange={(e) => { setPerTable(e.target.value); setPreview(null); }}
+                  className="h-8 w-16 rounded-md border bg-white px-2"
+                  aria-label="Seats per new table"
+                  data-testid="per-table"
+                />
+                seats each
+                <span className="text-amber-800">
+                  (about {Math.ceil(short / Math.max(1, per))} new table{Math.ceil(short / Math.max(1, per)) === 1 ? "" : "s"})
+                </span>
+              </label>
+            </div>
+          )}
           <label className="mb-3 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={families} onChange={(e) => { setFamilies(e.target.checked); setPreview(null); }} />
             Keep families together (same last name)
@@ -270,6 +310,15 @@ export default function SeatingHelper() {
                 {preview.seated} guest{preview.seated === 1 ? "" : "s"}
                 {preview.applied ? " seated." : ". Nothing is saved until you click Seat them now."}
               </p>
+              {!!preview.addedTables?.length && (
+                <p className="rounded-md bg-lime-50 p-2 text-lime-900">
+                  <b>
+                    {preview.applied ? "Added" : "Will add"} {preview.addedTables.length} table{preview.addedTables.length === 1 ? "" : "s"}
+                  </b>{" "}
+                  ({preview.addedTables.map((t) => t.name).join(", ")}, {preview.addedTables[0].seats} seats each).
+                  {preview.applied ? " They are on the floor plan: use Move tables to put them in their real spot." : ""}
+                </p>
+              )}
               {preview.notSeated.length > 0 && (
                 <p className="rounded-md bg-amber-50 p-2 text-amber-900">
                   <b>No room for {preview.notSeated.length}:</b> {preview.notSeated.join(", ")}. Add seats or tables, then try again.

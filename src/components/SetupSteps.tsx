@@ -125,7 +125,7 @@ export function SetupSteps() {
       text: !c.guests
         ? "Seat your guests once the list is in."
         : c.freeSeats !== undefined && c.unseated > c.freeSeats
-        ? `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table, but only ${c.freeSeats} empty seat${c.freeSeats === 1 ? "" : "s"} left (${c.seats} seats at ${c.tables} tables for ${c.guests} guests). Add tables or seats first.`
+        ? `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table, but only ${c.freeSeats} empty seat${c.freeSeats === 1 ? "" : "s"} left (${c.seats} seats at ${c.tables} tables for ${c.guests} guests). Seat everyone adds the missing tables for you (it asks how many seats per table).`
         : `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table. Seat everyone in one click (families and parties stay together), or by hand.`,
     },
     {
@@ -268,12 +268,7 @@ export function SetupSteps() {
           )}
           {cur === 5 && (
             <>
-              {c.freeSeats !== undefined && c.unseated > c.freeSeats && (
-                <button onClick={() => openSetup("bulk-tables")} className={main}>
-                  Add tables
-                </button>
-              )}
-              <Link href="/dashboard/seating-helper" className={c.freeSeats !== undefined && c.unseated > c.freeSeats ? plain : main}>
+              <Link href="/dashboard/seating-helper" className={main}>
                 Seat everyone
               </Link>
             </>
