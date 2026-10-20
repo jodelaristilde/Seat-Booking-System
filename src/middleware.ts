@@ -19,6 +19,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/wayfind", methods: ["GET"] }, // guest phone: line from the entrance to their table (no names)
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
   { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
+  { path: "/api/vip/guest-call", methods: ["POST"] }, // VIP guest taps "Call server" / "Order another bottle" (checked in the route)
 ]
 
 // What a check-in-only ("staff") account may change. Everything else that
@@ -32,6 +33,11 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/guest-notes/answer", methods: ["POST"] }, // the desk's required answer before seating a guest with a note
   { path: "/api/events", methods: ["PUT"] }, // open another event (renaming is refused in the route)
   { path: "/api/change-password", methods: ["POST", "PUT", "PATCH"] }, // their own password
+  // Nightclub VIP: servers and door staff
+  { path: "/api/vip/arrive", methods: ["PUT"] }, // count people in
+  { path: "/api/vip/order", methods: ["POST", "PUT"] }, // log a bottle order / mark it served
+  { path: "/api/vip/call", methods: ["PUT"] }, // a guest's call handled
+  { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
 ]
 const staffMayChange = (path: string, method: string) =>
   STAFF_API.some((r) => (path === r.path || path.startsWith(r.path + "/")) && r.methods.includes(method))

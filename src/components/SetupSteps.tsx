@@ -45,7 +45,7 @@ export function SetupSteps() {
   const load = useCallback(async () => {
     try {
       const j = await fetch("/api/setup-progress").then((r) => r.json());
-      if (!j?.success) return;
+      if (!j?.success || !j.event || !j.counts) return;
       setP((prev) => {
         if (!prev || prev.event.id !== j.event.id) {
           setName(j.event.name);

@@ -47,6 +47,8 @@ import {
   ClipboardCheck,
   ListChecks,
   ListOrdered,
+  Wine,
+  Martini,
   ChefHat,
   History,
   BarChart3,
@@ -66,6 +68,7 @@ import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
 import { GuestAccessBanner } from "./GuestAccessBanner";
 import { SetupSteps } from "./SetupSteps";
+import { useBrand } from "@/lib/useBrand";
 import { onSetup } from "@/lib/setupEvents";
 import { AddTableForm } from "./add-table-form";
 import { AssignGuestsDialog } from "./assign-guests-dialog";
@@ -246,6 +249,25 @@ const SeatBooking = () => {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Nightclub VIP events: table bookings and spending for the floor plan badges
+  const brand = useBrand();
+  const [vipByTable, setVipByTable] = useState<Record<string, { info: { status?: string; host?: string; minimum?: number; arrived?: number; partySize?: number }; spent: number }>>({});
+  useEffect(() => {
+    if (brand !== "vip") return;
+    const load = () =>
+      fetch("/api/vip")
+        .then((r) => r.json())
+        .then((j) => {
+          if (!j?.success) return;
+          const m: typeof vipByTable = {};
+          for (const t of j.tables) m[t.id] = { info: t.info, spent: t.spent };
+          setVipByTable(m);
+        })
+        .catch(() => undefined);
+    load();
+    const t = setInterval(() => document.visibilityState === "visible" && load(), 8000);
+    return () => clearInterval(t);
+  }, [brand]);
   // the open event, so "Scan QR Code" opens the guest page for this event
   const [activeEventIdForLinks, setActiveEventIdForLinks] = useState("");
   useEffect(() => {
@@ -896,8 +918,28 @@ const handleTableClick = () => {
               </motion.div>
             )}
           </div>
+          {/* Nightclub VIP: open / booked / minimum reached, and what was spent */}
+          {inFloorPlan && brand === "vip" && (() => {
+            const v = vipByTable[String(table.seats[0]?.table?.id ?? "")];
+            if (!v) return null;
+            const booked = v.info.status === "booked";
+            const min = v.info.minimum ?? 0;
+            const reached = min > 0 && v.spent >= min;
+            return (
+              <span
+                className={`pointer-events-none whitespace-nowrap rounded-full px-1.5 font-bold leading-tight tabular-nums ${
+                  !booked ? "bg-zinc-100 text-zinc-600" : reached ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"
+                }`}
+                style={{ fontSize: "clamp(8px, 10cqw, 14px)" }}
+                title={booked ? `${v.info.host} · ${v.info.arrived ?? 0}/${v.info.partySize ?? 0} in · $${v.spent} of $${min}` : "Open"}
+                data-testid="vip-badge"
+              >
+                {!booked ? (min ? `OPEN $${min}` : "OPEN") : min ? `$${Math.round(v.spent)}/$${min}` : `$${Math.round(v.spent)}`}
+              </span>
+            );
+          })()}
           {/* on the floor plan, a small count of guests seated / seats (when seats are hidden) */}
-          {inFloorPlan && hideSeats && table.seats.length > 0 && (() => {
+          {inFloorPlan && hideSeats && brand !== "vip" && table.seats.length > 0 && (() => {
             const seated = table.seats.filter((st) => st.isBooked).length;
             const full = seated >= table.seats.length;
             return (
@@ -1430,6 +1472,20 @@ const handleTableClick = () => {
                           <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
                         </Link>
                       </DropdownMenuItem>
+                      {brand === "vip" && (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/vip">
+                              <Wine className="mr-2 w-4 h-4" /> VIP tables &amp; bottles
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/bar">
+                              <Martini className="mr-2 w-4 h-4" /> Bar screen
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       {!isStaff && (
                         <DropdownMenuItem
                           className="cursor-pointer"

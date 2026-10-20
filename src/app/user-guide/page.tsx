@@ -77,6 +77,7 @@ export default function UserGuide() {
     ["team", "Ready check, staff & kitchen"],
     ["more", "RSVP, printing, history & after the event"],
     ["helper", "Seat everyone, seating rules & full tables"],
+    ["vip", "Nightclub VIP nights"],
   ];
 
   return (
@@ -534,6 +535,40 @@ export default function UserGuide() {
               <li>• <b>New Guest</b> warns you when the table is full and an extra seat will be added.</li>
               <li>• The <b>Ready check</b> lists tables with more guests than a table holds. Set how many a table holds at the bottom of the Seating helper page (it is filled in from the plan when possible).</li>
             </ul>
+          </Card>
+        </Section>
+
+        <Section id="vip" number={11} title="Nightclub VIP nights">
+          <Card title="Set up (once per night)">
+            <Steps
+              items={[
+                "Make the event a <b>Nightclub VIP</b> event (click the event name at the top). The menu (☰) then shows <b>VIP tables &amp; bottles</b> and <b>Bar screen</b>.",
+                "On <b>VIP tables</b>, click <b>Bottles &amp; staff</b>: add your bottle menu with prices, your servers and your promoters.",
+              ]}
+            />
+          </Card>
+          <Card title="Book a table">
+            <Steps
+              items={[
+                "Click <b>Book</b> on a table: the host's name, party size, minimum spend, server, promoter, and an optional celebration (birthday, sparklers…) with its time.",
+                "The host is added to the guest list at that table: the door finds them by name, and they can find the table on their phone.",
+                "On the floor plan each table shows <b>OPEN</b> or what it has spent against its minimum (for example <b>$650/$1000</b>).",
+              ]}
+            />
+          </Card>
+          <Card title="During the night">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• <b>At the door:</b> press <b>+</b> on the table for each person who comes in (3 / 8 in).</li>
+              <li>• <b>Bottles:</b> servers tap <b>Bottles</b>, pick what the table ordered and <b>Send to the bar</b>. The total counts toward the minimum. Servers can pick <b>Show: their own tables</b> at the top.</li>
+              <li>• <b>Bar screen</b> (a tablet or TV behind the bar): tables calling, bottles to bring out, and celebrations with a countdown. Turn <b>Sound on</b>.</li>
+              <li>• <b>Guests' phones:</b> after finding their table, VIP guests can tap <b>Call my server</b> or <b>Order another bottle</b>; it pops up on the bar screen.</li>
+              <li>• Check-in staff logins can count people in, send bottles and use the bar screen, but can&apos;t change bookings or prices.</li>
+            </ul>
+          </Card>
+          <Card title="End of the night">
+            <p className="text-zinc-700">
+              On <b>VIP tables</b>, click <b>End-of-night report</b>: an Excel file with the totals, every table (host, people in, minimum, spent, no-shows), sales per server and per promoter, and every order. The app records amounts; it does not charge cards.
+            </p>
           </Card>
         </Section>
 

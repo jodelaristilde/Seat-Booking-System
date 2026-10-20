@@ -278,6 +278,9 @@ html[data-brand="vip"] .shadow-lime-500\/10,
 html[data-brand="vip"] .shadow-lime-500\/20,
 html[data-brand="vip"] .shadow-lime-500\/25 { --tw-shadow-color: rgb(212 175 55 / 0.12); --tw-shadow: var(--tw-shadow-colored); }
 
+html[data-brand="vip"] .guest-page .bg-blue-600 { background-color: var(--panel-2); color: var(--gold); box-shadow: inset 0 0 0 2px var(--gold); }
+html[data-brand="vip"] .guest-page .hover\:bg-blue-700:hover { background-color: #3e3e46; }
+
 /* a thin gold line under the top bar */
 html[data-brand="vip"] nav { border-bottom: 2px solid var(--gold); }
 } /* end: VIP look on screen only (printing stays black on white) */

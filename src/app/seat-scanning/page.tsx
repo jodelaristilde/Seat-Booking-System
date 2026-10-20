@@ -1,7 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
-import { applyBrand } from "@/lib/useBrand";
+import { applyBrand, useBrand } from "@/lib/useBrand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -175,6 +175,7 @@ export default function SeatScanning() {
   const [eventId, setEventId] = useState<string | null>(null);
   // this event is closed to guests (past, or closed by the organizer)
   const [eventClosed, setEventClosed] = useState(false);
+  const brand = useBrand(); // nightclub VIP events get "Call my server" buttons
   const chooseEvent = (id: string) => {
     setEventId(id);
     // remembers the event on this phone (for "more guests" and the floor map)
@@ -756,6 +757,31 @@ export default function SeatScanning() {
             )}
           </Button>
           
+          {/* Nightclub VIP: call the server / order another bottle from the table */}
+          {brand === "vip" && selectedUser && (
+            <div className="grid grid-cols-2 gap-2" data-testid="vip-call">
+              {(["server", "bottle"] as const).map((kind) => (
+                <Button
+                  key={kind}
+                  onClick={async () => {
+                    const r = await fetch("/api/vip/guest-call", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ event: selectedUser.eventId || eventId, guestId: selectedUser.id, kind }),
+                    })
+                      .then((x) => x.json())
+                      .catch(() => null);
+                    if (r?.success) toast.success(kind === "server" ? t.serverComing : t.bottleComing);
+                    else toast.error(t.couldNotCheckIn);
+                  }}
+                  className="h-14 rounded-xl bg-green-600 text-base font-bold text-white hover:bg-green-700"
+                >
+                  {kind === "server" ? t.callServer : t.orderBottle}
+                </Button>
+              ))}
+            </div>
+          )}
+
           {/* Already arrived card */}
           <div className="p-6 bg-green-50 dark:bg-green-900/20 rounded-xl text-center space-y-3">
             <div className="h-20 w-20 bg-green-100 dark:bg-green-800/30 rounded-full flex items-center justify-center mx-auto">
