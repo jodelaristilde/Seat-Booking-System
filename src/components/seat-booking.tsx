@@ -642,6 +642,16 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
   };
 
   const handleDeleteTable = async (tableId: string | number) => {
+    // its number, to offer moving the next tables down ("Table 7" becomes 6...)
+    const goneName =
+      tables.find((t) => (t.seats[0]?.table?.id || t.tableNumber) === tableId)?.seats[0]?.table?.name ?? "";
+    const goneNum = goneName.match(/^\s*(?:table\s*#?\s*)?(\d+)\s*$/i)?.[1];
+    const higher = goneNum
+      ? tables.filter((t) => {
+          const n = (t.seats[0]?.table?.name ?? "").match(/^\s*(?:table\s*#?\s*)?(\d+)\s*$/i)?.[1];
+          return n && Number(n) > Number(goneNum);
+        }).length
+      : 0;
     try {
       const response = await fetch(`/api/delete-table`, {
         method: "DELETE",
@@ -655,6 +665,26 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
 
       if (result.success) {
         toast.success("Table deleted successfully");
+        if (
+          goneNum &&
+          higher > 0 &&
+          window.confirm(
+            `${goneName} is deleted. Renumber the tables after it?\n\nTable ${Number(goneNum) + 1} becomes ${goneNum}, Table ${Number(goneNum) + 2} becomes ${Number(goneNum) + 1}, and so on (${higher} table${higher === 1 ? "" : "s"}). Guests stay at their table.`
+          )
+        ) {
+          const r = await fetch("/api/tables/renumber", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ after: Number(goneNum) }),
+          })
+            .then((x) => x.json())
+            .catch(() => null);
+          if (r?.success) {
+            toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered`);
+            refreshSeats();
+          }
+          else toast.error("Could not renumber the tables");
+        }
         // take the deleted table off the screen right away
         setTables(
           tables.filter(
