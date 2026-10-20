@@ -895,7 +895,23 @@ const handleTableClick = () => {
               </motion.div>
             )}
           </div>
-          {/* the floor plan shows only the table number; counts are in the zoom card */}
+          {/* on the floor plan, a small count of guests seated / seats (when seats are hidden) */}
+          {inFloorPlan && hideSeats && table.seats.length > 0 && (() => {
+            const seated = table.seats.filter((st) => st.isBooked).length;
+            const full = seated >= table.seats.length;
+            return (
+              <span
+                className={`pointer-events-none rounded-full px-1 font-bold leading-tight tabular-nums ${
+                  full ? "bg-red-100 text-red-800" : seated ? "bg-amber-50 text-amber-800" : "bg-zinc-100 text-zinc-500"
+                }`}
+                style={{ fontSize: "clamp(8px, 10cqw, 14px)" }}
+                title={`${seated} guest${seated === 1 ? "" : "s"} seated, ${table.seats.length} seats`}
+                data-testid="table-count"
+              >
+                {seated}/{table.seats.length}
+              </span>
+            );
+          })()}
           {!inFloorPlan && (
             <TableNotes
               tableId={String(table.seats[0]?.table?.id || tableId)}

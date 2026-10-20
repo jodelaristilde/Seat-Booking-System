@@ -19,20 +19,22 @@ async function readFlags(eventId: string): Promise<Flags> {
 
 export async function GET() {
   const eventId = await activeEventId();
-  const [event, pictures, tables, guests, seated, flags] = await Promise.all([
+  const [event, pictures, tables, guests, seated, flags, seats, freeSeats] = await Promise.all([
     db.event.findUnique({ where: { id: eventId }, select: { id: true, name: true, date: true, entrances: true } }),
     db.image.count({ where: { eventId } }),
     db.table.count({ where: { eventId } }),
     db.users.count({ where: { eventId } }),
     db.users.count({ where: { eventId, seat: { some: { isBooked: true } } } }),
     readFlags(eventId),
+    db.seat.count({ where: { table: { eventId } } }),
+    db.seat.count({ where: { table: { eventId }, isBooked: false } }),
   ]);
   const entrances = Array.isArray(event?.entrances) ? (event!.entrances as unknown[]).length : 0;
   return NextResponse.json({
     success: true,
     event: { id: eventId, name: event?.name ?? "", date: event?.date ?? null },
     flags,
-    counts: { pictures, tables, entrances, guests, unseated: guests - seated },
+    counts: { pictures, tables, entrances, guests, unseated: guests - seated, seats, freeSeats },
   });
 }
 

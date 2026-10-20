@@ -12,7 +12,7 @@ import { openSetup } from "@/lib/setupEvents";
 type Progress = {
   event: { id: string; name: string; date: string | null };
   flags: { noFloorPlan?: boolean; noEntrance?: boolean; checked?: boolean };
-  counts: { pictures: number; tables: number; entrances: number; guests: number; unseated: number };
+  counts: { pictures: number; tables: number; entrances: number; guests: number; unseated: number; seats?: number; freeSeats?: number };
 };
 
 const HIDE_KEY = (id: string) => `seating4u-setup-hidden:${id}`;
@@ -122,9 +122,11 @@ export function SetupSteps() {
     {
       title: "Seat guests",
       done: c.tables > 0 && c.guests > 0 && c.unseated === 0,
-      text: c.guests
-        ? `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table. Seat everyone in one click (families and parties stay together), or by hand.`
-        : "Seat your guests once the list is in.",
+      text: !c.guests
+        ? "Seat your guests once the list is in."
+        : c.freeSeats !== undefined && c.unseated > c.freeSeats
+        ? `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table, but only ${c.freeSeats} empty seat${c.freeSeats === 1 ? "" : "s"} left (${c.seats} seats at ${c.tables} tables for ${c.guests} guests). Add tables or seats first.`
+        : `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table. Seat everyone in one click (families and parties stay together), or by hand.`,
     },
     {
       title: "Check & share",
@@ -266,7 +268,12 @@ export function SetupSteps() {
           )}
           {cur === 5 && (
             <>
-              <Link href="/dashboard/seating-helper" className={main}>
+              {c.freeSeats !== undefined && c.unseated > c.freeSeats && (
+                <button onClick={() => openSetup("bulk-tables")} className={main}>
+                  Add tables
+                </button>
+              )}
+              <Link href="/dashboard/seating-helper" className={c.freeSeats !== undefined && c.unseated > c.freeSeats ? plain : main}>
                 Seat everyone
               </Link>
             </>
