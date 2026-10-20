@@ -42,6 +42,7 @@ import {
   findShapes,
   readTextInShapes,
   findNumberedTables,
+  numberAtPoint,
   seatsFromPlan,
   nameFromText,
   readingOrder,
@@ -1221,7 +1222,31 @@ export function FloorPlanCanvas({
     try {
       const found = await shapeAtPoint(picture, x, y);
       if (!found) {
-        toast.error("No table found there. Click inside a table, or drag to draw it.");
+        // no closed table shape there (nightclub booths, sofas…): put the table
+        // where you clicked, numbered from the number printed there (you confirm it)
+        const num = await numberAtPoint(picture, x, y).catch(() => null);
+        const guess = num?.name.replace(/^Table /, "") ?? String(nextFreeNumber(tables.map(tableNameOf)));
+        const typed = window.prompt("Table number or name for the table you clicked:", guess);
+        if (!typed || !typed.trim()) return;
+        const name = nameFromText(typed.trim()) || typed.trim();
+        if (tables.some((t) => tableNameOf(t).trim().toLowerCase() === name.toLowerCase())) {
+          toast.message(`${name} is already on the plan.`);
+          return;
+        }
+        const size = num?.shape ?? { x, y, w: 5, h: (5 * aspect) || 5 };
+        const res = await fetch("/api/floor-plan-apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tables: [{ name, x: num ? num.shape.x : x, y: num ? num.shape.y : y, w: size.w, h: size.h, shape: "round", seats: drawSeats }],
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+        setDrawnIds((prev) => [...prev, ...(json.createdIds ?? [])]);
+        await onTablesChanged();
+        await loadPositions();
+        toast.success(`${name} added, ${drawSeats} seats`);
         return;
       }
       const taken = new Set(tables.map((t) => tableNameOf(t).trim().toLowerCase()));
@@ -2207,7 +2232,7 @@ export function FloorPlanCanvas({
           {drawing
             ? drawBusy
               ? "Finding the table..."
-              : `Easy way: click inside any table on the picture. Its shape, chairs and number are copied and it is added there. Or draw ${drawShape} tables with ${drawSeats} seats yourself: Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
+              : `Easy way: click inside any table (or on its number) on the picture. Its shape, chairs and number are copied and it is added there. Or draw ${drawShape} tables with ${drawSeats} seats yourself: Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
             : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."

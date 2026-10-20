@@ -497,6 +497,9 @@ export async function shapeAtPoint(src: string, xPct: number, yPct: number): Pro
   const cx = Math.round((xPct / 100) * (W - 1));
   const cy = Math.round((yPct / 100) * (H - 1));
   const seed = dominantColour(px, W, H, cx, cy);
+  // a black (or very dark) spot on a mostly dark plan is the background, not a
+  // table: the caller then uses the table number printed there
+  if (seed && (seed[0] * 299 + seed[1] * 587 + seed[2] * 114) / 1000 < 60 && darkShare(m.canvas) > 0.4) return null;
   const whiteInside = seed && seed[0] > 225 && seed[1] > 225 && seed[2] > 225;
   if (!seed || whiteInside) {
     const r = outlineShapeAtPoint(m, cx, cy);
@@ -787,13 +790,35 @@ export function pictureSignature(src: string): string {
 export async function findNumberedTables(
   canvas: HTMLCanvasElement,
   shapes: DetectedShape[],
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  min = 2 // fewer numbers than this: probably not table numbers
 ): Promise<DetectedShape[] | null> {
+  // a small picture (a screenshot): enlarge it first so small numbers separate
+  // from the circles around them (positions are in %, so nothing else changes)
+  if (Math.max(canvas.width, canvas.height) < 1300) {
+    const k = Math.min(3, 1800 / Math.max(canvas.width, canvas.height));
+    const big = document.createElement("canvas");
+    big.width = Math.round(canvas.width * k);
+    big.height = Math.round(canvas.height * k);
+    const bx = big.getContext("2d", { willReadFrequently: true })!;
+    bx.imageSmoothingEnabled = true;
+    bx.imageSmoothingQuality = "high";
+    bx.drawImage(canvas, 0, 0, big.width, big.height);
+    canvas = big;
+  }
   const W = canvas.width;
   const H = canvas.height;
   onProgress?.("Looking for table numbers on the plan...");
+  // dark numbers on a light plan, and (when the plan has dark areas) light numbers
+  // on a dark background; the same number found twice is kept once
   const tokens = numberLikeMarks(canvas);
-  if (tokens.length < 2) return null;
+  if (darkShare(canvas) > 0.25) {
+    for (const t of numberLikeMarks(canvas, true)) {
+      const cx = (t.x0 + t.x1) / 2, cy = (t.y0 + t.y1) / 2;
+      if (!tokens.some((o) => cx >= o.x0 - 2 && cx <= o.x1 + 2 && cy >= o.y0 - 2 && cy <= o.y1 + 2)) tokens.push(t);
+    }
+  }
+  if (tokens.length < min) return null;
   const T = await loadTesseract();
   const worker = await T.createWorker("eng");
   const nums: {
@@ -808,7 +833,7 @@ export async function findNumberedTables(
       const m = Math.round(h * 0.35);
       const sx = Math.max(0, tk.x0 - m), sy = Math.max(0, tk.y0 - m);
       const sw = Math.min(W - sx, tk.x1 - tk.x0 + 2 * m), sh = Math.min(H - sy, h + 2 * m);
-      const k = Math.min(6, Math.max(1, 48 / h));
+      const k = Math.min(tk.light ? 8 : 6, Math.max(1, (tk.light ? 64 : 48) / h));
       const crop = document.createElement("canvas");
       crop.width = Math.round(sw * k) + 24;
       crop.height = Math.round(sh * k) + 24;
@@ -829,21 +854,53 @@ export async function findNumberedTables(
         }
       cx.putImageData(img, 0, 0);
       let best = { t: "", c: 0 };
-      for (const params of [
-        { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" },
-        { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" },
-      ]) {
-        try {
-          await worker.setParameters(params);
-          const r = await worker.recognize(crop);
-          const t = r.data.text.replace(/\s+/g, "");
-          const c = r.data.confidence ?? 0;
-          // letters (a word) without the digits-only filter = not a table number
-          if (params.tessedit_char_whitelist === "" && /[A-Za-z]{2,}/.test(t) && c > 60) { best = { t: "", c: -1 }; break; }
-          if (/^\d{1,3}$/.test(t) && c > best.c) best = { t, c };
-          if (best.c >= 75) break;
-        } catch {
-          /* skip */
+      if (!tk.light) {
+        // dark numbers on a light plan: best of a free reading and a digits-only one
+        for (const params of [
+          { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" },
+          { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" },
+        ]) {
+          try {
+            await worker.setParameters(params);
+            const r = await worker.recognize(crop);
+            const t = r.data.text.replace(/\s+/g, "");
+            const c = r.data.confidence ?? 0;
+            // letters (a word) without the digits-only filter = not a table number
+            if (params.tessedit_char_whitelist === "" && /[A-Za-z]{2,}/.test(t) && c > 60) {
+              best = { t: "", c: -1 };
+              break;
+            }
+            if (/^\d{1,3}$/.test(t) && c > best.c) best = { t, c };
+            if (best.c >= 75) break;
+          } catch {
+            /* skip */
+          }
+        }
+      } else {
+        // light numbers on a dark plan (often a squarish nightclub font): a clean
+        // free reading is trusted; only if there is none, digits only
+        const single = tk.x1 - tk.x0 < (tk.y1 - tk.y0) * 0.95;
+        for (const params of [
+          { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" },
+          { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" },
+          ...(single ? [{ tessedit_pageseg_mode: "10", tessedit_char_whitelist: "0123456789" }] : []),
+        ]) {
+          try {
+            await worker.setParameters(params);
+            const r = await worker.recognize(crop);
+            const t = r.data.text.replace(/\s+/g, "");
+            const c = r.data.confidence ?? 0;
+            if (!params.tessedit_char_whitelist) {
+              if (/[A-Za-z]{2,}/.test(t) && c > 60) break;
+              if (/^\d{1,3}$/.test(t) && c >= 50) {
+                best = { t, c: Math.max(c, 56) };
+                break;
+              }
+            } else if (/^\d{1,3}$/.test(t) && c > best.c) best = { t, c };
+            if (best.c >= 70) break;
+          } catch {
+            /* skip */
+          }
         }
       }
       if (best.t && Number(best.t) > 0 && best.c >= 55) nums.push({ t: best.t, confidence: best.c, bbox: tk });
@@ -851,7 +908,7 @@ export async function findNumberedTables(
   } finally {
     await worker.terminate().catch(() => undefined);
   }
-  if (nums.length < 2) return null;
+  if (nums.length < min) return null;
 
   // same number twice: keep the surer reading
   const byNum = new Map<number, (typeof nums)[number]>();
@@ -867,7 +924,7 @@ export async function findNumberedTables(
     const h = n.bbox.y1 - n.bbox.y0;
     return h > medH * 0.5 && h < medH * 2;
   });
-  if (list.length < 2) return null;
+  if (list.length < min) return null;
 
   // each number's closed-in area is its table (position and size)
   const tables: DetectedShape[] = list.map(([v, n]) => {
@@ -898,10 +955,14 @@ export async function findNumberedTables(
 
 // Small marks shaped like digits, grouped side by side into 1-3 digit numbers.
 // Marks in a row of 4 or more are words or sentences ("350 seats"), so skipped.
-function numberLikeMarks(canvas: HTMLCanvasElement) {
+// light = true: look for light writing on a dark background (white numbers on a
+// black nightclub plan); otherwise dark writing on a light background.
+function numberLikeMarks(canvas: HTMLCanvasElement, light = false) {
   const W = canvas.width;
   const H = canvas.height;
-  const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  const d0 = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  // a dark plan is read as its negative: the same rules then work
+  const d = light ? d0.map((v, i) => (i % 4 === 3 ? v : 255 - v)) : d0;
   const ink = new Uint8Array(W * H);
   // ink = dark writing; line = any drawn line, even thin grey ones (they close a table)
   const line = new Uint8Array(W * H);
@@ -959,6 +1020,7 @@ function numberLikeMarks(canvas: HTMLCanvasElement) {
   const tokens: {
     x0: number; y0: number; x1: number; y1: number; pixels: Set<number>;
     region: { rx0: number; ry0: number; rx1: number; ry1: number };
+    light: boolean;
   }[] = [];
   for (const g of glyphs) {
     if (used.has(g)) continue;
@@ -971,7 +1033,7 @@ function numberLikeMarks(canvas: HTMLCanvasElement) {
         (o) =>
           !used.has(o) &&
           o.x0 > last.x0 &&
-          o.x0 - last.x1 < h * 0.7 &&
+          o.x0 - last.x1 < h * (light ? 1.1 : 0.7) &&
           Math.abs(o.y1 - o.y0 + 1 - h) < h * 0.3 &&
           Math.abs((o.y0 + o.y1) / 2 - (last.y0 + last.y1) / 2) < h * 0.3
       );
@@ -1016,7 +1078,7 @@ function numberLikeMarks(canvas: HTMLCanvasElement) {
     if (leak) continue;
     const rw = rx1 - rx0 + 1, rh = ry1 - ry0 + 1;
     // roomy enough for the number, roughly as wide as tall, number in the middle
-    if (rw < (tx1 - tx0) * 1.3 || rh < h0 * 1.6) continue;
+    if (rw < (tx1 - tx0) * (light ? 1.1 : 1.3) || rh < h0 * (light ? 1.4 : 1.6)) continue;
     if (rw / rh > 2.2 || rh / rw > 2.2) continue;
     if (Math.abs((rx0 + rx1) / 2 - cx0) > rw * 0.22 || Math.abs((ry0 + ry1) / 2 - cy0) > rh * 0.22) continue;
     const region = { rx0, ry0, rx1, ry1 };
@@ -1027,6 +1089,7 @@ function numberLikeMarks(canvas: HTMLCanvasElement) {
       y1: Math.max(...row.map((r) => r.y1)),
       pixels: new Set(row.flatMap((r) => r.px)),
       region,
+      light,
     };
     tokens.push(t);
   }
@@ -1115,4 +1178,61 @@ export async function seatsFromPlan(
   const near = counts.filter((c) => Math.abs(c - best) <= 1).length;
   if (n < 2 || near < counts.length * 0.6) return null;
   return { seats: best, from: "chairs" };
+}
+
+
+// How much of the plan is dark (a black nightclub plan is mostly dark)
+function darkShare(canvas: HTMLCanvasElement): number {
+  const W = canvas.width, H = canvas.height;
+  const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  let dark = 0, n = 0;
+  for (let i = 0; i < W * H; i += 7) {
+    n++;
+    if ((d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000 < 90) dark++;
+  }
+  return n ? dark / n : 0;
+}
+
+// ---- Click on a table number to add that table ----
+// For plans where tables aren't closed shapes (nightclub booths, sofas): the
+// number printed for the table is read near the click, and the table goes there.
+export async function numberAtPoint(src: string, xPct: number, yPct: number): Promise<{ shape: DetectedShape; name: string } | null> {
+  const img = await loadImage(src);
+  const W = img.naturalWidth, H = img.naturalHeight;
+  // a window around the click (6% of the plan each way)
+  const half = Math.round(Math.max(W, H) * 0.06);
+  const cx = Math.round((xPct / 100) * W), cy = Math.round((yPct / 100) * H);
+  const x0 = Math.max(0, cx - half), y0 = Math.max(0, cy - half);
+  const w = Math.min(W - x0, half * 2), h = Math.min(H - y0, half * 2);
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, x0, y0, w, h, 0, 0, w, h);
+  const found = await findNumberedTables(c, [], undefined, 1).catch(() => null);
+  if (!found?.length) return null;
+  // the number closest to the click
+  const best = found
+    .filter((s) => s.text)
+    .map((s) => ({ s, d: Math.hypot((s.x / 100) * w + x0 - cx, (s.y / 100) * h + y0 - cy) }))
+    .sort((a, b) => a.d - b.d)[0];
+  if (!best) return null;
+  const s = best.s;
+  const toX = (p: number) => (((p / 100) * w + x0) / W) * 100;
+  const toY = (p: number) => (((p / 100) * h + y0) / H) * 100;
+  // the circle around a number is small: give the table a usual size
+  const minW = 5, minH = (5 * W) / H;
+  return {
+    name: nameFromText(s.text),
+    shape: {
+      ...s,
+      key: `n${s.text}_${Math.round(toX(s.x))}`,
+      x: toX(s.x),
+      y: toY(s.y),
+      w: Math.max(minW, (s.w / 100) * (w / W) * 100),
+      h: Math.max(minH, (s.h / 100) * (h / H) * 100),
+      shape: "round",
+      likelyTable: true,
+    },
+  };
 }
