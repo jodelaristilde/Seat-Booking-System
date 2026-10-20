@@ -3,12 +3,14 @@
 import { useBrand } from "@/lib/useBrand";
 
 // The Seating4U logo, or the VIPService4U logo for nightclub VIP events
-export function BrandLogo({ className, width, height, style }: { className?: string; width?: number; height?: number; style?: React.CSSProperties }) {
-  const brand = useBrand();
+// guest: a guest page (phone seat finder): always the Seating4U logo
+export function BrandLogo({ className, width, height, style, guest }: { className?: string; width?: number; height?: number; style?: React.CSSProperties; guest?: boolean }) {
+  const b = useBrand();
+  const brand = guest ? "seating4u" : b;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={brand === "vip" ? "/vip4u-logo.png" : "/logo.svg"}
+      src={brand === "vip" ? "/vip4u-logo-gold.png" : "/logo.svg"}
       alt={brand === "vip" ? "VIPService4U" : "Seating4U"}
       width={width}
       height={height}

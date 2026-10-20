@@ -77,42 +77,169 @@ body {
   background-size: 24px 24px;
 }
 /* ---------- VIPService4U look (nightclub VIP events) ----------
-   <html data-brand="vip"> is set for events marked "Nightclub / VIP".
-   The Seating4U lime becomes the VIP logo's forest green and mint.
-   (Status colours, like green = arrived, stay the same.) */
+   <html data-brand="vip"> is set for events marked "Nightclub VIP":
+   black and gold, made for dark rooms at night. The floor plan picture stays
+   as it is; status colours keep their meaning (green = arrived, red = full). */
+@media screen {
 html[data-brand="vip"] {
-  --vip-dark: #134e31;
-  --vip-main: #17643d;
-  --vip-hover: #0f3f27;
-  --vip-mid: #1f8a52;
-  --vip-mint: #7ceba6;
-  --vip-mint-soft: #e9faf0;
-  --primary: 151 61% 19%;
-  --primary-foreground: 0 0% 100%;
-  --ring: 151 61% 30%;
+  color-scheme: dark;
+  --gold: #d4af37;
+  --gold-hover: #e6c45a;
+  --gold-soft: rgba(212, 175, 55, 0.14);
+  --ink: #f5f1e6;
+  --ink-2: #c9c3b4;
+  --ink-3: #8f8a7e;
+  --black: #0b0b0c;
+  --panel: #151517;
+  --panel-2: #1c1c1f;
+  --line: #2c2a26;
+  /* shadcn components (dialogs, inputs, menus, cards) */
+  --background: 240 5% 5%;
+  --foreground: 43 33% 93%;
+  --card: 240 4% 9%;
+  --card-foreground: 43 33% 93%;
+  --popover: 240 4% 9%;
+  --popover-foreground: 43 33% 93%;
+  --primary: 46 65% 52%;
+  --primary-foreground: 240 5% 5%;
+  --secondary: 240 4% 14%;
+  --secondary-foreground: 43 33% 93%;
+  --muted: 240 4% 14%;
+  --muted-foreground: 40 8% 62%;
+  --accent: 240 4% 16%;
+  --accent-foreground: 43 33% 93%;
+  --border: 40 7% 16%;
+  --input: 40 7% 20%;
+  --ring: 46 65% 52%;
 }
-html[data-brand="vip"] body,
-html[data-brand="vip"] .bg-zinc-100 { background-color: #eef8f2; }
-html[data-brand="vip"] .bg-zinc-50 { background-color: #f4fbf7; }
+html[data-brand="vip"] body { background-color: var(--black); color: var(--ink); }
+
+/* surfaces */
+html[data-brand="vip"] .bg-white,
+html[data-brand="vip"] .bg-white\/70,
+html[data-brand="vip"] .bg-white\/80,
+html[data-brand="vip"] .bg-white\/90 { background-color: var(--panel); }
+html[data-brand="vip"] .bg-zinc-50,
+html[data-brand="vip"] .bg-gray-50 { background-color: #111113; }
+html[data-brand="vip"] .bg-zinc-100,
+html[data-brand="vip"] .bg-gray-100 { background-color: var(--black); }
+html[data-brand="vip"] .bg-zinc-200 { background-color: var(--panel-2); }
+html[data-brand="vip"] .hover\:bg-zinc-50:hover,
+html[data-brand="vip"] .hover\:bg-zinc-100:hover,
+html[data-brand="vip"] .hover\:bg-gray-100:hover,
+html[data-brand="vip"] .hover\:bg-muted:hover { background-color: #232326; }
+html[data-brand="vip"] .bg-zinc-900 { background-color: var(--gold); color: var(--black); }
+
+/* text */
+html[data-brand="vip"] .text-black,
+html[data-brand="vip"] .text-zinc-900,
+html[data-brand="vip"] .text-zinc-950,
+html[data-brand="vip"] .text-gray-900,
+html[data-brand="vip"] .text-zinc-800 { color: var(--ink); }
+html[data-brand="vip"] .text-zinc-700,
+html[data-brand="vip"] .text-gray-700,
+html[data-brand="vip"] .text-zinc-600,
+html[data-brand="vip"] .text-gray-600 { color: var(--ink-2); }
+html[data-brand="vip"] .text-zinc-500,
+html[data-brand="vip"] .text-gray-500,
+html[data-brand="vip"] .text-zinc-400 { color: var(--ink-3); }
+
+/* lines */
+html[data-brand="vip"] .border-zinc-100,
+html[data-brand="vip"] .border-zinc-200,
+html[data-brand="vip"] .border-zinc-300,
+html[data-brand="vip"] .border-gray-200 { border-color: var(--line); }
+html[data-brand="vip"] .divide-zinc-100 > * + *,
+html[data-brand="vip"] .divide-zinc-200 > * + * { border-color: var(--line); }
+
+/* Seating4U lime becomes gold */
 html[data-brand="vip"] .bg-lime-600,
-html[data-brand="vip"] .bg-lime-500 { background-color: var(--vip-main); color: #fff; }
+html[data-brand="vip"] .bg-lime-500 { background-color: var(--gold); color: var(--black); }
 html[data-brand="vip"] .hover\:bg-lime-700:hover,
-html[data-brand="vip"] .hover\:bg-lime-600:hover { background-color: var(--vip-hover); }
+html[data-brand="vip"] .hover\:bg-lime-600:hover { background-color: var(--gold-hover); }
 html[data-brand="vip"] .bg-lime-50,
 html[data-brand="vip"] .bg-lime-100,
-html[data-brand="vip"] .hover\:bg-lime-50:hover { background-color: var(--vip-mint-soft); }
+html[data-brand="vip"] .hover\:bg-lime-50:hover { background-color: var(--gold-soft); }
 html[data-brand="vip"] .text-lime-500,
 html[data-brand="vip"] .text-lime-600,
 html[data-brand="vip"] .text-lime-700,
 html[data-brand="vip"] .text-lime-800,
-html[data-brand="vip"] .text-lime-900 { color: var(--vip-mid); }
+html[data-brand="vip"] .text-lime-900 { color: var(--gold); }
 html[data-brand="vip"] .border-lime-300,
 html[data-brand="vip"] .border-lime-400,
 html[data-brand="vip"] .border-lime-500,
-html[data-brand="vip"] .border-lime-600 { border-color: var(--vip-mint); }
-html[data-brand="vip"] .ring-lime-500 { --tw-ring-color: var(--vip-mint); }
-html[data-brand="vip"] .from-lime-500 { --tw-gradient-from: var(--vip-mid) var(--tw-gradient-from-position); --tw-gradient-to: rgb(31 138 82 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-html[data-brand="vip"] .to-lime-500 { --tw-gradient-to: var(--vip-dark) var(--tw-gradient-to-position); }
-html[data-brand="vip"] .to-lime-100 { --tw-gradient-to: var(--vip-mint-soft) var(--tw-gradient-to-position); }
-/* the top bar gets a thin mint line, like the logo's swoosh */
-html[data-brand="vip"] nav { border-bottom: 3px solid var(--vip-mint); }
+html[data-brand="vip"] .border-lime-600 { border-color: var(--gold); }
+html[data-brand="vip"] .ring-lime-500 { --tw-ring-color: var(--gold); }
+html[data-brand="vip"] .from-lime-500 { --tw-gradient-from: var(--gold) var(--tw-gradient-from-position); --tw-gradient-to: rgb(212 175 55 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html[data-brand="vip"] .to-lime-500 { --tw-gradient-to: #8a6d1d var(--tw-gradient-to-position); }
+html[data-brand="vip"] .to-lime-100 { --tw-gradient-to: var(--gold-soft) var(--tw-gradient-to-position); }
+
+/* light status tints read badly on black: make them see-through, text lighter */
+html[data-brand="vip"] .bg-green-50,
+html[data-brand="vip"] .bg-green-100 { background-color: rgba(34, 197, 94, 0.14); }
+html[data-brand="vip"] .bg-red-50,
+html[data-brand="vip"] .bg-red-100 { background-color: rgba(239, 68, 68, 0.15); }
+html[data-brand="vip"] .bg-amber-50,
+html[data-brand="vip"] .bg-amber-100,
+html[data-brand="vip"] .bg-yellow-50 { background-color: rgba(245, 158, 11, 0.15); }
+html[data-brand="vip"] .bg-blue-50,
+html[data-brand="vip"] .bg-blue-100,
+html[data-brand="vip"] .bg-sky-50 { background-color: rgba(59, 130, 246, 0.15); }
+html[data-brand="vip"] .text-green-700,
+html[data-brand="vip"] .text-green-800,
+html[data-brand="vip"] .text-green-900 { color: #86efac; }
+html[data-brand="vip"] .text-red-700,
+html[data-brand="vip"] .text-red-800,
+html[data-brand="vip"] .text-red-900 { color: #fca5a5; }
+html[data-brand="vip"] .text-amber-800,
+html[data-brand="vip"] .text-amber-900,
+html[data-brand="vip"] .text-amber-950 { color: #fcd34d; }
+html[data-brand="vip"] .text-blue-700,
+html[data-brand="vip"] .text-blue-800 { color: #93c5fd; }
+html[data-brand="vip"] .border-green-200,
+html[data-brand="vip"] .border-green-300 { border-color: rgba(34, 197, 94, 0.4); }
+html[data-brand="vip"] .border-red-200,
+html[data-brand="vip"] .border-red-300 { border-color: rgba(239, 68, 68, 0.45); }
+html[data-brand="vip"] .border-amber-200,
+html[data-brand="vip"] .border-amber-300 { border-color: rgba(245, 158, 11, 0.45); }
+
+/* more text and tint colours used here and there */
+html[data-brand="vip"] .text-gray-800,
+html[data-brand="vip"] .text-neutral-700,
+html[data-brand="vip"] .text-slate-800,
+html[data-brand="vip"] .text-slate-900 { color: var(--ink); }
+html[data-brand="vip"] .text-neutral-600,
+html[data-brand="vip"] .text-slate-600 { color: var(--ink-2); }
+html[data-brand="vip"] .bg-cyan-50,
+html[data-brand="vip"] .bg-teal-50,
+html[data-brand="vip"] .bg-emerald-50,
+html[data-brand="vip"] .bg-indigo-50,
+html[data-brand="vip"] .bg-purple-50,
+html[data-brand="vip"] .bg-violet-50,
+html[data-brand="vip"] .bg-orange-50,
+html[data-brand="vip"] .bg-pink-50,
+html[data-brand="vip"] .bg-slate-50 { background-color: rgba(255, 255, 255, 0.06); }
+html[data-brand="vip"] .text-cyan-600,
+html[data-brand="vip"] .text-cyan-700,
+html[data-brand="vip"] .text-cyan-800 { color: #67e8f9; }
+html[data-brand="vip"] .text-emerald-700,
+html[data-brand="vip"] .text-emerald-900,
+html[data-brand="vip"] .text-emerald-950,
+html[data-brand="vip"] .text-teal-700 { color: #6ee7b7; }
+html[data-brand="vip"] .text-indigo-700,
+html[data-brand="vip"] .text-sky-700 { color: #a5b4fc; }
+html[data-brand="vip"] .border-cyan-200,
+html[data-brand="vip"] .border-teal-300,
+html[data-brand="vip"] .border-neutral-200 { border-color: var(--line); }
+/* the "Nightclub VIP" choice itself is gold */
+html[data-brand="vip"] .bg-\[\#134e31\] { background-color: var(--gold); color: var(--black); }
+
+/* inputs */
+html[data-brand="vip"] input,
+html[data-brand="vip"] select,
+html[data-brand="vip"] textarea { background-color: #101012; color: var(--ink); border-color: #34312b; }
+html[data-brand="vip"] input::placeholder { color: var(--ink-3); }
+
+/* a thin gold line under the top bar */
+html[data-brand="vip"] nav { border-bottom: 2px solid var(--gold); }
+} /* end: VIP look on screen only (printing stays black on white) */

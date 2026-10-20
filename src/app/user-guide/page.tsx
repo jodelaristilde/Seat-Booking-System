@@ -419,7 +419,8 @@ export default function UserGuide() {
           <Card title="Nightclub VIP nights: the VIPService4U look">
             <ul className="space-y-2 text-zinc-700">
               <li>• Click the event name at the top. Each event shows <b>Gala / Wedding</b> or <b>Nightclub VIP</b>: click to switch.</li>
-              <li>• A <b>Nightclub VIP</b> event shows the <b>VIPService4U</b> logo and its green colours on your screens and on guests&apos; phones (QR code, seat finder, RSVP).</li>
+              <li>• A <b>Nightclub VIP</b> event turns your screens dark, black and gold, with the gold <b>VIPService4U</b> logo, so you always know which kind of event is open. Printing stays black on white.</li>
+              <li>• Guests&apos; phones (QR code, seat finder, RSVP) keep the normal Seating4U look.</li>
               <li>• When you start a new event, pick its <b>Type</b> there too. Everything else works the same.</li>
             </ul>
           </Card>
