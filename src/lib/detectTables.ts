@@ -908,6 +908,35 @@ export async function findNumberedTables(
   } finally {
     await worker.terminate().catch(() => undefined);
   }
+  // Numbers printed in small label circles (any colours: white ring on black,
+  // black ring on white…): each circle is read on its own, digit by digit.
+  // Only adds numbers where nothing was read yet.
+  try {
+    const circles = labelCircles(canvas);
+    let done = 0;
+    for (const c of circles) {
+      onProgress?.(`Reading numbered circles... ${++done} of ${circles.length}`);
+      const { x, y, w, h } = c.box;
+      if (nums.some((n) => (n.bbox.x0 + n.bbox.x1) / 2 >= x && (n.bbox.x0 + n.bbox.x1) / 2 <= x + w && (n.bbox.y0 + n.bbox.y1) / 2 >= y && (n.bbox.y0 + n.bbox.y1) / 2 <= y + h)) continue;
+      const t = await readCircle(c).catch(() => "");
+      if (!/^\d{1,3}$/.test(t) || Number(t) <= 0) continue;
+      // the digits' own height, about half the circle
+      const dh = Math.round(h * 0.5);
+      nums.push({
+        t,
+        confidence: 70,
+        bbox: {
+          x0: x + Math.round(w * 0.25),
+          x1: x + Math.round(w * 0.75),
+          y0: y + Math.round((h - dh) / 2),
+          y1: y + Math.round((h + dh) / 2),
+          region: { rx0: x, ry0: y, rx1: x + w - 1, ry1: y + h - 1 },
+        },
+      });
+    }
+  } catch {
+    /* circles are a bonus */
+  }
   if (nums.length < min) return null;
 
   // same number twice: keep the surer reading
@@ -929,12 +958,13 @@ export async function findNumberedTables(
   // each number's closed-in area is its table (position and size)
   const tables: DetectedShape[] = list.map(([v, n]) => {
     const r = n.bbox.region;
-    const bw = r.rx1 - r.rx0 + 1, bh = r.ry1 - r.ry0 + 1;
+    // a number's own circle is only a label: at least a usual table size
+    const bw = Math.max(r.rx1 - r.rx0 + 1, Math.round(W * 0.035)), bh = Math.max(r.ry1 - r.ry0 + 1, Math.round(W * 0.035));
     const aspect = bw / bh;
     return {
       key: `n${v}`,
-      x: ((r.rx0 + bw / 2) / W) * 100,
-      y: ((r.ry0 + bh / 2) / H) * 100,
+      x: (((r.rx0 + r.rx1) / 2) / W) * 100,
+      y: (((r.ry0 + r.ry1) / 2) / H) * 100,
       w: (bw / W) * 100,
       h: (bh / H) * 100,
       shape: aspect > 1.5 || aspect < 0.67 ? "rectangle" : "round",
@@ -1434,4 +1464,89 @@ async function readCircle(c: Circle): Promise<string> {
   } finally {
     await worker.terminate().catch(() => undefined);
   }
+}
+
+
+// Small closed round areas with a few marks inside (a number in a circle), on a
+// plan of any colours: dark circles with light writing, and light circles with
+// dark writing.
+function labelCircles(canvas: HTMLCanvasElement): Circle[] {
+  const W = canvas.width, H = canvas.height;
+  const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  const L = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) L[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+  const minS = Math.max(10, Math.round(Math.max(W, H) * 0.008));
+  const maxS = Math.round(Math.max(W, H) * 0.05);
+  const out: Circle[] = [];
+  const label = new Int32Array(W * H);
+  const stack = new Int32Array(W * H);
+  for (const darkInside of [true, false]) {
+    const inside = (i: number) => (darkInside ? L[i] < 128 : L[i] >= 128);
+    label.fill(0);
+    for (let s0 = 0; s0 < W * H; s0++) {
+      if (label[s0] || !inside(s0)) continue;
+      let top = 0, area = 0, x0 = W, y0 = H, x1 = 0, y1 = 0, big = false;
+      stack[top++] = s0;
+      label[s0] = 1;
+      while (top) {
+        const p = stack[--top];
+        const x = p % W, y = (p - x) / W;
+        area++;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+        if (x1 - x0 > maxS || y1 - y0 > maxS) big = true; // keep filling (to mark it) but it is too big
+        if (x > 0 && !label[p - 1] && inside(p - 1)) { label[p - 1] = 1; stack[top++] = p - 1; }
+        if (x < W - 1 && !label[p + 1] && inside(p + 1)) { label[p + 1] = 1; stack[top++] = p + 1; }
+        if (y > 0 && !label[p - W] && inside(p - W)) { label[p - W] = 1; stack[top++] = p - W; }
+        if (y < H - 1 && !label[p + W] && inside(p + W)) { label[p + W] = 1; stack[top++] = p + W; }
+      }
+      if (big) continue;
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+      if (bw < minS || bh < minS || bw / bh > 1.35 || bh / bw > 1.35) continue;
+      // round-ish and holding something: the area minus the writing inside
+      const fill = area / (bw * bh);
+      if (fill < 0.4 || fill > 0.9) continue;
+      // writing in the middle: other-colour pixels in the central part
+      let marks = 0, n = 0;
+      for (let y = y0 + Math.round(bh * 0.25); y < y1 - Math.round(bh * 0.25); y++)
+        for (let x = x0 + Math.round(bw * 0.2); x < x1 - Math.round(bw * 0.2); x++) {
+          n++;
+          if (!inside(y * W + x)) marks++;
+        }
+      if (!n || marks / n < 0.08 || marks / n > 0.7) continue;
+      // a real label circle is a thin ring with the same colour outside it as
+      // inside (a big digit printed on a table is not)
+      {
+        const cx = x0 + bw / 2, cy = y0 + bh / 2;
+        let same = 0, k = 0;
+        for (let a = 0; a < 360; a += 10) {
+          const r = Math.max(bw, bh) * 0.5 * 1.3 + 2;
+          const x = Math.round(cx + Math.cos((a * Math.PI) / 180) * r), y = Math.round(cy + Math.sin((a * Math.PI) / 180) * r);
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          k++;
+          if (inside(y * W + x)) same++;
+        }
+        if (!k || same / k < 0.5) continue;
+      }
+      out.push({
+        canvas,
+        darkInside,
+        box: { x: x0, y: y0, w: bw, h: bh },
+        shape: {
+          key: `c${x0}_${y0}`,
+          x: ((x0 + bw / 2) / W) * 100,
+          y: ((y0 + bh / 2) / H) * 100,
+          w: (bw / W) * 100,
+          h: (bh / H) * 100,
+          shape: "round",
+          likelyTable: true,
+          text: "",
+        },
+      });
+      if (out.length > 300) return out;
+    }
+  }
+  return out;
 }
