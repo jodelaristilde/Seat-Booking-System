@@ -62,6 +62,7 @@ import { useGuestNotes } from "../hooks/useGuestNotes";
 import { useSeats } from "../hooks/useSeats";
 import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
+import { GuestAccessBanner } from "./GuestAccessBanner";
 import { AddTableForm } from "./add-table-form";
 import { AssignGuestsDialog } from "./assign-guests-dialog";
 import { BookingSidebar } from "./booking-sidebar";
@@ -201,6 +202,14 @@ const SeatBooking = () => {
   const { data: session } = useSession();
   // check-in only account: hide everything that deletes or changes tables
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
+  // the open event, so "Scan QR Code" opens the guest page for this event
+  const [activeEventIdForLinks, setActiveEventIdForLinks] = useState("");
+  useEffect(() => {
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((j) => j?.success && setActiveEventIdForLinks(j.activeId))
+      .catch(() => undefined);
+  }, []);
   // check-in staff go straight to the full-screen check-in view (once per visit;
   // they can still leave it with Esc or the button on the left edge)
   const staffFullScreenDone = useRef(false);
@@ -1209,6 +1218,7 @@ const handleTableClick = () => {
 
   return (
     <div className={`bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
+      {!isFullScreen && !isStaff && <GuestAccessBanner />}
       <AnimatePresence>
         {!isFullScreen && (
           <motion.nav
@@ -1332,7 +1342,7 @@ const handleTableClick = () => {
                       )}
                       <DropdownMenuItem asChild>
                         <Link
-                          href="/seat-scanning"
+                          href={activeEventIdForLinks ? `/seat-scanning?event=${activeEventIdForLinks}` : "/seat-scanning"}
                           className="flex items-center"
                         >
                           <ScanQrCode className="mr-2 w-4 h-4" /> Scan QR Code
