@@ -160,6 +160,20 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
                 )
               })}
             </select>
+            {(() => {
+              const t = sortedTables.find((x) => x.name === table)
+              if (!t) return null
+              const free = t.seats.filter((s) => !s.isBooked).length
+              const need = party
+              if (free >= need) return null
+              const used = t.seats.length - free
+              return (
+                <p className="rounded-md border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-800">
+                  ⚠ {t.name} is full{free ? ` for ${need} people (${free} empty seat${free === 1 ? "" : "s"})` : ""}. {need - free} extra seat
+                  {need - free === 1 ? " will be" : "s will be"} added: {used + need} guests at a table with {t.seats.length} seats.
+                </p>
+              )
+            })()}
           </div>
 
           {/* Note for the desk: the guest's phone won't show the seat until the desk says yes */}

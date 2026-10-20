@@ -76,6 +76,7 @@ export default function UserGuide() {
     ["fix", "Fixing mistakes"],
     ["team", "Ready check, staff & kitchen"],
     ["more", "RSVP, printing, history & after the event"],
+    ["helper", "Seat everyone, seating rules & full tables"],
   ];
 
   return (
@@ -483,6 +484,39 @@ export default function UserGuide() {
                 { text: "Click <b>Close out event</b>: a full backup Excel downloads (all guests, notes, desk notes, allergies, RSVP, check-in times and history), then guest check-in closes.", tip: "You can reopen guest check-in any time: click the event name at the top." },
               ]}
             />
+          </Card>
+        </Section>
+
+        <Section id="helper" number={10} title="Seat everyone, seating rules & full tables">
+          <Card title="Seats per table, read from the plan">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• When you use <b>Find all tables + numbers</b>, the app also sets <b>Seats for new tables</b>: from a note on the plan (like <i>Up to 13 guests</i>), or by counting the chairs drawn around the tables.</li>
+              <li>• A green note says where the number came from. Change it if it is wrong before clicking <b>Use these tables</b>.</li>
+            </ul>
+          </Card>
+          <Card title="Seat everyone in one click">
+            <Steps
+              items={[
+                "Menu (☰) → <b>Seat everyone &amp; seating rules</b>.",
+                "Click <b>Show me first</b> to see who would sit where. Nothing is saved yet.",
+                { text: "Click <b>Seat them now</b>. Every guest without a table gets one: parties (+1s), families (same last name) and <i>keep together</i> guests sit at the same table; <i>keep apart</i> guests go to different tables.", tip: "Guests who already have a seat are never moved. Adjust by hand afterwards if you like." },
+              ]}
+            />
+          </Card>
+          <Card title="Keep together / keep apart">
+            <Steps
+              items={[
+                "On the same page, pick two guests, choose <b>Keep apart</b> or <b>Keep together</b>, and click <b>Add rule</b>.",
+                "If the seating breaks a rule, it shows in red at the top of the page, in the <b>Ready check</b>, and in <b>Assign Multiple</b> before you assign.",
+              ]}
+            />
+          </Card>
+          <Card title="Table too full">
+            <ul className="space-y-2 text-zinc-700">
+              <li>• <b>Assign Multiple</b> tells you when you picked more guests than the table has empty seats, and won&apos;t assign until you fix it.</li>
+              <li>• <b>New Guest</b> warns you when the table is full and an extra seat will be added.</li>
+              <li>• The <b>Ready check</b> lists tables with more guests than a table holds. Set how many a table holds at the bottom of the Seating helper page (it is filled in from the plan when possible).</li>
+            </ul>
           </Card>
         </Section>
 

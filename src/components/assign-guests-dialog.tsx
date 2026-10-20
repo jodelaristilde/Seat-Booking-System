@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import type { Rule } from "@/lib/seatPlan"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -26,6 +27,7 @@ interface Table {
     id: string
     seat: number
     isBooked: boolean
+    userId?: string | null
   }[]
 }
 
@@ -44,6 +46,15 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
   const [searchValue, setSearchValue] = useState("")
   // Guests assigned while this window is open: hidden right away, counted for the "Done" summary
   const [justAssigned, setJustAssigned] = useState<string[]>([])
+  // keep together / keep apart rules, to warn before assigning
+  const [rules, setRules] = useState<Rule[]>([])
+  useEffect(() => {
+    if (!isOpen) return
+    fetch("/api/seating-rules")
+      .then((r) => r.json())
+      .then((j) => j?.success && setRules(j.rules))
+      .catch(() => undefined)
+  }, [isOpen])
 
   // guests without a seat, A–Z by last name
   const availableGuests = guests
@@ -73,6 +84,36 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
     }
     setSelectedGuests(picked.slice(0, freeSeats))
   }
+
+  // Warnings for the current choice: not enough seats, or a seating rule broken
+  const warnings = (() => {
+    const out: string[] = []
+    const t = tables.find((x) => x.id === selectedTable)
+    if (!t) return out
+    if (selectedGuests.length > freeSeats)
+      out.push(
+        `${t.name} has only ${freeSeats} empty seat${freeSeats === 1 ? "" : "s"}: unselect ${selectedGuests.length - freeSeats} guest${selectedGuests.length - freeSeats === 1 ? "" : "s"} or pick another table.`,
+      )
+    const name = (id: string) => {
+      const g = guests.find((x) => x.id === id)
+      return g ? `${g.firstname} ${g.lastname}` : "a guest"
+    }
+    const there = new Set([...selectedGuests, ...t.seats.filter((s) => s.isBooked && s.userId).map((s) => s.userId!)])
+    const tableOfGuest = (id: string) => guests.find((x) => x.id === id)?.seat[0]?.tableId ?? null
+    for (const r of rules) {
+      const picked = selectedGuests.includes(r.a) || selectedGuests.includes(r.b)
+      if (!picked) continue
+      if (r.kind === "apart" && there.has(r.a) && there.has(r.b))
+        out.push(`${name(r.a)} and ${name(r.b)} should not sit at the same table.`)
+      if (r.kind === "together") {
+        const other = selectedGuests.includes(r.a) ? r.b : r.a
+        const ot = tableOfGuest(other)
+        if (!there.has(other) && ot && ot !== selectedTable)
+          out.push(`${name(selectedGuests.includes(r.a) ? r.a : r.b)} should sit with ${name(other)} (${tables.find((x) => x.id === ot)?.name ?? "another table"}).`)
+      }
+    }
+    return out
+  })()
 
   const handleGuestToggle = (guestId: string) => {
     setSelectedGuests((prev) =>
@@ -236,12 +277,19 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
                 ))}
               </RadioGroup>
             </ScrollArea>
+            {warnings.length > 0 && (
+              <div className="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-800">
+                {warnings.map((w) => (
+                  <p key={w}>⚠ {w}</p>
+                ))}
+              </div>
+            )}
             {/* Assign right under the tables, on the same line as "Select 10 guests" */}
             <div className="flex justify-center gap-2">
               <Button variant="outline" size="sm" onClick={handleDone}>
                 Done
               </Button>
-              <Button size="sm" onClick={handleAssign} disabled={isAssigning || !selectedTable || selectedGuests.length === 0}>
+              <Button size="sm" onClick={handleAssign} disabled={isAssigning || !selectedTable || selectedGuests.length === 0 || selectedGuests.length > freeSeats}>
                 {isAssigning
                   ? "Assigning..."
                   : selectedTable

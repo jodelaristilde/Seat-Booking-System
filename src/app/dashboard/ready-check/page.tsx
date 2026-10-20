@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 import { fold } from "@/lib/fold";
+import { ruleProblems, type Rule } from "@/lib/seatPlan";
+import { overTables } from "@/lib/capacity";
 
 type SeatRow = {
   id: string;
@@ -38,13 +40,15 @@ export default function ReadyCheck() {
   const run = useCallback(async () => {
     setBusy(true);
     try {
-      const [s, g, p, e, ent, pic] = await Promise.all([
+      const [s, g, p, e, ent, pic, rl, cap] = await Promise.all([
         fetch("/api/get-seat").then((r) => r.json()),
         fetch("/api/get-guests").then((r) => r.json()),
         fetch("/api/table-positions").then((r) => r.json()),
         fetch("/api/events").then((r) => r.json()),
         fetch("/api/event-entrance").then((r) => r.json()).catch(() => ({})),
         fetch("/api/floor-map").then((r) => r.json()).catch(() => ({})),
+        fetch("/api/seating-rules").then((r) => r.json()).catch(() => ({})),
+        fetch("/api/table-capacity").then((r) => r.json()).catch(() => ({})),
       ]);
       const seats: SeatRow[] = s.success ? s.data : [];
       const guests: Guest[] = g.success ? g.data : [];
@@ -121,6 +125,44 @@ export default function ReadyCheck() {
         items: twice,
         fix: "Point at the wrong table and click × next to their name.",
       });
+
+      // 4b. tables with more guests than a table holds
+      const stats = new Map<string, { name: string; seats: number; guests: number }>();
+      for (const st of seats) {
+        const t = stats.get(st.table.id) ?? { name: st.table.name, seats: 0, guests: 0 };
+        t.seats++;
+        if (st.isBooked && st.user) t.guests++;
+        stats.set(st.table.id, t);
+      }
+      const full = overTables([...stats.values()], cap?.success ? cap.capacity : null);
+      out.push({
+        title: "Tables too full",
+        ok: full.length === 0,
+        level: "error",
+        okText: "No table has more guests than it holds.",
+        problem: "These tables have more guests than a table holds:",
+        items: full.map((t) => `${t.name}: ${t.guests} guests (holds ${t.limit})`),
+        fix: "Move a guest: point at the table, click × next to their name, and seat them elsewhere. Menu → Seat everyone & seating rules sets how many a table holds.",
+      });
+
+      // 4c. keep together / keep apart rules
+      const rules: Rule[] = rl?.success ? rl.rules : [];
+      if (rules.length) {
+        const tableOfGuest = new Map<string, string>();
+        for (const st of seats) if (st.isBooked && st.user) tableOfGuest.set(st.user.id, st.table.id);
+        const tName = new Map(seats.map((st) => [st.table.id, st.table.name]));
+        const gName = new Map(guests.map((gu) => [gu.id, name(gu)]));
+        const broken = ruleProblems(rules, (id) => tableOfGuest.get(id) ?? null, (id) => gName.get(id) ?? "A removed guest", (id) => tName.get(id) ?? "?");
+        out.push({
+          title: "Keep together / keep apart",
+          ok: broken.length === 0,
+          level: "error",
+          okText: `All ${rules.length} seating rule${rules.length === 1 ? " is" : "s are"} followed.`,
+          problem: "The seating breaks these rules:",
+          items: broken.map((b) => b.text),
+          fix: "Move one of the guests to another table. Menu → Seat everyone & seating rules shows all rules.",
+        });
+      }
 
       // 5. guests without a table
       const unseated = guests.filter((gu) => !gu.seat?.length).map(name).sort();

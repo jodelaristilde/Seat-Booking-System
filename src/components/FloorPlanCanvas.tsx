@@ -41,6 +41,7 @@ import {
   findShapes,
   readTextInShapes,
   findNumberedTables,
+  seatsFromPlan,
   nameFromText,
   readingOrder,
   type DetectedShape,
@@ -343,6 +344,7 @@ export function FloorPlanCanvas({
   const [review, setReview] = useState<ReviewItem[] | null>(null);
   const [reviewBusy, setReviewBusy] = useState<string | null>(null);
   const [seatsPerTable, setSeatsPerTable] = useState(10);
+  const [seatsHint, setSeatsHint] = useState(""); // where the seats number came from
   // New venue = new tables: remove old tables that are not in the picture
   const [replaceOld, setReplaceOld] = useState(true);
   // Write the table names onto the floor plan picture itself
@@ -578,6 +580,22 @@ export function FloorPlanCanvas({
             }));
             setReview(items);
             changeTableSize(12);
+            // seats per table from the plan (a note like "Up to 13 guests", or the chairs drawn)
+            try {
+              setReviewBusy("Counting the seats...");
+              const hint = await seatsFromPlan(canvas, tablesFirst);
+              if (hint) {
+                setSeatsPerTable(hint.seats);
+                setSeatsHint(hint.from === "note" ? `from the plan: “${hint.note}”` : "counted from the chairs on the plan, please check");
+                fetch("/api/table-capacity", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ capacity: hint.seats }),
+                }).catch(() => undefined);
+              } else setSeatsHint("");
+            } catch {
+              setSeatsHint("");
+            }
             toast.success(`${tablesFirst.length} numbered tables found. Check them, then click Use these tables.`);
             return;
           }
@@ -1899,11 +1917,16 @@ export function FloorPlanCanvas({
               <input
                 type="number"
                 min={1}
-                max={20}
+                max={30}
                 value={seatsPerTable}
-                onChange={(e) => setSeatsPerTable(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                onChange={(e) => {
+                  setSeatsPerTable(Math.min(30, Math.max(1, Number(e.target.value) || 1)));
+                  setSeatsHint("");
+                }}
                 className="w-16 border rounded px-2 py-1"
+                data-testid="review-seats"
               />
+              {seatsHint && <span className="text-xs font-medium text-green-700">✓ {seatsHint}</span>}
             </label>
             <label className="flex items-center gap-2 text-sm text-zinc-600">
               <input

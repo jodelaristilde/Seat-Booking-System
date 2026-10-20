@@ -1032,3 +1032,87 @@ function numberLikeMarks(canvas: HTMLCanvasElement) {
   }
   return tokens.slice(0, 400);
 }
+
+// ---- How many seats a table has, from the plan ----
+// 1) A note on the plan: "Up to 13 guests", "10 guests per table", "Seats 8".
+// 2) Otherwise the chairs drawn around the tables: look in a ring just outside
+//    each table and count the separate marks; the usual count wins.
+export async function seatsFromPlan(
+  canvas: HTMLCanvasElement,
+  tables: DetectedShape[]
+): Promise<{ seats: number; from: "note" | "chairs"; note?: string } | null> {
+  const W = canvas.width;
+  const H = canvas.height;
+  // 1) the note
+  try {
+    const T = await loadTesseract();
+    const worker = await T.createWorker("eng");
+    try {
+      await worker.setParameters({ tessedit_pageseg_mode: "11" });
+      const k = Math.max(W, H) < 2600 ? 2 : 1;
+      const big = document.createElement("canvas");
+      big.width = W * k;
+      big.height = H * k;
+      big.getContext("2d")!.drawImage(canvas, 0, 0, big.width, big.height);
+      const text = (await worker.recognize(big)).data.text.replace(/\s+/g, " ");
+      const pats = [
+        /up\s*to\s*(\d{1,2})\s*(?:guests?|people|persons?|pax|seats?|chairs?)/i,
+        /(\d{1,2})\s*(?:guests?|people|persons?|pax|seats?|chairs?)\s*(?:per|a|each|at each)\s*table/i,
+        /tables?\s*(?:of|seat|seats|for|hold|holds)\s*(\d{1,2})\b/i,
+        /(\d{1,2})\s*(?:-|\s)?(?:top|seater)s?\b/i,
+      ];
+      for (const re of pats) {
+        const m = text.match(re);
+        const n = m ? Number(m[1]) : 0;
+        if (n >= 2 && n <= 30) return { seats: n, from: "note", note: m![0].trim() };
+      }
+    } finally {
+      await worker.terminate().catch(() => undefined);
+    }
+  } catch {
+    /* no reader: try the chairs */
+  }
+  // 2) the chairs
+  const round = tables.filter((t) => t.shape === "round");
+  if (round.length < 2) return null;
+  const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  const dark = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= W || y >= H) return false;
+    const o = (y * W + x) * 4;
+    return (d[o] * 299 + d[o + 1] * 587 + d[o + 2] * 114) / 1000 < 200;
+  };
+  const counts: number[] = [];
+  for (const t of round) {
+    const cx = (t.x / 100) * W;
+    const cy = (t.y / 100) * H;
+    const R = (((t.w / 100) * W + (t.h / 100) * H) / 4);
+    if (R < 6) continue;
+    // for each of 360 directions: is there a chair mark in the ring outside the table?
+    const bins = new Array(360).fill(false);
+    for (let a = 0; a < 360; a++) {
+      const rad = (a * Math.PI) / 180;
+      for (let r = R * 1.22; r <= R * 1.55; r += 0.7) {
+        if (dark(Math.round(cx + Math.cos(rad) * r), Math.round(cy + Math.sin(rad) * r))) {
+          bins[a] = true;
+          break;
+        }
+      }
+    }
+    // count separate runs of marks around the circle
+    let runs = 0;
+    for (let a = 0; a < 360; a++) if (bins[a] && !bins[(a + 359) % 360]) runs++;
+    if (bins.every(Boolean)) runs = 0;
+    // many plans draw each chair as two short side lines: more than 16 marks
+    // around one table is two marks per chair
+    if (runs > 16) runs = Math.round(runs / 2);
+    if (runs >= 2 && runs <= 16) counts.push(runs);
+  }
+  if (counts.length < 2) return null;
+  const freq = new Map<number, number>();
+  for (const c of counts) freq.set(c, (freq.get(c) ?? 0) + 1);
+  const [best, n] = [...freq.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+  // only when most tables agree (give or take one chair)
+  const near = counts.filter((c) => Math.abs(c - best) <= 1).length;
+  if (n < 2 || near < counts.length * 0.6) return null;
+  return { seats: best, from: "chairs" };
+}
