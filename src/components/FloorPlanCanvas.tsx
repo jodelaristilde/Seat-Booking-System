@@ -1225,11 +1225,19 @@ export function FloorPlanCanvas({
         // no closed table shape there (nightclub booths, sofas…): put the table
         // where you clicked, numbered from the number printed there (you confirm it)
         const num = await numberAtPoint(picture, x, y).catch(() => null);
-        const guess = num?.name.replace(/^Table /, "") ?? String(nextFreeNumber(tables.map(tableNameOf)));
-        const typed = window.prompt("Table number or name for the table you clicked:", guess);
-        if (!typed || !typed.trim()) return;
-        const name = nameFromText(typed.trim()) || typed.trim();
-        if (tables.some((t) => tableNameOf(t).trim().toLowerCase() === name.toLowerCase())) {
+        // the number was read: add the table right away; only if it could not be
+        // read (or that number is already used) ask for it
+        let name = num?.name ?? "";
+        const taken = (n: string) => tables.some((t) => tableNameOf(t).trim().toLowerCase() === n.toLowerCase());
+        if (!name || taken(name)) {
+          const typed = window.prompt(
+            name ? `${name} is already on the plan. Number or name for this table:` : "Couldn't read the number here. Number or name for this table:",
+            name ? "" : String(nextFreeNumber(tables.map(tableNameOf)))
+          );
+          if (!typed || !typed.trim()) return;
+          name = nameFromText(typed.trim()) || typed.trim();
+        }
+        if (taken(name)) {
           toast.message(`${name} is already on the plan.`);
           return;
         }
@@ -1246,7 +1254,9 @@ export function FloorPlanCanvas({
         setDrawnIds((prev) => [...prev, ...(json.createdIds ?? [])]);
         await onTablesChanged();
         await loadPositions();
-        toast.success(`${name} added, ${drawSeats} seats`);
+        toast.success(`${name} added, ${drawSeats} seats`, {
+          description: "Wrong number? Click Done drawing, point at the table and use ⚙️ to rename it.",
+        });
         return;
       }
       const taken = new Set(tables.map((t) => tableNameOf(t).trim().toLowerCase()));
