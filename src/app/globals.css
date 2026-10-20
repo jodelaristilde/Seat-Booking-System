@@ -88,28 +88,28 @@ html[data-brand="vip"] {
   --gold-soft: rgba(212, 175, 55, 0.14);
   --ink: #f5f1e6;
   --ink-2: #c9c3b4;
-  --ink-3: #8f8a7e;
-  --black: #0b0b0c;
-  --panel: #151517;
-  --panel-2: #1c1c1f;
-  --line: #2c2a26;
+  --ink-3: #a19b8e;
+  --black: #1e1e22;
+  --panel: #2a2a30;
+  --panel-2: #34343b;
+  --line: #45423c;
   /* shadcn components (dialogs, inputs, menus, cards) */
-  --background: 240 5% 5%;
+  --background: 240 6% 12%;
   --foreground: 43 33% 93%;
-  --card: 240 4% 9%;
+  --card: 240 7% 17%;
   --card-foreground: 43 33% 93%;
-  --popover: 240 4% 9%;
+  --popover: 240 7% 17%;
   --popover-foreground: 43 33% 93%;
   --primary: 46 65% 52%;
   --primary-foreground: 240 5% 5%;
-  --secondary: 240 4% 14%;
+  --secondary: 240 6% 22%;
   --secondary-foreground: 43 33% 93%;
-  --muted: 240 4% 14%;
+  --muted: 240 6% 22%;
   --muted-foreground: 40 8% 62%;
-  --accent: 240 4% 16%;
+  --accent: 240 6% 24%;
   --accent-foreground: 43 33% 93%;
-  --border: 40 7% 16%;
-  --input: 40 7% 20%;
+  --border: 40 6% 26%;
+  --input: 40 6% 30%;
   --ring: 46 65% 52%;
 }
 html[data-brand="vip"] body { background-color: var(--black); color: var(--ink); }
@@ -120,14 +120,14 @@ html[data-brand="vip"] .bg-white\/70,
 html[data-brand="vip"] .bg-white\/80,
 html[data-brand="vip"] .bg-white\/90 { background-color: var(--panel); }
 html[data-brand="vip"] .bg-zinc-50,
-html[data-brand="vip"] .bg-gray-50 { background-color: #111113; }
+html[data-brand="vip"] .bg-gray-50 { background-color: #242429; }
 html[data-brand="vip"] .bg-zinc-100,
 html[data-brand="vip"] .bg-gray-100 { background-color: var(--black); }
 html[data-brand="vip"] .bg-zinc-200 { background-color: var(--panel-2); }
 html[data-brand="vip"] .hover\:bg-zinc-50:hover,
 html[data-brand="vip"] .hover\:bg-zinc-100:hover,
 html[data-brand="vip"] .hover\:bg-gray-100:hover,
-html[data-brand="vip"] .hover\:bg-muted:hover { background-color: #232326; }
+html[data-brand="vip"] .hover\:bg-muted:hover { background-color: #3a3a42; }
 html[data-brand="vip"] .bg-zinc-900 { background-color: var(--gold); color: var(--black); }
 
 /* text */
@@ -237,14 +237,14 @@ html[data-brand="vip"] .bg-\[\#134e31\] { background-color: var(--gold); color: 
 /* inputs */
 html[data-brand="vip"] input,
 html[data-brand="vip"] select,
-html[data-brand="vip"] textarea { background-color: #101012; color: var(--ink); border-color: #34312b; }
+html[data-brand="vip"] textarea { background-color: #222227; color: var(--ink); border-color: #55514a; }
 html[data-brand="vip"] input::placeholder { color: var(--ink-3); }
 
 /* guests' phones (seat finder, RSVP) */
 html[data-brand="vip"] .bg-\[\#fafafa\] { background-color: var(--black); }
-html[data-brand="vip"] .from-lime-50 { --tw-gradient-from: var(--panel) var(--tw-gradient-from-position); --tw-gradient-to: rgb(21 21 23 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-html[data-brand="vip"] .via-white { --tw-gradient-to: rgb(21 21 23 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), #18181b var(--tw-gradient-via-position), var(--tw-gradient-to); }
-html[data-brand="vip"] .to-emerald-50 { --tw-gradient-to: #1d1a12 var(--tw-gradient-to-position); }
+html[data-brand="vip"] .from-lime-50 { --tw-gradient-from: var(--panel) var(--tw-gradient-from-position); --tw-gradient-to: rgb(42 42 48 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html[data-brand="vip"] .via-white { --tw-gradient-to: rgb(42 42 48 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), #2c2c32 var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html[data-brand="vip"] .to-emerald-50 { --tw-gradient-to: #34301f var(--tw-gradient-to-position); }
 html[data-brand="vip"] .from-lime-400 { --tw-gradient-from: #8a6d1d var(--tw-gradient-from-position); --tw-gradient-to: rgb(138 109 29 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 html[data-brand="vip"] .via-emerald-500 { --tw-gradient-to: rgb(212 175 55 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--gold) var(--tw-gradient-via-position), var(--tw-gradient-to); }
 html[data-brand="vip"] .to-lime-400 { --tw-gradient-to: #8a6d1d var(--tw-gradient-to-position); }
