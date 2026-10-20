@@ -110,7 +110,8 @@ export function SetupSteps() {
     },
     {
       title: "Entrance",
-      done: c.entrances > 0 || !!p.flags.noEntrance,
+      // only once there are tables (a door marked earlier doesn't count on its own)
+      done: c.tables > 0 && (c.entrances > 0 || !!p.flags.noEntrance),
       text: "Click the door where guests come in. Guests' phones draw a green line from it to their table.",
     },
     {
@@ -120,17 +121,18 @@ export function SetupSteps() {
     },
     {
       title: "Seat guests",
-      done: c.guests > 0 && c.unseated === 0,
+      done: c.tables > 0 && c.guests > 0 && c.unseated === 0,
       text: c.guests
         ? `${c.unseated} guest${c.unseated === 1 ? "" : "s"} still without a table. Seat everyone in one click (families and parties stay together), or by hand.`
         : "Seat your guests once the list is in.",
     },
     {
       title: "Check & share",
-      done: !!p.flags.checked,
+      done: false, // set below: only when every step before it is done too
       text: "Run the Ready check, print the table signs and place cards, and share the event's QR code (click the event name at the top).",
     },
   ];
+  steps[6].done = !!p.flags.checked && steps.slice(0, 6).every((s) => s.done);
   const firstOpen = steps.findIndex((s) => !s.done);
   const allDone = firstOpen === -1;
   const cur = picked ?? (allDone ? steps.length - 1 : firstOpen);
@@ -278,9 +280,13 @@ export function SetupSteps() {
                 Table signs &amp; place cards
               </Link>
               {!step.done ? (
-                <button onClick={() => flag({ checked: true })} className={main}>
-                  All set: mark done
-                </button>
+                steps.slice(0, 6).every((s) => s.done) ? (
+                  <button onClick={() => flag({ checked: true })} className={main}>
+                    All set: mark done
+                  </button>
+                ) : (
+                  <span className="text-sm text-zinc-500">Finish the steps before this one first.</span>
+                )
               ) : (
                 <button onClick={hide} className={main}>
                   Hide the setup steps
