@@ -83,31 +83,31 @@ body {
 @media screen {
 html[data-brand="vip"] {
   color-scheme: dark;
-  --gold: #d4af37;
+  --gold: #e8c24a;
   --gold-hover: #e6c45a;
   --gold-soft: rgba(212, 175, 55, 0.14);
-  --ink: #f5f1e6;
-  --ink-2: #c9c3b4;
-  --ink-3: #a19b8e;
+  --ink: #ffffff;
+  --ink-2: #ece7dc;
+  --ink-3: #cbc5b8;
   --black: #1e1e22;
   --panel: #2a2a30;
   --panel-2: #34343b;
   --line: #45423c;
   /* shadcn components (dialogs, inputs, menus, cards) */
   --background: 240 6% 12%;
-  --foreground: 43 33% 93%;
+  --foreground: 0 0% 100%;
   --card: 240 7% 17%;
-  --card-foreground: 43 33% 93%;
+  --card-foreground: 0 0% 100%;
   --popover: 240 7% 17%;
-  --popover-foreground: 43 33% 93%;
+  --popover-foreground: 0 0% 100%;
   --primary: 46 65% 52%;
   --primary-foreground: 240 5% 5%;
   --secondary: 240 6% 22%;
-  --secondary-foreground: 43 33% 93%;
+  --secondary-foreground: 0 0% 100%;
   --muted: 240 6% 22%;
-  --muted-foreground: 40 8% 62%;
+  --muted-foreground: 40 12% 78%;
   --accent: 240 6% 24%;
-  --accent-foreground: 43 33% 93%;
+  --accent-foreground: 0 0% 100%;
   --border: 40 6% 26%;
   --input: 40 6% 30%;
   --ring: 46 65% 52%;

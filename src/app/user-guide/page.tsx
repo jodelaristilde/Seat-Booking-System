@@ -561,7 +561,7 @@ export default function UserGuide() {
               <li>• <b>At the door:</b> press <b>+</b> on the table for each person who comes in (3 / 8 in).</li>
               <li>• <b>Bottles:</b> servers tap <b>Bottles</b>, pick what the table ordered and <b>Send to the bar</b>. The total counts toward the minimum. Servers can pick <b>Show: their own tables</b> at the top.</li>
               <li>• <b>Bar screen</b> (a tablet or TV behind the bar): tables calling, bottles to bring out, and celebrations with a countdown. Turn <b>Sound on</b>.</li>
-              <li>• <b>Guests' phones:</b> after finding their table, VIP guests can tap <b>Call my server</b> or <b>Order another bottle</b>; it pops up on the bar screen.</li>
+              <li>• <b>Guests&apos; phones:</b> after finding their table, VIP guests can tap <b>Call my server</b> or <b>Order another bottle</b>; it pops up on the bar screen.</li>
               <li>• Check-in staff logins can count people in, send bottles and use the bar screen, but can&apos;t change bookings or prices.</li>
             </ul>
           </Card>
