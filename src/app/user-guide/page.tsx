@@ -186,9 +186,11 @@ export default function UserGuide() {
             <Steps
               items={[
                 "Click <b>Draw tables</b>.",
-                { text: "<b>Click inside a table</b> on the picture. Its shape, size and number are copied and the table is added right there.", tip: "Works with round, square and rectangle tables, standing up or lying down." },
+                { text: "Fastest: click <b>Find all tables + numbers</b>. Every table in the picture is found and gets the number written on it. Check the names, fix any that are wrong, then click <b>Use these tables</b>.", tip: "Works best when the numbers are printed clearly inside the tables." },
+                { text: "Or <b>click inside a table</b> on the picture. Its shape, size and number are copied and the table is added right there.", tip: "Works with round, square and rectangle tables, standing up or lying down." },
                 "Keep clicking each table. Made a mistake? Click <b>Undo last</b>.",
                 "Click <b>Done drawing</b> when you are finished.",
+                "Next, the app asks for the <b>entrance</b>: click the door on the plan where guests come in (required).",
               ]}
             />
             <div className="mt-4">

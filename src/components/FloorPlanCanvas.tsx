@@ -31,6 +31,7 @@ import {
   Check,
   Search,
   DoorOpen,
+  ScanSearch,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,9 @@ interface ReviewItem {
 const SIZE_KEY = "floorPlanTableSize";
 // tables count when "Later" was clicked on the entrance pop-up (survives the floor plan being rebuilt)
 let entranceLater: number | null = null;
+// set when tables were just drawn / read from the picture: ask about the entrance
+// even if one is already set ("is it still right?")
+let entranceCheckAfterTables = false;
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
 const FS_ARRIVED_KEY = "floorPlanFullScreenArrived";
@@ -424,13 +428,19 @@ export function FloorPlanCanvas({
   // or tables are drawn/moved again.
   const [askTick, setAskTick] = useState(0);
   const askEntrance =
-    entrancesLoaded && !roomOnly && !staff && !working && tables.length > 0 && entrances.length === 0 &&
-    entranceLater !== tables.length;
+    entrancesLoaded && !roomOnly && !staff && !working && tables.length > 0 &&
+    ((entrances.length === 0 && entranceLater !== tables.length) || entranceCheckAfterTables);
   const setAskEntrance = (open: boolean) => {
     if (!open) {
       entranceLater = tables.length;
+      entranceCheckAfterTables = false;
       setAskTick((t) => t + 1);
     }
+  };
+  const askAboutEntranceNow = () => {
+    entranceLater = null;
+    entranceCheckAfterTables = true;
+    setAskTick((t) => t + 1);
   };
   void askTick;
   const wasWorking = useRef(false);
@@ -520,8 +530,7 @@ export function FloorPlanCanvas({
   }, [loadPicture]);
 
   // ---------- Read tables from the picture ----------
-  // Reading tables from the picture is switched off (not needed); kept for later
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Find every table in the picture at once and copy the numbers written on it
   const startReview = useCallback(
     async (src?: string | null) => {
       const pic = src ?? picture;
@@ -794,6 +803,7 @@ export function FloorPlanCanvas({
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
       setReview(null);
+      askAboutEntranceNow();
       skipNextStamp.current = writeNames;
       await onTablesChanged();
       await loadPositions();
@@ -1230,7 +1240,7 @@ export function FloorPlanCanvas({
     }
     setDrawnIds([]);
     // Required next step: where guests come in (their phone draws the way from there)
-    entranceLater = null; // ask for the entrance again now that drawing is done
+    askAboutEntranceNow();
   };
 
   // ---------- dragging (tables and review shapes) ----------
@@ -1780,6 +1790,20 @@ export function FloorPlanCanvas({
               <Save className="w-4 h-4 mr-2" /> Done drawing
             </Button>
             <Button
+              onClick={() => {
+                setDrawing(false);
+                setDrawBox(null);
+                startReview();
+              }}
+              size="sm"
+              variant="outline"
+              disabled={drawBusy || saving || !picture}
+              title={picture ? "Find every table in the picture and copy the numbers written on them" : "Upload a floor plan picture first"}
+              className="border-green-600 text-green-800"
+            >
+              <ScanSearch className="w-4 h-4 mr-2" /> Find all tables + numbers
+            </Button>
+            <Button
               onClick={undoLastDrawn}
               size="sm"
               variant="outline"
@@ -2062,16 +2086,27 @@ export function FloorPlanCanvas({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <DoorOpen className="h-5 w-5 text-green-700" /> Next step (required): the entrance
+              <DoorOpen className="h-5 w-5 text-green-700" />{" "}
+              {entrances.length ? "Check the entrance" : "Next step (required): the entrance"}
             </DialogTitle>
             <DialogDescription>
-              Your tables are set. Now click the <b>door</b> on the floor plan where guests come in. Guests&apos; phones
-              draw a green line from that door to their table.
+              {entrances.length ? (
+                <>
+                  Your tables are set. The entrance is already marked ({entrances.length} door
+                  {entrances.length === 1 ? "" : "s"}). Is it still the right door? Guests&apos; phones draw a green line
+                  from it to their table.
+                </>
+              ) : (
+                <>
+                  Your tables are set. Now click the <b>door</b> on the floor plan where guests come in. Guests&apos;
+                  phones draw a green line from that door to their table.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setAskEntrance(false)}>
-              Later
+              {entrances.length ? "Yes, keep it" : "Later"}
             </Button>
             <Button
               className="bg-green-700 hover:bg-green-800"
@@ -2081,7 +2116,7 @@ export function FloorPlanCanvas({
                 setTimeout(() => roomColRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
             >
-              Set entrance now
+              {entrances.length ? "Change entrance" : "Set entrance now"}
             </Button>
           </DialogFooter>
         </DialogContent>
