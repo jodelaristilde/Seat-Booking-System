@@ -240,6 +240,44 @@ html[data-brand="vip"] select,
 html[data-brand="vip"] textarea { background-color: #101012; color: var(--ink); border-color: #34312b; }
 html[data-brand="vip"] input::placeholder { color: var(--ink-3); }
 
+/* guests' phones (seat finder, RSVP) */
+html[data-brand="vip"] .bg-\[\#fafafa\] { background-color: var(--black); }
+html[data-brand="vip"] .from-lime-50 { --tw-gradient-from: var(--panel) var(--tw-gradient-from-position); --tw-gradient-to: rgb(21 21 23 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html[data-brand="vip"] .via-white { --tw-gradient-to: rgb(21 21 23 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), #18181b var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html[data-brand="vip"] .to-emerald-50 { --tw-gradient-to: #1d1a12 var(--tw-gradient-to-position); }
+html[data-brand="vip"] .from-lime-400 { --tw-gradient-from: #8a6d1d var(--tw-gradient-from-position); --tw-gradient-to: rgb(138 109 29 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html[data-brand="vip"] .via-emerald-500 { --tw-gradient-to: rgb(212 175 55 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--gold) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+html[data-brand="vip"] .to-lime-400 { --tw-gradient-to: #8a6d1d var(--tw-gradient-to-position); }
+html[data-brand="vip"] .guest-page .text-emerald-950 { color: var(--ink); }
+html[data-brand="vip"] .guest-page .text-emerald-900 { color: var(--ink-2); }
+html[data-brand="vip"] .guest-page .text-emerald-700,
+html[data-brand="vip"] .guest-page .text-emerald-600 { color: var(--gold); }
+/* on guest pages green is the brand colour (buttons), so it turns gold */
+html[data-brand="vip"] .guest-page .bg-green-600,
+html[data-brand="vip"] .guest-page .bg-green-700,
+html[data-brand="vip"] .guest-page .bg-emerald-600,
+html[data-brand="vip"] .guest-page .bg-emerald-700 { background-color: var(--gold); color: var(--black); }
+html[data-brand="vip"] .guest-page .hover\:bg-green-700:hover,
+html[data-brand="vip"] .guest-page .hover\:bg-green-800:hover,
+html[data-brand="vip"] .guest-page .bg-green-800,
+html[data-brand="vip"] .guest-page .bg-emerald-800 { background-color: var(--gold-hover); color: var(--black); }
+html[data-brand="vip"] .guest-page .text-green-600,
+html[data-brand="vip"] .guest-page .text-green-700,
+html[data-brand="vip"] .guest-page .text-green-800 { color: var(--gold); }
+html[data-brand="vip"] .guest-page .bg-green-50,
+html[data-brand="vip"] .guest-page .bg-green-100 { background-color: var(--gold-soft); }
+html[data-brand="vip"] .guest-page .border-green-500,
+html[data-brand="vip"] .guest-page .border-green-600,
+html[data-brand="vip"] .guest-page .border-green-700,
+html[data-brand="vip"] .guest-page .border-emerald-500,
+html[data-brand="vip"] .guest-page .border-emerald-700 { border-color: var(--gold); }
+html[data-brand="vip"] .guest-page .border-green-100,
+html[data-brand="vip"] .guest-page .border-green-200 { border-color: rgba(212, 175, 55, 0.35); }
+
+html[data-brand="vip"] .shadow-lime-500\/10,
+html[data-brand="vip"] .shadow-lime-500\/20,
+html[data-brand="vip"] .shadow-lime-500\/25 { --tw-shadow-color: rgb(212 175 55 / 0.12); --tw-shadow: var(--tw-shadow-colored); }
+
 /* a thin gold line under the top bar */
 html[data-brand="vip"] nav { border-bottom: 2px solid var(--gold); }
 } /* end: VIP look on screen only (printing stays black on white) */

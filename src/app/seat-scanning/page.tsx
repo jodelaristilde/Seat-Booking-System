@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { applyBrand } from "@/lib/useBrand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -179,11 +180,16 @@ export default function SeatScanning() {
     // remembers the event on this phone (for "more guests" and the floor map)
     fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
-      .then((j) => j.success && setEventName(j.event.name))
+      .then((j) => {
+        if (!j.success) return;
+        setEventName(j.event.name);
+        applyBrand(j.event.brand); // nightclub VIP events: dark, black and gold
+      })
       .catch(() => undefined);
   };
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("event");
+    applyBrand(null); // the normal look until this event's look is known
     if (!id) {
       setIsLoading(false);
       return;
@@ -192,7 +198,10 @@ export default function SeatScanning() {
     fetch(`/api/event-info?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
       .then((j) => {
-        if (j.success) setEventName(j.event.name);
+        if (j.success) {
+          setEventName(j.event.name);
+          applyBrand(j.event.brand);
+        }
       })
       .catch(() => undefined)
       .finally(() => setIsLoading(false));
@@ -441,7 +450,7 @@ export default function SeatScanning() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-zinc-950">
+    <div className="guest-page min-h-screen bg-[#fafafa] dark:bg-zinc-950">
       {/* Main Content */}
       {/* centred top to bottom in the part of the screen you can actually see
           (100dvh leaves out the phone browser's own bars) */}
@@ -458,7 +467,7 @@ export default function SeatScanning() {
               href="/"
               className="flex justify-center items-center space-x-2"
             >
-              <BrandLogo width={150} style={{ height: "auto", maxHeight: 84 }} guest />
+              <BrandLogo width={150} style={{ height: "auto", maxHeight: 84 }} />
             </Link>
             <div className="flex gap-2">
               <Button

@@ -2,6 +2,7 @@
 
 // A guest's own RSVP page (from their personal link): coming yes / no,
 // meal and allergy. /rsvp?t=<personal code>   (no login)
+import { applyBrand } from "@/lib/useBrand";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
@@ -29,6 +30,7 @@ function RsvpForm() {
       .then((j) => {
         if (!j.success) return setErr(j.message || "This link is not valid.");
         setData(j);
+        applyBrand(j.event?.brand); // nightclub VIP events: dark, black and gold
         setComing(j.guest.coming);
         setMeal(j.guest.meal);
         setAllergy(j.guest.allergy);
@@ -168,7 +170,7 @@ function RsvpForm() {
 
 export default function RsvpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-[#fafafa] px-3 py-4">
+    <div className="guest-page flex min-h-[100dvh] items-center justify-center bg-[#fafafa] px-3 py-4">
       <Suspense fallback={<Loader2 className="h-10 w-10 animate-spin text-emerald-600" />}>
         <RsvpForm />
       </Suspense>

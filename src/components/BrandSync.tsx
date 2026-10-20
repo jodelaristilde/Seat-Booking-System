@@ -1,7 +1,7 @@
 "use client";
 
 // On the organizer's pages: use the look of the open event.
-// Guest pages (phone seat finder, RSVP) always keep the normal Seating4U look.
+// Guest pages (phone seat finder, RSVP) set the look from their own event.
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -11,8 +11,9 @@ export function BrandSync() {
   const path = usePathname();
   const { status } = useSession();
   useEffect(() => {
-    // guest pages (phone seat finder, RSVP) always keep the normal look
-    if (path?.startsWith("/seat-scanning") || path?.startsWith("/rsvp") || path?.startsWith("/login")) {
+    // guest pages (phone seat finder, RSVP) set the look from their own event
+    if (path?.startsWith("/seat-scanning") || path?.startsWith("/rsvp")) return;
+    if (path?.startsWith("/login")) {
       applyBrand("seating4u");
       return;
     }
