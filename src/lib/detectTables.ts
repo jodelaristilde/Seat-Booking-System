@@ -23,7 +23,7 @@ export interface DetectedShape {
   text: string; // text read inside (may be empty)
 }
 
-const MAX_SIDE = 1200;
+const MAX_SIDE = 2000; // big venue plans have small tables: keep enough detail
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -193,8 +193,9 @@ export async function findShapes(src: string): Promise<{
 
 // ---- Reading text inside the shapes (optional, loaded only when needed) ----
 
+type OcrWord = { text: string; confidence: number; bbox: { x0: number; y0: number; x1: number; y1: number } };
 type TesseractWorker = {
-  recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string; confidence?: number } }>;
+  recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string; confidence?: number; words?: OcrWord[] } }>;
   setParameters: (p: Record<string, string>) => Promise<unknown>;
   terminate: () => Promise<unknown>;
 };
@@ -775,4 +776,259 @@ export function pictureSignature(src: string): string {
   const step = Math.max(1, Math.floor(src.length / 4000));
   for (let i = 0; i < src.length; i += step) h = (h * 31 + src.charCodeAt(i)) | 0;
   return `${src.length}-${h >>> 0}`;
+}
+
+
+// ---- Find tables by their printed numbers ----
+// Venue plans often draw small round tables with chairs all around, so the
+// table outline is broken up and hard to see. The number in the middle is easy
+// to read: read every number on the plan, and put a table on each one.
+// Numbers that are part of a sentence ("350 seats", "72 inches") are skipped.
+export async function findNumberedTables(
+  canvas: HTMLCanvasElement,
+  shapes: DetectedShape[],
+  onProgress?: (msg: string) => void
+): Promise<DetectedShape[] | null> {
+  const W = canvas.width;
+  const H = canvas.height;
+  onProgress?.("Looking for table numbers on the plan...");
+  const tokens = numberLikeMarks(canvas);
+  if (tokens.length < 2) return null;
+  const T = await loadTesseract();
+  const worker = await T.createWorker("eng");
+  const nums: {
+    t: string; confidence: number;
+    bbox: { x0: number; y0: number; x1: number; y1: number; region: { rx0: number; ry0: number; rx1: number; ry1: number } };
+  }[] = [];
+  try {
+    for (let i = 0; i < tokens.length; i++) {
+      if (i % 10 === 0) onProgress?.(`Reading table numbers... ${i} of ${tokens.length}`);
+      const tk = tokens[i];
+      const h = tk.y1 - tk.y0;
+      const m = Math.round(h * 0.35);
+      const sx = Math.max(0, tk.x0 - m), sy = Math.max(0, tk.y0 - m);
+      const sw = Math.min(W - sx, tk.x1 - tk.x0 + 2 * m), sh = Math.min(H - sy, h + 2 * m);
+      const k = Math.min(6, Math.max(1, 48 / h));
+      const crop = document.createElement("canvas");
+      crop.width = Math.round(sw * k) + 24;
+      crop.height = Math.round(sh * k) + 24;
+      const cx = crop.getContext("2d")!;
+      cx.fillStyle = "#fff";
+      cx.fillRect(0, 0, crop.width, crop.height);
+      cx.drawImage(canvas, sx, sy, sw, sh, 12, 12, sw * k, sh * k);
+      // only the marks of this number (chairs or lines nearby are rubbed out)
+      const keep = tk.pixels;
+      const img = cx.getImageData(0, 0, crop.width, crop.height);
+      for (let y = 0; y < crop.height; y++)
+        for (let x = 0; x < crop.width; x++) {
+          const ox = Math.floor(sx + (x - 12) / k), oy = Math.floor(sy + (y - 12) / k);
+          const o = (y * crop.width + x) * 4;
+          const on = ox >= 0 && oy >= 0 && ox < W && oy < H && keep.has(oy * W + ox);
+          const v = on ? 0 : 255;
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+        }
+      cx.putImageData(img, 0, 0);
+      let best = { t: "", c: 0 };
+      for (const params of [
+        { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" },
+        { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" },
+      ]) {
+        try {
+          await worker.setParameters(params);
+          const r = await worker.recognize(crop);
+          const t = r.data.text.replace(/\s+/g, "");
+          const c = r.data.confidence ?? 0;
+          // letters (a word) without the digits-only filter = not a table number
+          if (params.tessedit_char_whitelist === "" && /[A-Za-z]{2,}/.test(t) && c > 60) { best = { t: "", c: -1 }; break; }
+          if (/^\d{1,3}$/.test(t) && c > best.c) best = { t, c };
+          if (best.c >= 75) break;
+        } catch {
+          /* skip */
+        }
+      }
+      if (best.t && Number(best.t) > 0 && best.c >= 55) nums.push({ t: best.t, confidence: best.c, bbox: tk });
+    }
+  } finally {
+    await worker.terminate().catch(() => undefined);
+  }
+  if (nums.length < 2) return null;
+
+  // same number twice: keep the surer reading
+  const byNum = new Map<number, (typeof nums)[number]>();
+  for (const n of nums) {
+    const v = Number(n.t.replace("#", ""));
+    const prev = byNum.get(v);
+    if (!prev || n.confidence > prev.confidence) byNum.set(v, n);
+  }
+  // numbers should be about the same size: drop odd ones (a title, a footnote)
+  const heights = [...byNum.values()].map((n) => n.bbox.y1 - n.bbox.y0).sort((a, b) => a - b);
+  const medH = heights[Math.floor(heights.length / 2)];
+  const list = [...byNum.entries()].filter(([, n]) => {
+    const h = n.bbox.y1 - n.bbox.y0;
+    return h > medH * 0.5 && h < medH * 2;
+  });
+  if (list.length < 2) return null;
+
+  // each number's closed-in area is its table (position and size)
+  const tables: DetectedShape[] = list.map(([v, n]) => {
+    const r = n.bbox.region;
+    const bw = r.rx1 - r.rx0 + 1, bh = r.ry1 - r.ry0 + 1;
+    const aspect = bw / bh;
+    return {
+      key: `n${v}`,
+      x: ((r.rx0 + bw / 2) / W) * 100,
+      y: ((r.ry0 + bh / 2) / H) * 100,
+      w: (bw / W) * 100,
+      h: (bh / H) * 100,
+      shape: aspect > 1.5 || aspect < 0.67 ? "rectangle" : "round",
+      likelyTable: true,
+      text: String(v),
+    } as DetectedShape;
+  });
+  const used = new Set<string>();
+  // other shapes stay available (grey) in case a table has no number
+  // (likelyTable kept: the caller reads those one by one, e.g. white numbers on dark tables)
+  const rest = shapes
+    .filter((sh) => !used.has(sh.key))
+    .filter((sh) => !tables.some((t) => Math.abs(t.x - sh.x) < t.w / 2 && Math.abs(t.y - sh.y) < t.h / 2))
+    .map((sh) => ({ ...sh, text: "" }));
+  return [...tables, ...rest];
+}
+
+
+// Small marks shaped like digits, grouped side by side into 1-3 digit numbers.
+// Marks in a row of 4 or more are words or sentences ("350 seats"), so skipped.
+function numberLikeMarks(canvas: HTMLCanvasElement) {
+  const W = canvas.width;
+  const H = canvas.height;
+  const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, W, H).data;
+  const ink = new Uint8Array(W * H);
+  // ink = dark writing; line = any drawn line, even thin grey ones (they close a table)
+  const line = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    const l = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+    ink[i] = l < 150 ? 1 : 0;
+    line[i] = l < 200 ? 1 : 0;
+  }
+  // thicken lines by 1 pixel so small gaps in a table outline (where chairs are
+  // drawn) close up
+  {
+    const thin = line.slice();
+    for (let y = 1; y < H - 1; y++)
+      for (let x = 1; x < W - 1; x++) {
+        const i = y * W + x;
+        if (thin[i]) continue;
+        if (thin[i - 1] || thin[i + 1] || thin[i - W] || thin[i + W] || thin[i - W - 1] || thin[i - W + 1] || thin[i + W - 1] || thin[i + W + 1]) line[i] = 1;
+      }
+  }
+  const lab = new Int32Array(W * H).fill(-1);
+  type Comp = { x0: number; y0: number; x1: number; y1: number; n: number; px: number[] };
+  const comps: Comp[] = [];
+  const st = new Int32Array(W * H);
+  for (let s0 = 0; s0 < W * H; s0++) {
+    if (!ink[s0] || lab[s0] !== -1) continue;
+    const c: Comp = { x0: W, y0: H, x1: 0, y1: 0, n: 0, px: [] };
+    let top = 0;
+    st[top++] = s0;
+    lab[s0] = comps.length;
+    let big = false;
+    while (top) {
+      const p = st[--top];
+      const x = p % W, y = (p - x) / W;
+      c.n++;
+      if (c.n < 6000) c.px.push(p); else big = true;
+      if (x < c.x0) c.x0 = x; if (x > c.x1) c.x1 = x;
+      if (y < c.y0) c.y0 = y; if (y > c.y1) c.y1 = y;
+      for (const q of [p - 1, p + 1, p - W, p + W]) {
+        if (q < 0 || q >= W * H) continue;
+        if ((q === p - 1 && x === 0) || (q === p + 1 && x === W - 1)) continue;
+        if (ink[q] && lab[q] === -1) { lab[q] = comps.length; st[top++] = q; }
+      }
+    }
+    comps.push(big ? { ...c, px: [] } : c);
+  }
+  // digit-sized marks: not tiny dots, not lines, not big shapes
+  const minH = Math.max(6, H * 0.006), maxH = H * 0.06;
+  const glyphs = comps.filter((c) => {
+    const w = c.x1 - c.x0 + 1, h = c.y1 - c.y0 + 1;
+    const fill = c.n / (w * h);
+    return h >= minH && h <= maxH && w <= h * 1.1 && w >= h * 0.12 && fill > 0.12 && fill < 0.85 && c.px.length;
+  });
+  glyphs.sort((a, b) => a.x0 - b.x0);
+  const used = new Set<Comp>();
+  const tokens: {
+    x0: number; y0: number; x1: number; y1: number; pixels: Set<number>;
+    region: { rx0: number; ry0: number; rx1: number; ry1: number };
+  }[] = [];
+  for (const g of glyphs) {
+    if (used.has(g)) continue;
+    const row = [g];
+    used.add(g);
+    let last = g;
+    for (;;) {
+      const h = last.y1 - last.y0 + 1;
+      const next = glyphs.find(
+        (o) =>
+          !used.has(o) &&
+          o.x0 > last.x0 &&
+          o.x0 - last.x1 < h * 0.7 &&
+          Math.abs(o.y1 - o.y0 + 1 - h) < h * 0.3 &&
+          Math.abs((o.y0 + o.y1) / 2 - (last.y0 + last.y1) / 2) < h * 0.3
+      );
+      if (!next) break;
+      row.push(next);
+      used.add(next);
+      last = next;
+    }
+    if (row.length > 3) continue;
+    // A table number sits in the middle of the table: fill outward from it
+    // until lines stop the fill. It must be closed in, small, and centred on the
+    // number (a footnote or a bit of a chair drawing is not).
+    const h0 = g.y1 - g.y0 + 1;
+    const tx0 = row[0].x0, tx1 = row[row.length - 1].x1;
+    const ty0 = Math.min(...row.map((r) => r.y0)), ty1 = Math.max(...row.map((r) => r.y1));
+    const inRow = new Set(row.flatMap((r) => r.px));
+    const limit = Math.round(h0 * 20);
+    const lim2 = limit * limit;
+    const seen = new Set<number>();
+    const q: number[] = [];
+    const cx0 = Math.round((tx0 + tx1) / 2), cy0 = Math.round((ty0 + ty1) / 2);
+    for (let y = ty0 - 4; y <= ty1 + 4; y++)
+      for (let x = tx0 - 4; x <= tx1 + 4; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const p0 = y * W + x;
+        if (!line[p0] || inRow.has(p0)) { seen.add(p0); q.push(p0); }
+      }
+    let leak = false;
+    let rx0 = W, ry0 = H, rx1 = 0, ry1 = 0;
+    while (q.length) {
+      const p0 = q.pop()!;
+      const x = p0 % W, y = (p0 - x) / W;
+      if (x < rx0) rx0 = x; if (x > rx1) rx1 = x;
+      if (y < ry0) ry0 = y; if (y > ry1) ry1 = y;
+      if (seen.size > lim2 || rx1 - rx0 > limit || ry1 - ry0 > limit) { leak = true; break; }
+      for (const n of [p0 - 1, p0 + 1, p0 - W, p0 + W]) {
+        if (n < 0 || n >= W * H || seen.has(n)) continue;
+        if ((n === p0 - 1 && x === 0) || (n === p0 + 1 && x === W - 1)) continue;
+        if (!line[n] || inRow.has(n)) { seen.add(n); q.push(n); }
+      }
+    }
+    if (leak) continue;
+    const rw = rx1 - rx0 + 1, rh = ry1 - ry0 + 1;
+    // roomy enough for the number, roughly as wide as tall, number in the middle
+    if (rw < (tx1 - tx0) * 1.3 || rh < h0 * 1.6) continue;
+    if (rw / rh > 2.2 || rh / rw > 2.2) continue;
+    if (Math.abs((rx0 + rx1) / 2 - cx0) > rw * 0.22 || Math.abs((ry0 + ry1) / 2 - cy0) > rh * 0.22) continue;
+    const region = { rx0, ry0, rx1, ry1 };
+    const t = {
+      x0: Math.min(...row.map((r) => r.x0)),
+      y0: Math.min(...row.map((r) => r.y0)),
+      x1: Math.max(...row.map((r) => r.x1)),
+      y1: Math.max(...row.map((r) => r.y1)),
+      pixels: new Set(row.flatMap((r) => r.px)),
+      region,
+    };
+    tokens.push(t);
+  }
+  return tokens.slice(0, 400);
 }

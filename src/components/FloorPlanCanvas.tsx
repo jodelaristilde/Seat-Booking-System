@@ -40,6 +40,7 @@ import type { TableData } from "@/types/booking";
 import {
   findShapes,
   readTextInShapes,
+  findNumberedTables,
   nameFromText,
   readingOrder,
   type DetectedShape,
@@ -543,6 +544,46 @@ export function FloorPlanCanvas({
       setReview([]);
       try {
         const { shapes, canvas } = await findShapes(pic);
+        // First choice: put a table on every table number printed on the plan
+        try {
+          const numbered = await findNumberedTables(canvas, shapes, (m) => setReviewBusy(m));
+          if (numbered) {
+            const found = numbered.filter((s) => s.text);
+            const others = numbered.filter((s) => !s.text);
+            // tables the number scan missed (e.g. white numbers on a dark table): read them one by one
+            const maybe = others.filter((s) => s.likelyTable);
+            let extra: DetectedShape[] = [];
+            if (maybe.length) {
+              setReviewBusy("Reading the other tables...");
+              const taken = new Set(found.map((f) => f.text));
+              extra = (await readTextInShapes(canvas, maybe).catch(() => maybe)).filter((s) => {
+                const n = nameFromText(s.text);
+                return n && !taken.has(n.replace(/^Table /, ""));
+              });
+            }
+            const extraKeys = new Set(extra.map((e) => e.key));
+            const tablesFirst = readingOrder([...found, ...extra]);
+            const items: ReviewItem[] = [
+              ...tablesFirst,
+              ...others.filter((s) => !extraKeys.has(s.key)),
+            ].map((s) => ({
+              key: s.key,
+              x: s.x,
+              y: s.y,
+              w: s.w,
+              h: s.h,
+              shape: s.shape,
+              name: s.text ? nameFromText(s.text) : "",
+              picked: !!s.text,
+            }));
+            setReview(items);
+            changeTableSize(12);
+            toast.success(`${tablesFirst.length} numbered tables found. Check them, then click Use these tables.`);
+            return;
+          }
+        } catch (e) {
+          console.warn("Number reading skipped:", e);
+        }
         const ordered = readingOrder(shapes);
         const toItems = (list: DetectedShape[]) => {
           const used: string[] = [];
