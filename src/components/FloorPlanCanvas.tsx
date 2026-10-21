@@ -1662,7 +1662,7 @@ export function FloorPlanCanvas({
   // The Arrived list. On smaller screens (phones) it goes under the Guest
   // Names list instead of next to the room.
   const arrivedList = (cls: string, mobile = false) => (
-        <div className={`${cls} rounded-lg border border-green-200 bg-green-50/60 overflow-hidden`}>
+        <div className={`${cls} arrived-list rounded-lg border border-green-200 bg-green-50/60 overflow-hidden`}>
           <div className="flex items-center justify-between gap-3 px-2 py-0.5 border-b border-green-200 bg-green-100/70">
             <span className="font-semibold text-green-900">Arrived</span>
             <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
@@ -1688,7 +1688,7 @@ export function FloorPlanCanvas({
                         initial={{ opacity: 0, backgroundColor: "rgba(134,239,172,0.9)" }}
                         animate={{
                           opacity: 1,
-                          backgroundColor: a.seatId === lastArrived ? "rgba(187,247,208,0.9)" : "rgba(255,255,255,0)",
+                          backgroundColor: a.seatId === lastArrived ? "var(--arrived-flash, rgba(187,247,208,0.9))" : "rgba(255,255,255,0)",
                         }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.6, backgroundColor: { duration: 2.5 } }}
@@ -2362,7 +2362,7 @@ export function FloorPlanCanvas({
           {vipBanners.map((v) => (
             <div
               key={v.seatId}
-              className="animate-bounce rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-300 px-6 py-3 text-center text-amber-950 shadow-2xl"
+              className="keep-ink animate-bounce rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-300 px-6 py-3 text-center text-amber-950 shadow-2xl"
             >
               <div className="text-xs font-bold uppercase tracking-widest">⭐ VIP arrived</div>
               <div className="text-xl font-extrabold sm:text-2xl">{v.name}</div>
@@ -2396,7 +2396,7 @@ export function FloorPlanCanvas({
                       small ? "px-4 py-1" : "px-6 py-2.5"
                     } ${
                       p.vip
-                        ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 ring-amber-200"
+                        ? "keep-ink bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-950 ring-amber-200"
                         : "bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white ring-green-200"
                     }`}
                   >
