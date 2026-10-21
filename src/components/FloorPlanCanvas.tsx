@@ -1702,7 +1702,15 @@ export function FloorPlanCanvas({
                           {a.seatId === lastArrived && (
                             <span className="mr-1 rounded bg-green-600 px-1 text-[10px] font-bold uppercase text-white">New</span>
                           )}
-                          {a.name}
+                          {/* VIP guests: a gold star and their name in gold */}
+                          {a.vip ? (
+                            <span className="vip-name font-bold text-amber-600" title="VIP">
+                              <span className="mr-0.5">★</span>
+                              {a.name}
+                            </span>
+                          ) : (
+                            a.name
+                          )}
                         </td>
                         <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">{a.table}</td>
                       </motion.tr>

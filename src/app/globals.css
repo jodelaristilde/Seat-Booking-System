@@ -308,6 +308,9 @@ html[data-brand="vip"] .text-blue-600 { color: #93c5fd; }
 html[data-brand="vip"] .text-amber-600,
 html[data-brand="vip"] .text-amber-700 { color: #fcd34d; }
 
+html[data-brand="vip"] .arrived-list .vip-name,
+html[data-brand="vip"] .arrived-list .last-arrived .vip-name { color: #facc15; }
+
 /* a thin gold line under the top bar */
 html[data-brand="vip"] nav { border-bottom: 2px solid var(--gold); }
 } /* end: VIP look on screen only (printing stays black on white) */
