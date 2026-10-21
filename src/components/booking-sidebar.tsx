@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { matches } from "@/lib/fold";
+import { fold, matches } from "@/lib/fold";
 import { useGuestNotes } from "@/hooks/useGuestNotes";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -164,11 +164,27 @@ export function BookingSidebar({
       });
   }, [bookedSeats, searchQueries]);
 
+  // The same name on the list more than once (same first + last name,
+  // ignoring capitals and accents): shown in light red until one is removed
+  const dupKey = (seat: Seat) => fold(`${seat.user?.firstname ?? ""} ${seat.user?.lastname ?? ""}`).replace(/\s+/g, " ").trim();
+  const dupes = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const s of bookedSeats) if (s.user) n.set(dupKey(s), (n.get(dupKey(s)) ?? 0) + 1);
+    return new Set([...n].filter(([k, c]) => k && c > 1).map(([k]) => k));
+  }, [bookedSeats]);
+  const [onlyDupes, setOnlyDupes] = useState(false);
+  const showOnlyDupes = onlyDupes && dupes.size > 0;
+
   // On screen: guests who have not arrived yet. Arrived guests only show
-  // when searched for (to undo a mistake).
+  // when searched for (to undo a mistake), or when looking at duplicates.
   const visibleBookings = useMemo(
-    () => (searchQueries.name.trim() ? filteredBookings : filteredBookings.filter((s) => !s.isReceived)),
-    [filteredBookings, searchQueries]
+    () =>
+      showOnlyDupes
+        ? filteredBookings.filter((s) => dupes.has(dupKey(s)))
+        : searchQueries.name.trim()
+        ? filteredBookings
+        : filteredBookings.filter((s) => !s.isReceived),
+    [filteredBookings, searchQueries, showOnlyDupes, dupes]
   );
   const searchRef = useRef<HTMLInputElement>(null);
   // Ticking a guest marks them arrived: their name pops out on the floor
@@ -218,6 +234,16 @@ export function BookingSidebar({
             </div>
           </div>
 
+          {dupes.size > 0 && !compact && (
+            <div className="keep-ink flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-2 py-1.5 text-xs text-red-900">
+              <span className="flex-1">
+                <b>{dupes.size} name{dupes.size === 1 ? " is" : "s are"} on the list more than once</b> (light red). Remove the extra ones.
+              </span>
+              <button type="button" onClick={() => setOnlyDupes((v) => !v)} className="shrink-0 rounded border border-red-400 bg-white px-2 py-0.5 font-semibold hover:bg-red-50">
+                {showOnlyDupes ? "Show all" : "Show them"}
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <div className="relative w-full">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -263,7 +289,7 @@ export function BookingSidebar({
                     ) : (
                     <Fragment key={seat.id}>
                     <tr
-                      className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""} ${seat.user ? "cursor-grab active:cursor-grabbing" : ""}`}
+                      className={`border-b border-gray-100 ${dupes.has(dupKey(seat)) ? "keep-ink bg-red-100" : seat.isReceived ? "bg-green-50/70" : ""} ${seat.user ? "cursor-grab active:cursor-grabbing" : ""}`}
                       // drag a name onto a table on the floor plan to move the guest there
                       draggable={!!seat.user}
                       onDragStart={(e) => {
@@ -274,7 +300,7 @@ export function BookingSidebar({
                         );
                         e.dataTransfer.effectAllowed = "move";
                       }}
-                      title="Drag onto a table on the floor plan to move this guest"
+                      title={dupes.has(dupKey(seat)) ? "This name is on the list more than once. Remove the extra one." : "Drag onto a table on the floor plan to move this guest"}
                     >
                       <td className="py-0.5 pr-1.5 align-middle">
                         <Checkbox
@@ -408,6 +434,8 @@ export function BookingSidebar({
       showDeleteBookingPassword,
       seatToDelete,
       isExporting,
+      dupes,
+      showOnlyDupes,
     ]
   );
 
