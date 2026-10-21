@@ -680,7 +680,9 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
             .then((x) => x.json())
             .catch(() => null);
           if (r?.success) {
-            toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered`);
+            // the numbers printed on the floor plan picture stay as they are
+            if (r.changed > 0) (window as unknown as { __skipPictureStamp?: boolean }).__skipPictureStamp = true;
+            toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered (the floor plan picture is not changed)`);
             refreshSeats();
           }
           else toast.error("Could not renumber the tables");

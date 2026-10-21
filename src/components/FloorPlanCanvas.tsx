@@ -797,9 +797,12 @@ export function FloorPlanCanvas({
       lastNamesKey.current.split("|").map((p) => [p.slice(0, p.indexOf(":")), p.slice(p.indexOf(":") + 1)])
     );
     lastNamesKey.current = namesKey;
-    if (skipNextStamp.current) {
-      // the picture was just written by "Use these tables"
+    const w = window as unknown as { __skipPictureStamp?: boolean };
+    if (skipNextStamp.current || w.__skipPictureStamp) {
+      // the picture was just written by "Use these tables", or the tables were
+      // renumbered after a delete: the numbers printed on the picture stay
       skipNextStamp.current = false;
+      w.__skipPictureStamp = false;
       return;
     }
     if (!picture || reviewing || editing) return;
@@ -1409,7 +1412,10 @@ export function FloorPlanCanvas({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ after: Number(n) }),
         }).then((x) => x.json()).catch(() => null);
-        if (r?.success) toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered`);
+        if (r?.success) {
+          if (r.changed > 0) (window as unknown as { __skipPictureStamp?: boolean }).__skipPictureStamp = true;
+          toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered (the floor plan picture is not changed)`);
+        }
       }
       await onTablesChanged();
       await loadPositions();
