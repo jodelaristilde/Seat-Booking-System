@@ -28,7 +28,33 @@ interface Guest {
   party?: number;
 }
 
+const FIELD_LIST: [keyof Fields, string, string][] = [
+  ["meal", "Meal", "Chicken, Fish, Veg…"],
+  ["allergy", "Allergy", "shown in red to the caterer"],
+  ["vip", "VIP", "gold welcome"],
+  ["note", "Note for the desk", "the desk decides before seating"],
+  ["party", "Party size", "+1s and children seated together"],
+];
+type Fields = { meal: boolean; allergy: boolean; vip: boolean; note: boolean; party: boolean };
+
 export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } = {}) {
+  // which optional details this event's guest list has (saved per event)
+  const [fields, setFields] = useState<Fields>({ meal: false, allergy: false, vip: false, note: false, party: false });
+  useEffect(() => {
+    fetch("/api/guest-fields")
+      .then((r) => r.json())
+      .then((j) => j?.success && setFields(j.fields))
+      .catch(() => undefined);
+  }, []);
+  const toggleField = (k: keyof Fields) => {
+    const next = { ...fields, [k]: !fields[k] };
+    setFields(next);
+    fetch("/api/guest-fields", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: next }),
+    }).catch(() => undefined);
+  };
   // noButton: a copy with no menu button, opened by the setup steps
   const [open, setOpen] = useState(false);
   useEffect(() => (noButton ? onSetup("import-guests", () => setOpen(true)) : undefined), [noButton]);
@@ -226,13 +252,15 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
   };
 
   const downloadSampleFile = (fileType: "xlsx" | "csv") => {
-    // "Table" is optional: fill it in and guests are seated on import
-    const data = [
-      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", Allergy: "", VIP: "", Note: "" },
-      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", Allergy: "Nuts", VIP: "", Note: "" },
-      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", Allergy: "", VIP: "yes", Note: "" },
-      { firstname: "Paul", lastname: "Murphy", Table: "2", Meal: "", Allergy: "", VIP: "", Note: "See the organizer before seating" },
+    // only the columns this event uses (First Name, Last Name and Table always)
+    const full = [
+      { firstname: "John", lastname: "Doe", Table: "1", Meal: "Chicken", Allergy: "", VIP: "", Note: "", "Party Size": "" },
+      { firstname: "Jane", lastname: "Smith", Table: "1", Meal: "Fish", Allergy: "Nuts", VIP: "", Note: "", "Party Size": "2" },
+      { firstname: "Ana", lastname: "Silva", Table: "Head Table", Meal: "Veg", Allergy: "", VIP: "yes", Note: "", "Party Size": "" },
+      { firstname: "Paul", lastname: "Murphy", Table: "2", Meal: "", Allergy: "", VIP: "", Note: "See the organizer before seating", "Party Size": "" },
     ];
+    const keep: Record<string, boolean> = { Meal: fields.meal, Allergy: fields.allergy, VIP: fields.vip, Note: fields.note, "Party Size": fields.party };
+    const data = full.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !(k in keep) || keep[k])));
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -241,7 +269,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
     if (fileType === "xlsx") {
       // the ready-made template (headers, drop-downs and instructions)
       const a = document.createElement("a");
-      a.href = "/templates/Seating4U-guest-template.xlsx";
+      a.href = "/api/guest-template"; // made with only the columns ticked above
       a.download = "Seating4U-guest-template.xlsx";
       document.body.appendChild(a);
       a.click();
@@ -318,13 +346,27 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               and their meal, allergy or VIP is filled in. <b>Nobody is added twice</b>, and empty cells change nothing.
             </p>
           ) : (
-          <p className="text-sm text-zinc-600">
-            Your Excel file needs the columns <b>First Name</b> and <b>Last Name</b>. Add a <b>Table</b> column
-            (like <i>5</i> or <i>Head Table</i>) and each guest is seated at that table right away; missing tables
-            are created. Leave it empty to seat them later. Optional too: a <b>Meal</b> column (Chicken, Fish, Veg…),
-            an <b>Allergy</b> column, a <b>VIP</b> column (put <i>yes</i> for VIP guests) and a <b>Note</b> column: a guest
-            with a note does not see their seat on the phone; the desk sees the note and decides.
-          </p>
+          <div className="rounded-lg border p-3" data-testid="field-checklist">
+            <p className="mb-2 text-sm font-semibold">1. What does your guest list have?</p>
+            <div className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+              {["First Name", "Last Name", "Table"].map((n) => (
+                <label key={n} className="flex items-center gap-2 text-zinc-500" title="Always included">
+                  <input type="checkbox" checked disabled className="h-4 w-4" /> <b className="text-zinc-800">{n}</b>
+                  <span className="text-xs">always</span>
+                </label>
+              ))}
+              {FIELD_LIST.map(([k, label, hint]) => (
+                <label key={k} className="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" checked={fields[k]} onChange={() => toggleField(k)} className="h-4 w-4" />
+                  <b>{label}</b> <span className="text-xs text-zinc-500">{hint}</span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              2. Download the <b>Excel template</b> below: it only has these columns. 3. Fill it in and drop it here. Table can stay empty to
+              seat guests later.
+            </p>
+          </div>
           )}
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />

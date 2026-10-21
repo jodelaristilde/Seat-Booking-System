@@ -261,7 +261,7 @@ export function SetupSteps() {
               <button onClick={() => openSetup("import-guests")} className={main}>
                 Import guests (Excel)
               </button>
-              <a href="/templates/Seating4U-guest-template.xlsx" download className={plain}>
+              <a href="/api/guest-template" download className={plain}>
                 Download the template
               </a>
             </>
