@@ -1369,6 +1369,36 @@ export function FloorPlanCanvas({
       dragging.current = { id, dx: cur.x - p.x, dy: cur.y - p.y };
     };
 
+  // drag a guest from the Guest Names list onto a table: they (and their party) move there
+  const [dropTable, setDropTable] = useState<string | null>(null);
+  const moveGuestTo = async (raw: string, t: TableData) => {
+    let g: { userId: string; name: string; tableId?: string };
+    try {
+      g = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (g.tableId && g.tableId === tableIdOf(t)) return toast.message(`${g.name} is already at ${tableNameOf(t)}.`);
+    try {
+      const r = await fetch("/api/move-guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: g.userId, tableId: tableIdOf(t) }),
+      }).then((x) => x.json());
+      if (!r?.success) throw new Error(r?.message || "Could not move the guest");
+      const others = (r.moved ?? 1) - 1;
+      toast.success(`${g.name}${others > 0 ? ` (+${others} in their party)` : ""} moved to ${tableNameOf(t)}`, {
+        description: r.addedSeats ? `The table was full: ${r.addedSeats} seat${r.addedSeats === 1 ? " was" : "s were"} added.` : undefined,
+      });
+      await onTablesChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  // the table last under the mouse stays in front for a moment
+  const [frontTable, setFrontTable] = useState<string | null>(null);
+  const frontTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Draw / Move tables: the table under the mouse gets its buttons (shape,
   // resize, delete), so a busy plan stays readable
   const [hoverTable, setHoverTable] = useState<string | null>(null);
@@ -2749,12 +2779,40 @@ export function FloorPlanCanvas({
                   width: `${tableBox(table).width}%`,
                   // the table top is centred at 45% of this box
                   transform: "translate(-45%, -45%)",
-                  zIndex: dragging.current?.id === id ? 30 : 10,
+                  // the table under the mouse comes to the front, so its buttons
+                  // are not covered by a table next to it
+                  zIndex: dragging.current?.id === id ? 30 : frontTable === id ? 25 : 10,
                 }}
-                onMouseEnter={hoverZoom && !working ? () => zoomOpenSoon(id) : undefined}
-                onMouseLeave={hoverZoom && !working ? zoomCloseSoon : undefined}
+                // a guest name dragged from the Guest Names list can be dropped here
+                onDragOver={(e) => {
+                  if (working || !e.dataTransfer.types.includes("application/x-seating4u-guest")) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dropTable !== id) setDropTable(id);
+                }}
+                onDragLeave={() => setDropTable((d) => (d === id ? null : d))}
+                onDrop={(e) => {
+                  setDropTable(null);
+                  const raw = e.dataTransfer.getData("application/x-seating4u-guest");
+                  if (!raw) return;
+                  e.preventDefault();
+                  moveGuestTo(raw, table);
+                }}
+                onMouseEnter={() => {
+                  if (frontTimer.current) clearTimeout(frontTimer.current);
+                  setFrontTable(id);
+                  if (hoverZoom && !working) zoomOpenSoon(id);
+                }}
+                onMouseLeave={() => {
+                  if (frontTimer.current) clearTimeout(frontTimer.current);
+                  frontTimer.current = setTimeout(() => setFrontTable((f) => (f === id ? null : f)), 700);
+                  if (hoverZoom && !working) zoomCloseSoon();
+                }}
               >
                 {renderTable(withShape(table), index, !showSeats && !guestNames)}
+                {dropTable === id && (
+                  <div className="pointer-events-none absolute inset-0 z-40 rounded-full ring-4 ring-blue-500 bg-blue-400/20" style={{ left: "8%", top: "8%", width: "74%", height: "74%" }} />
+                )}
                 {(() => {
                   // everyone at this table has arrived: gold glow + check
                   const booked = table.seats.filter((x) => x.isBooked);

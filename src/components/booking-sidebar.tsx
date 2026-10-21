@@ -263,7 +263,18 @@ export function BookingSidebar({
                     ) : (
                     <Fragment key={seat.id}>
                     <tr
-                      className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""}`}
+                      className={`border-b border-gray-100 ${seat.isReceived ? "bg-green-50/70" : ""} ${seat.user ? "cursor-grab active:cursor-grabbing" : ""}`}
+                      // drag a name onto a table on the floor plan to move the guest there
+                      draggable={!!seat.user}
+                      onDragStart={(e) => {
+                        if (!seat.user) return;
+                        e.dataTransfer.setData(
+                          "application/x-seating4u-guest",
+                          JSON.stringify({ userId: seat.user.id, name: `${seat.user.firstname} ${seat.user.lastname}`.trim(), tableId: seat.table?.id })
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      title="Drag onto a table on the floor plan to move this guest"
                     >
                       <td className="py-0.5 pr-1.5 align-middle">
                         <Checkbox

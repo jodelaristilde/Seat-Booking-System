@@ -53,6 +53,7 @@ import {
   History,
   BarChart3,
   Sparkles,
+  Radio,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -67,6 +68,7 @@ import { useSeats } from "../hooks/useSeats";
 import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
 import { GuestAccessBanner } from "./GuestAccessBanner";
+import { LiveLinkDialog } from "@/components/LiveLinkDialog";
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup } from "@/lib/setupEvents";
@@ -150,6 +152,7 @@ const SeatBooking = () => {
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
   const pdfExportRef = useRef<{ generatePDF: () => void } | null>(null);
   const router = useRouter();
+  const hoverOffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredTable, setHoveredTable] = useState<string | number | null>(
     null
   );
@@ -794,8 +797,15 @@ const handleTableClick = () => {
         } ${
           inFloorPlan ? "" : isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
         } ${showNames && !inFloorPlan ? "p-8" : ""}`} // Add padding when names are shown
-        onMouseEnter={() => setHoveredTable(tableId)}
-        onMouseLeave={() => setHoveredTable(null)}
+        onMouseEnter={() => {
+          if (hoverOffTimer.current) clearTimeout(hoverOffTimer.current);
+          setHoveredTable(tableId);
+        }}
+        // a short grace period, so the ⚙️ / 🗑️ buttons can still be reached
+        onMouseLeave={() => {
+          if (hoverOffTimer.current) clearTimeout(hoverOffTimer.current);
+          hoverOffTimer.current = setTimeout(() => setHoveredTable((h) => (h === tableId ? null : h)), 700);
+        }}
         layout={!inFloorPlan}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -1521,6 +1531,14 @@ const handleTableClick = () => {
                       {!isStaff && (
                         <DropdownMenuItem
                           className="cursor-pointer"
+                          onClick={() => window.dispatchEvent(new Event("seating4u:live-link"))}
+                        >
+                          <Radio className="mr-2 w-4 h-4" /> Client live view (share link)
+                        </DropdownMenuItem>
+                      )}
+                      {!isStaff && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
                           onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}
                         >
                           <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
@@ -1637,6 +1655,7 @@ const handleTableClick = () => {
       </AnimatePresence>
       <div ref={setupBarRef}>{!isFullScreen && !isStaff && <SetupSteps />}</div>
       {!isStaff && <ImportGuestsforWeb noButton />}
+      {!isStaff && <LiveLinkDialog />}
 
       {/* Main Content */}
       <div

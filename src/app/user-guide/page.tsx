@@ -583,6 +583,8 @@ export default function UserGuide() {
                 <li>• Do a practice run: check in 2–3 test guests on a phone and watch them appear in Arrived.</li>
                 <li>• Run the <b>Ready check</b> and print the <b>Door list</b> the night before.</li>
                 <li>• Give your desk helpers <b>check-in only</b> accounts.</li>
+                <li>• To move someone, drag their name from the guest list on the right onto another table (their party moves with them).</li>
+                <li>• Send the client the <b>Client live view</b> link (menu ☰): they follow seating and arrivals live, view only. <b>New link</b> turns off the old one.</li>
               </ul>
             </div>
             <div className="rounded-xl border border-zinc-200 bg-white p-6">
