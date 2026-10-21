@@ -1627,8 +1627,10 @@ export function FloorPlanCanvas({
         setVipBanners((v) => [...v, { seatId: a.seatId, name: a.name, table: a.table }]);
         setTimeout(() => setVipBanners((v) => v.filter((x) => x.seatId !== a.seatId)), 12000);
       }
-      // the table number starts flashing 1 second before the name card
-      // leaves, and keeps flashing for 5 seconds
+      // the table starts flashing right away (the name card sits on the
+      // other side of the room so the table stays in view), and keeps
+      // flashing a few seconds after the card has left
+      const leaveAt = (fresh.length - 1) * 350 + 3800;
       setTimeout(() => {
         setFlashing((f) => ({ ...f, [a.tableId]: (f[a.tableId] ?? 0) + 1 }));
         setTimeout(
@@ -1640,13 +1642,12 @@ export function FloorPlanCanvas({
               else next[a.tableId] = n;
               return next;
             }),
-          5000
+          leaveAt + 3000
         );
-      }, i * 350 + 1600);
+      }, i * 350);
       // Pop up in the MIDDLE of the room, one under another when several
       // arrive together; after a few seconds the whole group slides to the
       // Arrived list on the left
-      const leaveAt = (fresh.length - 1) * 350 + 3800;
       setTimeout(() => setPopups((p) => [...p, { ...item, phase: "pop" }]), i * 350);
       setTimeout(
         () => setPopups((p) => p.map((x) => (x.seatId === a.seatId ? { ...x, phase: "fly" } : x))),
@@ -2483,11 +2484,27 @@ export function FloorPlanCanvas({
           ))}
         </div>
       )}
-        {/* A guest just arrived: their name pops up in the MIDDLE of the
-            room (a group goes one under another), then slides off to the
-            Arrived list on the left */}
-        {popups.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 z-[60] flex flex-col items-center justify-center gap-2 overflow-hidden p-2">
+        {/* A guest just arrived: their name pops up on the side of the room
+            AWAY from their table (a group goes one under another) while the
+            table flashes, then slides off to the Arrived list on the left */}
+        {popups.length > 0 && (() => {
+          // where the arriving table(s) are on screen (0..1); the cards go to
+          // the opposite side so the flashing table is never covered
+          let sx = 0, sy = 0, n = 0;
+          for (const p of popups) {
+            const pos = positions[p.tableId];
+            if (!pos) continue;
+            sx += (pos.x - show.x) / show.w;
+            sy += (pos.y - show.y) / show.h;
+            n++;
+          }
+          const fx = n ? sx / n : 0.5;
+          const fy = n ? sy / n : 0.5;
+          // close to the middle on one axis: stay centred on that axis
+          const h = Math.abs(fx - 0.5) < 0.12 && Math.abs(fy - 0.5) >= 0.12 ? "items-center" : fx < 0.5 ? "items-end pr-[4%]" : "items-start pl-[4%]";
+          const v = n === 0 ? "justify-center" : fy < 0.5 ? "justify-end pb-[4%]" : "justify-start pt-[4%]";
+          return (
+          <div className={`pointer-events-none absolute inset-0 z-[60] flex flex-col gap-2 overflow-hidden p-2 ${n ? h : "items-center"} ${v}`}>
             <AnimatePresence>
               {popups.map((p) => {
                 // many at once: smaller cards so they all fit down the middle
@@ -2531,7 +2548,8 @@ export function FloorPlanCanvas({
               })}
             </AnimatePresence>
           </div>
-        )}
+          );
+        })()}
 
       <div
         ref={canvasRef}
