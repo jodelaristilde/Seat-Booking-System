@@ -1360,6 +1360,64 @@ export function FloorPlanCanvas({
       dragging.current = { id, dx: cur.x - p.x, dy: cur.y - p.y };
     };
 
+  // Draw / Move tables: the table under the mouse gets its buttons (shape,
+  // resize, delete), so a busy plan stays readable
+  const [hoverTable, setHoverTable] = useState<string | null>(null);
+  const trackHover = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!(drawing || editing) || dragging.current || resizing.current) return;
+    const p = pointToPercent(e.clientX, e.clientY);
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const t of tables) {
+      const id = tableIdOf(t);
+      const pos = positions[id];
+      if (!pos) continue;
+      const w = tableBox(t).width;
+      const dx = Math.abs(p.x - pos.x) / (w / 2);
+      const dy = Math.abs(p.y - pos.y) / ((w * aspect) / 2);
+      const d = Math.max(dx, dy);
+      if (d < 0.75 && d < bestD) {
+        bestD = d;
+        best = id;
+      }
+    }
+    if (best !== hoverTable) setHoverTable(best);
+  };
+  const deleteTableHere = async (t: TableData) => {
+    const name = tableNameOf(t);
+    const guests = t.seats.filter((x) => x.isBooked).length;
+    if (!window.confirm(`Delete ${name}?${guests ? ` ${guests} guest${guests === 1 ? " loses their" : "s lose their"} seat (they stay in your guest list).` : ""}`)) return;
+    try {
+      const res = await fetch("/api/delete-table", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tableId: tableIdOf(t) }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      setDrawnIds((prev) => prev.filter((x) => x !== tableIdOf(t)));
+      setHoverTable(null);
+      toast.success(`${name} deleted`);
+      // offer to move the next numbers down (Table 7 becomes 6...)
+      const n = name.match(/^\s*(?:table\s*#?\s*)?(\d+)\s*$/i)?.[1];
+      const higher = n
+        ? tables.filter((o) => Number(tableNameOf(o).match(/^\s*(?:table\s*#?\s*)?(\d+)\s*$/i)?.[1] ?? -1) > Number(n)).length
+        : 0;
+      if (n && higher && window.confirm(`Renumber the tables after it?\n\nTable ${Number(n) + 1} becomes ${n}, Table ${Number(n) + 2} becomes ${Number(n) + 1}, and so on (${higher} table${higher === 1 ? "" : "s"}).`)) {
+        const r = await fetch("/api/tables/renumber", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ after: Number(n) }),
+        }).then((x) => x.json()).catch(() => null);
+        if (r?.success) toast.success(`${r.changed} table${r.changed === 1 ? "" : "s"} renumbered`);
+      }
+      await onTablesChanged();
+      await loadPositions();
+    } catch (e) {
+      toast.error("Could not delete the table", { description: e instanceof Error ? e.message : undefined });
+    }
+  };
+
   const onResizeDown =
     (id: string, cx: number, startW: number) => (e: ReactPointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
@@ -2250,11 +2308,11 @@ export function FloorPlanCanvas({
           {drawing
             ? drawBusy
               ? "Finding the table..."
-              : `Easy way: click inside any table (or on its number) on the picture. Its shape, chairs and number are copied and it is added there. Or draw ${drawShape} tables with ${drawSeats} seats yourself: Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
+              : `Easy way: click inside any table (or on its number) on the picture. Its shape, chairs and number are copied and it is added there. Point at a table and click the red × to delete it. Or draw ${drawShape} tables with ${drawSeats} seats yourself: Draw around the whole table, chairs included: press on the picture, drag, and let go. The seats go just inside your outline. Draw as many as you need, then click Done drawing. To rename a table or add a note, click Done drawing, then hover the table.`
             : reviewing
             ? reviewBusy ??
               "Blue = will be a table. Click a grey shape to make it a table, click × to remove one. Type in the box to rename a table. Click the shape icon to switch round / square / rectangle. Drag a table to move it."
-            : "Drag each table to its spot. Drag the blue dot at a table's corner to make it bigger or smaller. Click a table's Shape button to switch round / square / rectangle. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
+            : "Drag each table to its spot. Point at a table to see its buttons: the blue dot makes it bigger or smaller, Shape switches round / square / rectangle, the red × deletes it. Then click Save layout. To rename a table, save first, then hover it and click the gear."}
           {reviewBusy && <Loader2 className="inline w-4 h-4 ml-2 animate-spin" />}
         </p>
       )}
@@ -2442,6 +2500,8 @@ export function FloorPlanCanvas({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onMouseMove={trackHover}
+        onMouseLeave={() => !dragging.current && !resizing.current && setHoverTable(null)}
       >
         {picture && (showPicture || reviewing || drawing || editing || settingEntrance) && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -2585,6 +2645,30 @@ export function FloorPlanCanvas({
           </div>
         )}
 
+        {/* Draw / Move tables: a red × on the table under the mouse deletes it */}
+        {(drawing || editing) && hoverTable && positions[hoverTable] && (() => {
+          const t = tables.find((x) => tableIdOf(x) === hoverTable);
+          if (!t) return null;
+          const pos = positions[hoverTable];
+          const w = tableBox(t).width;
+          return (
+            <button
+              type="button"
+              className="absolute z-[60] flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white shadow-lg ring-2 ring-white hover:bg-red-700"
+              style={{ left: `${pos.x + w * 0.38}%`, top: `${pos.y - w * aspect * 0.42}%`, transform: "translate(-50%, -50%)" }}
+              title={`Delete ${tableNameOf(t)}`}
+              aria-label={`Delete ${tableNameOf(t)}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteTableHere(t);
+              }}
+            >
+              ×
+            </button>
+          );
+        })()}
+
         {/* Drawing: a layer over everything that catches the mouse */}
         {drawing && (
           <div
@@ -2694,6 +2778,7 @@ export function FloorPlanCanvas({
                       onPointerDown={onPointerDown(id, pos)}
                       title="Drag to move"
                     />
+                    {(hoverTable === id || dragging.current?.id === id || resizing.current?.id === id) && (<>
                     <button
                       type="button"
                       className="absolute -bottom-2 -right-2 z-40 w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow cursor-nwse-resize touch-none"
@@ -2716,6 +2801,7 @@ export function FloorPlanCanvas({
                       <ShapeIcon shape={shape} className="w-3.5 h-3.5" />
                       Shape
                     </button>
+                    </>)}
                   </>
                 )}
               </div>
