@@ -446,6 +446,12 @@ export function FloorPlanCanvas({
   // the setup steps bar: "Find / draw tables" and "Set the entrance"
   useEffect(() => onSetup("draw-tables", () => setDrawing(true)), []);
   useEffect(() => onSetup("set-entrance", () => setSettingEntrance(true)), []);
+  // changing the entrance: bring the current one into view (it flashes)
+  useEffect(() => {
+    if (!settingEntrance) return;
+    const t = setTimeout(() => document.querySelector(".entrance-pin")?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }), 250);
+    return () => clearTimeout(t);
+  }, [settingEntrance]);
   const askAboutEntranceNow = () => {
     entranceLater = null;
     entranceCheckAfterTables = true;
@@ -1814,6 +1820,11 @@ export function FloorPlanCanvas({
       .welcome-title { background-size: 200% auto; animation: welcomeShine 4s linear infinite; }
       @keyframes lastArrived { 0%,100% { color: rgb(24 24 27); } 50% { color: rgb(22 163 74); text-shadow: 0 0 8px rgba(34,197,94,.6); } }
       .last-arrived { animation: lastArrived .7s ease-in-out 7; }
+      @keyframes entranceFlash { 0% { transform: translate(-50%,-50%) scale(.4); opacity: 1 } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0 } }
+      .entrance-flash { animation: entranceFlash 1.4s ease-out infinite; }
+      .entrance-flash-2 { animation-delay: .7s; }
+      @keyframes entrancePin { 0%,100% { transform: translate(-50%,-50%) scale(1) } 50% { transform: translate(-50%,-50%) scale(1.15) } }
+      .entrance-pin { animation: entrancePin 0.7s ease-in-out 6; }
       .table-complete-ring { border: 4px solid #f59e0b; background: rgba(251,191,36,.18);
         box-shadow: 0 0 14px 4px rgba(245,158,11,.55); }
     `}</style>
@@ -2634,19 +2645,22 @@ export function FloorPlanCanvas({
             }}
           >
             {entrances.map((pt, i) => (
-              <button
-                key={i}
-                type="button"
-                className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg ring-4 ring-green-200 hover:bg-red-600"
-                style={{ left: `${pt.x}%`, top: `${pt.y}%` }}
-                title="Remove this entrance"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  saveEntrances(entrances.filter((_, j) => j !== i));
-                }}
-              >
-                <DoorOpen className="h-3.5 w-3.5" /> Entrance
-              </button>
+              <div key={i} className="absolute" style={{ left: `${pt.x}%`, top: `${pt.y}%` }}>
+                {/* flashing rings so you see right away where the entrance is now */}
+                <span className="entrance-flash pointer-events-none absolute left-0 top-0 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-green-400" />
+                <span className="entrance-flash entrance-flash-2 pointer-events-none absolute left-0 top-0 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-green-400" />
+                <button
+                  type="button"
+                  className="entrance-pin absolute left-0 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg ring-4 ring-green-200 hover:bg-red-600"
+                  title="Remove this entrance"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveEntrances(entrances.filter((_, j) => j !== i));
+                  }}
+                >
+                  <DoorOpen className="h-3.5 w-3.5" /> Entrance
+                </button>
+              </div>
             ))}
           </div>
         )}
