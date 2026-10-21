@@ -1385,11 +1385,10 @@ export function FloorPlanCanvas({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: g.userId, tableId: tableIdOf(t) }),
       }).then((x) => x.json());
+      if (r?.full) return toast.error(r.message, { duration: 8000 });
       if (!r?.success) throw new Error(r?.message || "Could not move the guest");
       const others = (r.moved ?? 1) - 1;
-      toast.success(`${g.name}${others > 0 ? ` (+${others} in their party)` : ""} moved to ${tableNameOf(t)}`, {
-        description: r.addedSeats ? `The table was full: ${r.addedSeats} seat${r.addedSeats === 1 ? " was" : "s were"} added.` : undefined,
-      });
+      toast.success(`${g.name}${others > 0 ? ` (+${others} in their party)` : ""} moved to ${tableNameOf(t)}`);
       await onTablesChanged();
     } catch (e) {
       toast.error((e as Error).message);

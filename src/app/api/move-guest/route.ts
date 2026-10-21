@@ -6,7 +6,8 @@ import { partyOf } from "@/lib/party";
 import { NextResponse } from "next/server";
 
 // POST { userId, tableId }: move a guest (and the people in their party) to
-// another table: the first empty seats there, a seat is added if it is full.
+// another table: the first empty seats there. A full table stays full: the
+// move is refused and the organizer adds a seat first.
 // Arrived stays arrived. (login required; not for check-in staff)
 export async function POST(req: Request) {
   try {
@@ -35,16 +36,20 @@ export async function POST(req: Request) {
     if (!people.length) return NextResponse.json({ success: true, moved: 0, table: table.name });
 
     const free = (table.Seat as { id: string; isBooked: boolean; seat: number }[]).filter((s) => !s.isBooked).map((s) => s.id);
-    let next = table.Seat.length;
+    if (free.length < people.length) {
+      const msg = !free.length
+        ? `${table.name} is full. Add a seat to it first, then drag the guest again.`
+        : `${table.name} has only ${free.length} empty seat${free.length === 1 ? "" : "s"}, but ${people.length} people are moving (the guest and their party). Add ${people.length - free.length} seat${people.length - free.length === 1 ? "" : "s"} first.`;
+      return NextResponse.json({ success: false, full: true, message: msg }, { status: 409 });
+    }
     await db.$transaction(async (tx: Pick<typeof db, "seat">) => {
       for (const p of people) {
         if (p.from) await tx.seat.update({ where: { id: p.from }, data: { isBooked: false, isReceived: false, userId: null } });
         const seatId = free.shift();
-        if (seatId) await tx.seat.update({ where: { id: seatId }, data: { isBooked: true, isReceived: p.isReceived, userId: p.userId } });
-        else await tx.seat.create({ data: { tableId: table.id, seat: ++next, isBooked: true, isReceived: p.isReceived, userId: p.userId } });
+        await tx.seat.update({ where: { id: seatId! }, data: { isBooked: true, isReceived: p.isReceived, userId: p.userId } });
       }
     });
-    return NextResponse.json({ success: true, moved: people.length, table: table.name, addedSeats: Math.max(0, people.length - (table.Seat.length - (table.Seat as { isBooked: boolean }[]).filter((s) => s.isBooked).length)) });
+    return NextResponse.json({ success: true, moved: people.length, table: table.name });
   } catch (e) {
     console.error("move-guest", e);
     return NextResponse.json({ success: false, message: "Could not move the guest. Nothing was changed." }, { status: 500 });
