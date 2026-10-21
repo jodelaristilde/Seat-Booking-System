@@ -76,8 +76,9 @@ const SeatBooking = () => {
     return (
       <motion.div
         className={`relative w-full aspect-square mx-auto ${
-          isFullScreen ? "max-w-[500px]" : "max-w-[300px]"
+          isFullScreen ? "max-w-[560px]" : "max-w-[380px]"
         }`}
+        style={{ containerType: "inline-size" }}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
@@ -109,9 +110,8 @@ const SeatBooking = () => {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              className={`absolute ${
-                isFullScreen ? "w-[20%]" : "w-[15%]"
-              } aspect-square`}
+              className={`absolute ${seat.user ? "w-[21%]" : isFullScreen ? "w-[20%]" : "w-[15%]"} aspect-square`}
+              title={seat.user ? `${seat.user.firstname} ${seat.user.lastname}`.trim() : undefined}
               style={{
                 left: `${left}%`,
                 top: `${top}%`,
@@ -120,7 +120,7 @@ const SeatBooking = () => {
             >
               <div
                 className={`
-                        w-full h-full rounded-full
+                        w-full h-full rounded-full overflow-hidden
                         flex items-center justify-center
                         transition-all duration-200
                         ${
@@ -134,7 +134,17 @@ const SeatBooking = () => {
                         border-2
                       `}
               >
-                {seat.isBooked ? (
+                {seat.isBooked && seat.user ? (
+                  // the guest's name inside the seat circle (logged in only)
+                  <span
+                    className={`flex flex-col items-center px-0.5 text-center font-semibold leading-tight ${seat.isReceived ? "text-green-800" : "text-red-800"}`}
+                    style={{ fontSize: "clamp(8px, 2.7cqw, 15px)", wordBreak: "break-word" }}
+                  >
+                    {seat.isReceived && <Check className="h-[1.1em] w-[1.1em] text-green-600" />}
+                    <span className="line-clamp-2">{seat.user.firstname}</span>
+                    {seat.user.lastname && <span className="line-clamp-1 font-normal">{seat.user.lastname}</span>}
+                  </span>
+                ) : seat.isBooked ? (
                   seat.isReceived ? (
                     <Check className="h-4 w-4 text-green-600" />
                   ) : (
@@ -183,7 +193,7 @@ const SeatBooking = () => {
               style={{
                 gridTemplateColumns: isFullScreen
                   ? "repeat(4, minmax(0, 1fr))"
-                  : "repeat(auto-fill, minmax(250px, 1fr))",
+                  : "repeat(auto-fill, minmax(300px, 1fr))",
               }}
               transition={{ duration: 0.5 }}
             >
