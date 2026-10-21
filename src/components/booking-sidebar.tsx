@@ -15,7 +15,7 @@ import PasswordVerificationDialog from "./password-verification-dialog";
 
 interface BookingSidebarProps {
   bookedSeats: Seat[];
-  onDeleteBooking: (seatId: string) => void;
+  onDeleteBooking: (seatId: string, guestId?: string) => void;
   onToggleReceived: (seatId: string, isReceived: boolean) => void;
   onDeleteAll: () => void;
   // Full-screen floor plan: just the names, no Export / Delete All buttons
@@ -57,7 +57,8 @@ export function BookingSidebar({
   const handleDeleteBookingConfirm = async () => {
     try {
       if (seatToDelete) {
-        onDeleteBooking(seatToDelete);
+        onDeleteBooking(seatToDelete, guestToDelete ?? undefined);
+        setGuestToDelete(null);
         setIsDeleteBookingDialogOpen(false);
         setDeleteBookingConfirmText("");
         setDeleteBookingPassword("");
@@ -173,6 +174,8 @@ export function BookingSidebar({
     return new Set([...n].filter(([k, c]) => k && c > 1).map(([k]) => k));
   }, [bookedSeats]);
   const [onlyDupes, setOnlyDupes] = useState(false);
+  const [overTrash, setOverTrash] = useState(false);
+  const [guestToDelete, setGuestToDelete] = useState<string | null>(null);
   const showOnlyDupes = onlyDupes && dupes.size > 0;
 
   // On screen: guests who have not arrived yet. Arrived guests only show
@@ -206,7 +209,41 @@ export function BookingSidebar({
       <div className="flex flex-col h-full w-full bg-white">
         <div className="px-2 py-3 bg-white shadow-sm space-y-2">
           {/* Title centred; search box and list share the same edges */}
-          <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap text-center">Guest Names</h2>
+          <div className="relative flex items-center justify-center">
+            <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap text-center">Guest Names</h2>
+            {!readOnly && (
+              // drop a name here to delete it (asks first)
+              <div
+                className={`absolute right-0 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed transition-all ${
+                  overTrash ? "scale-125 border-red-600 bg-red-600 text-white" : "border-red-300 bg-red-50 text-red-500"
+                }`}
+                title="Drag a guest's name here to delete it"
+                aria-label="Delete: drop a guest's name here"
+                onDragOver={(e) => {
+                  if (!e.dataTransfer.types.includes("application/x-seating4u-guest")) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setOverTrash(true);
+                }}
+                onDragLeave={() => setOverTrash(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setOverTrash(false);
+                  try {
+                    const g = JSON.parse(e.dataTransfer.getData("application/x-seating4u-guest"));
+                    if (!g?.seatId) return;
+                    setSeatToDelete(g.seatId);
+                    setGuestToDelete(g.userId ?? null);
+                    setIsDeleteBookingDialogOpen(true);
+                  } catch {
+                    /* not a guest */
+                  }
+                }}
+              >
+                <Trash2 className="h-5 w-5" />
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-2">
             <div className={`flex gap-2 justify-center ${bookedSeats.length > 0 && !compact ? "" : "hidden"}`}>
               {bookedSeats.length > 0 && !compact && (
@@ -234,10 +271,11 @@ export function BookingSidebar({
             </div>
           </div>
 
-          {dupes.size > 0 && !compact && (
+          {dupes.size > 0 && (
             <div className="keep-ink flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-2 py-1.5 text-xs text-red-900">
               <span className="flex-1">
-                <b>{dupes.size} name{dupes.size === 1 ? " is" : "s are"} on the list more than once</b> (light red). Remove the extra ones.
+                <b>{dupes.size} name{dupes.size === 1 ? " is" : "s are"} on the list more than once</b> (light red).{" "}
+                {readOnly ? "Ask the guest which table is theirs before checking them in." : "Drag the extra one onto the red bin to delete it."}
               </span>
               <button type="button" onClick={() => setOnlyDupes((v) => !v)} className="shrink-0 rounded border border-red-400 bg-white px-2 py-0.5 font-semibold hover:bg-red-50">
                 {showOnlyDupes ? "Show all" : "Show them"}
@@ -291,16 +329,22 @@ export function BookingSidebar({
                     <tr
                       className={`border-b border-gray-100 ${dupes.has(dupKey(seat)) ? "keep-ink bg-red-100" : seat.isReceived ? "bg-green-50/70" : ""} ${seat.user ? "cursor-grab active:cursor-grabbing" : ""}`}
                       // drag a name onto a table on the floor plan to move the guest there
-                      draggable={!!seat.user}
+                      draggable={!!seat.user && !readOnly}
                       onDragStart={(e) => {
                         if (!seat.user) return;
                         e.dataTransfer.setData(
                           "application/x-seating4u-guest",
-                          JSON.stringify({ userId: seat.user.id, name: `${seat.user.firstname} ${seat.user.lastname}`.trim(), tableId: seat.table?.id })
+                          JSON.stringify({ seatId: seat.id, userId: seat.user.id, name: `${seat.user.firstname} ${seat.user.lastname}`.trim(), tableId: seat.table?.id })
                         );
                         e.dataTransfer.effectAllowed = "move";
                       }}
-                      title={dupes.has(dupKey(seat)) ? "This name is on the list more than once. Remove the extra one." : "Drag onto a table on the floor plan to move this guest"}
+                      title={
+                        dupes.has(dupKey(seat))
+                          ? readOnly
+                            ? "This name is on the list more than once: ask the guest which table is theirs."
+                            : "This name is on the list more than once. Drag the extra one onto the red bin to delete it."
+                          : "Drag onto a table to move this guest, or onto the red bin to delete"
+                      }
                     >
                       <td className="py-0.5 pr-1.5 align-middle">
                         <Checkbox
@@ -406,11 +450,16 @@ export function BookingSidebar({
               setDeleteBookingPassword("");
               setShowDeleteBookingPassword(false);
               setSeatToDelete(null);
+              setGuestToDelete(null);
             }
           }}
           simple={true}
           onVerified={handleDeleteBookingConfirm}
-          action="delete booking"
+          action={(() => {
+            const st = bookedSeats.find((x) => x.id === seatToDelete);
+            const nm = st?.user ? `${st.user.firstname} ${st.user.lastname}`.trim() : "this guest";
+            return guestToDelete ? `delete ${nm}${st ? ` (${st.table.name})` : ""} from the guest list` : "delete booking";
+          })()}
           confirmText="Delete Booking"
           confirmTextDisplay="Delete Booking"
         />
@@ -436,6 +485,8 @@ export function BookingSidebar({
       isExporting,
       dupes,
       showOnlyDupes,
+      overTrash,
+      guestToDelete,
     ]
   );
 

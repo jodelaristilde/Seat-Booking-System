@@ -1,4 +1,5 @@
 "use client";
+import { fold } from "@/lib/fold";
 import { onSetup } from "@/lib/setupEvents";
 
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,26 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
       toast.success(
         `Successfully imported ${importedGuests.length} out of ${guests.length} guests`
       );
+      // the same name more than once in the file: tell the person now
+      const seen = new Map<string, { name: string; n: number }>();
+      for (const g of importedGuests) {
+        const name = `${g.firstname ?? ""} ${g.lastname ?? ""}`.replace(/\s+/g, " ").trim();
+        const k = fold(name);
+        if (!k) continue;
+        const e = seen.get(k) ?? { name, n: 0 };
+        e.n++;
+        seen.set(k, e);
+      }
+      const twice = [...seen.values()].filter((e) => e.n > 1);
+      if (twice.length) {
+        toast.warning(`${twice.length} name${twice.length === 1 ? " is" : "s are"} in your list more than once`, {
+          description: `${twice
+            .slice(0, 6)
+            .map((e) => `${e.name} (${e.n}×)`)
+            .join(", ")}${twice.length > 6 ? "…" : ""}. They show in light red in the guest list: drag the extra one onto the red bin.`,
+          duration: 15000,
+        });
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";

@@ -577,7 +577,8 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
     }
   };
 
-  const handleDeleteBooking = async (seatId: string) => {
+  // guestId: also delete the guest from the list (dropped on the red bin)
+  const handleDeleteBooking = async (seatId: string, guestId?: string) => {
     try {
       const toastId = toast.loading("Deleting booking...");
 
@@ -610,6 +611,21 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
 
         setTables(updatedTables);
         setBookedSeats(bookedSeats.filter((seat) => seat.id !== seatId));
+        if (guestId) {
+          const g = await fetch("/api/delete-guest", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ guestId }),
+          })
+            .then((r) => r.json())
+            .catch(() => null);
+          if (g?.success) {
+            toast.success("Guest deleted from the list", { id: toastId });
+            return;
+          }
+          toast.error("The seat was freed, but the guest is still on the list", { id: toastId, description: g?.message });
+          return;
+        }
 
         toast.success(
           <div className="flex flex-col gap-1">
