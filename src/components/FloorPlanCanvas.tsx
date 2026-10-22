@@ -1825,7 +1825,8 @@ export function FloorPlanCanvas({
   useEffect(() => {
     setArrivedSlot(roomOnly ? null : document.getElementById("arrived-under-guests"));
   }, [roomOnly]);
-  const showArrived = arrivals.length > 0 && !working;
+  // with the menu hidden the list always stays (even before anyone arrives)
+  const showArrived = (arrivals.length > 0 || !!roomOnly) && !working;
   // Full screen: the Arrived list is tucked into a button so the map gets the room
   const [fsArrivedOpen, setFsArrivedOpen] = useState(true);
   useEffect(() => {
@@ -2266,9 +2267,9 @@ export function FloorPlanCanvas({
       {/* Arrived guests (left of the room on big screens) */}
       {showArrived && (!roomOnly || fsArrivedOpen) &&
         arrivedList(
-          `w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 ${arrivedSlot ? "hidden xl:block" : ""}`
+          `w-fit lg:shrink-0 lg:self-start lg:sticky lg:top-2 ${arrivedSlot && !roomOnly ? "hidden xl:block" : ""}`
         )}
-      {showArrived && arrivedSlot && createPortal(arrivedList("w-full xl:hidden mt-3", true), arrivedSlot)}
+      {showArrived && arrivedSlot && !roomOnly && createPortal(arrivedList("w-full xl:hidden mt-3", true), arrivedSlot)}
 
       {/* The room, with any instructions above it */}
       <div className="flex-1 min-w-0 relative" ref={roomColRef}>
