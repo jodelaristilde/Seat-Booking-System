@@ -33,6 +33,7 @@ import {
   Search,
   DoorOpen,
   ScanSearch,
+  UserPlus,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -228,6 +229,30 @@ export function FloorPlanCanvas({
     setAddQuery("");
     setAddPicked([]);
     setTableQuery("");
+    setWalk({ first: "", last: "", open: false, busy: false });
+  };
+
+  // ---- Zoom card: a walk-in guest seated straight at this table ----
+  const [walk, setWalk] = useState({ first: "", last: "", open: false, busy: false });
+  const addWalkIn = async (table: TableData, arrived: boolean) => {
+    const first = walk.first.trim();
+    const last = walk.last.trim();
+    if (!first || !last) return toast.error("Type the first and last name");
+    setWalk((w) => ({ ...w, busy: true }));
+    try {
+      const r = await fetch("/api/add-guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstname: first, lastname: last, table: tableNameOf(table), arrived }),
+      }).then((x) => x.json());
+      if (r?.error || r?.success === false) throw new Error(r.error || r.message || "Could not add the guest");
+      toast.success(`${first} ${last} added to ${tableNameOf(table)}${arrived ? " and checked in" : ""}`);
+      setWalk({ first: "", last: "", open: false, busy: false });
+      await onTablesChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+      setWalk((w) => ({ ...w, busy: false }));
+    }
   };
 
   // ---- Zoom card: add several guests to the table at once ----
@@ -3211,6 +3236,59 @@ export function FloorPlanCanvas({
                   {seats.length - booked.length} empty seat{seats.length - booked.length === 1 ? "" : "s"}
                 </p>
               )}
+
+              {/* Walk-in / last-minute guest: type the name, they take an empty seat here */}
+              {seats.length > booked.length &&
+                (walk.open ? (
+                  <form
+                    className="mt-2 rounded-lg border-2 border-blue-200 bg-blue-50 p-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addWalkIn(table, true);
+                    }}
+                  >
+                    <p className="mb-1 text-sm font-semibold text-blue-900">New guest at {tableNameOf(table)}</p>
+                    <div className="flex gap-1.5">
+                      <input
+                        autoFocus
+                        value={walk.first}
+                        onChange={(e) => setWalk((w) => ({ ...w, first: e.target.value }))}
+                        onFocus={() => (zoomPinned.current = true)}
+                        placeholder="First name"
+                        className="min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        value={walk.last}
+                        onChange={(e) => setWalk((w) => ({ ...w, last: e.target.value }))}
+                        onFocus={() => (zoomPinned.current = true)}
+                        placeholder="Last name"
+                        className="min-w-0 flex-1 rounded-md border px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <Button type="submit" size="sm" disabled={walk.busy} className="bg-green-600 hover:bg-green-700 text-white">
+                        <Check className="mr-1 h-4 w-4" /> Add &amp; check in
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" disabled={walk.busy} onClick={() => addWalkIn(table, false)}>
+                        Add only
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setWalk({ first: "", last: "", open: false, busy: false })}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      zoomPinned.current = true;
+                      setWalk((w) => ({ ...w, open: true }));
+                    }}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-blue-300 bg-blue-50/60 px-2 py-1.5 text-sm font-semibold text-blue-800 hover:bg-blue-100"
+                  >
+                    <UserPlus className="h-4 w-4" /> Walk-in guest: add &amp; seat here
+                  </button>
+                ))}
 
               {/* Add several guests to this table at once (Seat guests mode) */}
               {cardMode === "seat" && !staff && seats.length > booked.length && (() => {

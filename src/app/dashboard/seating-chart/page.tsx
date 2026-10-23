@@ -1,11 +1,13 @@
 "use client";
 
-// Printable seating chart + after-event report for the open event.
+// Seating chart for the venue: page 1 is the floor plan with every table
+// number and how many guests sit there; then every table with its guests
+// (meals and allergies for the kitchen), then an A–Z list "name → table".
+// Print it or save as PDF for the venue manager, catering and staff.
 // /dashboard/seating-chart (login required)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import * as XLSX from "xlsx";
-import { Printer, Download, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 
 type SeatRow = {
   id: string;
@@ -15,197 +17,114 @@ type SeatRow = {
   table: { id: string; name: string };
   user: { id: string; firstname: string; lastname: string; vip?: boolean; meal?: string | null } | null;
 };
-type Guest = { id: string; firstname: string; lastname: string; seat: unknown[]; vip?: boolean; meal?: string | null };
+type Pos = { id: string; name: string; posX: number | null; posY: number | null };
+type Guest = { id: string; name: string; last: string; first: string; vip: boolean; meal: string; seat: number };
+type Table = { id: string; name: string; seats: number; guests: Guest[]; x: number | null; y: number | null };
 
-// "4 Chicken · 5 Fish" for a list of guests
-const mealSummary = (list: { meal?: string | null }[]) => {
-  const m = new Map<string, number>();
-  for (const g of list) {
-    const k = g.meal?.trim();
-    if (k) m.set(k, (m.get(k) ?? 0) + 1);
-  }
-  return [...m.entries()].map(([k, n]) => `${n} ${k}`).join(" · ");
-};
-
-const byTable = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
-const byLast = (a: { firstname: string; lastname: string }, b: { firstname: string; lastname: string }) =>
-  `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`, undefined, { sensitivity: "base" });
+const shortName = (n: string) => n.replace(/^table\s*/i, "") || n;
 
 export default function SeatingChart() {
-  const [seats, setSeats] = useState<SeatRow[]>([]);
-  const [guests, setGuests] = useState<Guest[]>([]);
-  const [eventName, setEventName] = useState("");
-  const [eventDate, setEventDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [picture, setPicture] = useState<string | null>(null);
+  const [aspect, setAspect] = useState(0.62);
   const [allergies, setAllergies] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [answers, setAnswers] = useState<Record<string, { text: string; by: string; at: string }>>({});
-  const [rsvps, setRsvps] = useState<Record<string, { coming: "yes" | "no" }>>({});
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(true);
+  const [showMeals, setShowMeals] = useState(true);
+  const [showIndex, setShowIndex] = useState(true);
+  const [printedAt] = useState(() => new Date().toLocaleString());
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, g, e, al] = await Promise.all([
+        const [s, p, e, al, fm] = await Promise.all([
           fetch("/api/get-seat").then((r) => r.json()),
-          fetch("/api/get-guests").then((r) => r.json()),
-          fetch("/api/events").then((r) => r.json()),
-          fetch("/api/allergies").then((r) => r.json()).catch(() => ({})),
+          fetch("/api/table-positions").then((r) => r.json()).catch(() => null),
+          fetch("/api/events").then((r) => r.json()).catch(() => null),
+          fetch("/api/allergies").then((r) => r.json()).catch(() => null),
+          fetch("/api/floor-map").then((r) => r.json()).catch(() => null),
         ]);
-        if (al?.success) setAllergies(al.data);
-        const rl = await fetch("/api/rsvp-links").then((r) => r.json()).catch(() => null);
-        if (rl?.success) setRsvps(rl.rsvps ?? {});
-        const nt = await fetch("/api/guest-notes").then((r) => r.json()).catch(() => null);
-        if (nt?.success) {
-          setNotes(nt.data ?? {});
-          setAnswers(nt.answers ?? {});
-        }
-        if (s.success) setSeats(s.data);
-        if (g.success) setGuests(g.data);
-        if (e.success) {
+        if (al?.success) setAllergies(al.data ?? {});
+        if (e?.success) {
           const ev = e.events.find((x: { id: string }) => x.id === e.activeId);
           setEventName(ev?.name ?? "");
-          setEventDate(ev?.date ?? null);
+          setEventDate(ev?.date ?? "");
         }
+        const pic: string | null = fm?.image?.data ?? null;
+        if (pic) {
+          const img = new Image();
+          img.onload = () => img.naturalWidth && setAspect(img.naturalHeight / img.naturalWidth);
+          img.src = pic;
+          setPicture(pic);
+        }
+        const pos = new Map<string, Pos>(((p?.success ? p.data : []) as Pos[]).map((x) => [x.id, x]));
+        const byTable = new Map<string, Table>();
+        for (const st of (s?.success ? s.data : []) as SeatRow[]) {
+          let t = byTable.get(st.table.id);
+          if (!t) {
+            const ps = pos.get(st.table.id);
+            t = { id: st.table.id, name: st.table.name, seats: 0, guests: [], x: ps?.posX ?? null, y: ps?.posY ?? null };
+            byTable.set(st.table.id, t);
+          }
+          t.seats++;
+          if (st.isBooked && st.user)
+            t.guests.push({
+              id: st.user.id,
+              first: st.user.firstname,
+              last: st.user.lastname,
+              name: `${st.user.firstname} ${st.user.lastname}`.trim(),
+              vip: !!st.user.vip,
+              meal: st.user.meal ?? "",
+              seat: st.seat,
+            });
+        }
+        const list = [...byTable.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+        list.forEach((t) => t.guests.sort((a, b) => a.seat - b.seat));
+        setTables(list);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // tables with their seated guests
-  const tables = useMemo(() => {
-    const m = new Map<string, { name: string; seats: number; guests: SeatRow[] }>();
-    for (const s of seats) {
-      const t = m.get(s.table.id) ?? { name: s.table.name, seats: 0, guests: [] };
-      t.seats++;
-      if (s.isBooked && s.user) t.guests.push(s);
-      m.set(s.table.id, t);
-    }
-    return [...m.values()]
-      .sort((a, b) => byTable(a.name, b.name))
-      .map((t) => ({ ...t, guests: t.guests.sort((a, b) => byLast(a.user!, b.user!)) }));
-  }, [seats]);
-
-  // A–Z list: name → table
-  const alpha = useMemo(
-    () => seats.filter((s) => s.isBooked && s.user).sort((a, b) => byLast(a.user!, b.user!)),
-    [seats]
+  const total = tables.reduce((n, t) => n + t.guests.length, 0);
+  const placed = tables.filter((t) => t.x != null && t.y != null);
+  const index = useMemo(
+    () =>
+      tables
+        .flatMap((t) => t.guests.map((g) => ({ ...g, table: t.name })))
+        .sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`, undefined, { sensitivity: "base" })),
+    [tables]
   );
-  const unseated = useMemo(() => guests.filter((g) => !g.seat?.length).sort(byLast), [guests]);
-
-  const downloadReport = () => {
-    const wb = XLSX.utils.book_new();
-    const seated = alpha;
-    const came = seated.filter((s) => s.isReceived).length;
-    // Summary
-    const summary = [
-      ["Event", eventName],
-      ["Date", eventDate ?? ""],
-      ["Report made", new Date().toLocaleString()],
-      [],
-      ["Guests invited", guests.length],
-      ["Guests with a seat", seated.length],
-      ["Arrived", came],
-      ["Did not arrive", seated.length - came],
-      ["Without a seat", unseated.length],
-      [],
-      ["Meals (all guests)", mealSummary(guests) || "-"],
-      [
-        "RSVP",
-        `${Object.values(rsvps).filter((r) => r.coming === "yes").length} yes · ${
-          Object.values(rsvps).filter((r) => r.coming === "no").length
-        } no · ${guests.length - Object.keys(rsvps).length} no answer`,
-      ],
-      ["Allergies", Object.keys(allergies).length ? `${Object.keys(allergies).length} guests (see All guests)` : "-"],
-      [],
-      ["Table", "Seats", "Guests seated", "Arrived", "Did not arrive", "Meals", "Allergies"],
-      ...tables.map((t) => {
-        const a = t.guests.filter((g) => g.isReceived).length;
-        const al = t.guests
-          .filter((g) => allergies[g.user!.id])
-          .map((g) => `${g.user!.firstname} ${g.user!.lastname}: ${allergies[g.user!.id]}`)
-          .join("; ");
-        return [t.name, t.seats, t.guests.length, a, t.guests.length - a, mealSummary(t.guests.map((g) => g.user!)), al];
-      }),
-    ];
-    const ws1 = XLSX.utils.aoa_to_sheet(summary);
-    ws1["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 }, { wch: 40 }];
-    XLSX.utils.book_append_sheet(wb, ws1, "Summary");
-    // Every guest
-    const rows = [
-      ...seated.map((s) => ({
-        "Last Name": s.user!.lastname,
-        "First Name": s.user!.firstname,
-        Table: s.table.name,
-        Seat: s.seat,
-        Meal: s.user!.meal ?? "",
-        Allergy: allergies[s.user!.id] ?? "",
-        VIP: s.user!.vip ? "Yes" : "",
-        Arrived: s.isReceived ? "Yes" : "No",
-        RSVP: rsvps[s.user!.id]?.coming ?? "",
-        Note: notes[s.user!.id] ?? "",
-        "Desk note": answers[s.user!.id]?.text ?? "",
-        "Desk note by": answers[s.user!.id]
-          ? `${answers[s.user!.id].by}, ${new Date(answers[s.user!.id].at).toLocaleString()}`
-          : "",
-      })),
-      ...unseated.map((g) => ({
-        "Last Name": g.lastname,
-        "First Name": g.firstname,
-        Table: "",
-        Seat: "",
-        Meal: g.meal ?? "",
-        Allergy: allergies[g.id] ?? "",
-        VIP: g.vip ? "Yes" : "",
-        Arrived: "No seat",
-        RSVP: rsvps[g.id]?.coming ?? "",
-        Note: notes[g.id] ?? "",
-        "Desk note": answers[g.id]?.text ?? "",
-        "Desk note by": answers[g.id] ? `${answers[g.id].by}, ${new Date(answers[g.id].at).toLocaleString()}` : "",
-      })),
-    ];
-    const ws2 = XLSX.utils.json_to_sheet(rows);
-    ws2["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 10 }, { wch: 22 }, { wch: 5 }, { wch: 9 }, { wch: 36 }, { wch: 28 }, { wch: 28 }];
-    XLSX.utils.book_append_sheet(wb, ws2, "All guests");
-    // No-shows
-    const ws3 = XLSX.utils.json_to_sheet(
-      seated
-        .filter((s) => !s.isReceived)
-        .map((s) => ({ "Last Name": s.user!.lastname, "First Name": s.user!.firstname, Table: s.table.name, Seat: s.seat }))
-    );
-    ws3["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 6 }];
-    XLSX.utils.book_append_sheet(wb, ws3, "Did not arrive");
-    const safe = (eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
-    XLSX.writeFile(wb, `${safe} - report ${new Date().toISOString().slice(0, 10)}.xlsx`);
-  };
-
-  // Everyone's personal RSVP link, to text or email
-  const downloadRsvpLinks = async () => {
-    const j = await fetch("/api/rsvp-links").then((r) => r.json()).catch(() => null);
-    if (!j?.success) return;
-    const ws = XLSX.utils.json_to_sheet(
-      (j.data as { firstname: string; lastname: string; rsvp: string; link: string }[]).map((g) => ({
-        "Last Name": g.lastname,
-        "First Name": g.firstname,
-        RSVP: g.rsvp,
-        "Personal RSVP link": g.link,
-      }))
-    );
-    ws["!cols"] = [{ wch: 18 }, { wch: 16 }, { wch: 8 }, { wch: 80 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "RSVP links");
-    const safe = (eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
-    XLSX.writeFile(wb, `${safe} - RSVP links.xlsx`);
-  };
+  // meals: totals for the kitchen
+  const meals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const g of index) if (g.meal) m.set(g.meal, (m.get(g.meal) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [index]);
 
   if (loading) return <p className="p-8 text-zinc-500">Loading…</p>;
 
+  const head = (title: string) => (
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-2 border-b-2 border-black pb-1.5">
+      <div>
+        <h1 className="text-xl font-bold">
+          {eventName || "Seating chart"}
+          {eventDate && <span className="ml-2 text-base font-normal text-zinc-600">{eventDate}</span>}
+        </h1>
+        <p className="text-sm text-zinc-600">{title}</p>
+      </div>
+      <p className="text-xs text-zinc-500">Printed {printedAt}</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white text-black">
-      <style>{`@media print { .no-print { display: none !important } @page { margin: 12mm } .break-inside-avoid { break-inside: avoid } }`}</style>
-
-      {/* Buttons (not printed) */}
-      <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-zinc-50 px-6 py-3">
+      <style>{`@media print { .no-print { display: none !important } @page { margin: 9mm } .avoid { break-inside: avoid } .page { break-after: page } .page:last-child { break-after: auto } }
+        .chart, .chart * { color: #000 } `}</style>
+      <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b bg-zinc-50 px-6 py-3 text-zinc-900">
         <Link href="/dashboard" className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
@@ -215,107 +134,113 @@ export default function SeatingChart() {
         >
           <Printer className="h-4 w-4" /> Print / save as PDF
         </button>
-        <button
-          onClick={downloadReport}
-          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
-        >
-          <Download className="h-4 w-4" /> After-event report (Excel)
-        </button>
-        <button
-          onClick={downloadRsvpLinks}
-          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
-          title="Each guest's personal link to answer yes / no, meal and allergy"
-        >
-          <Download className="h-4 w-4" /> RSVP links (Excel)
-        </button>
-        <Link
-          href="/dashboard/door-list"
-          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
-        >
-          Door list (A–Z, tick boxes)
-        </Link>
-        <span className="text-xs text-zinc-500">
-          Tip: in the print window choose &quot;Save as PDF&quot; to email it to the venue.
-        </span>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input type="checkbox" checked={showMap} onChange={(e) => setShowMap(e.target.checked)} /> Floor plan page
+        </label>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input type="checkbox" checked={showMeals} onChange={(e) => setShowMeals(e.target.checked)} /> Meals &amp; allergies
+        </label>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input type="checkbox" checked={showIndex} onChange={(e) => setShowIndex(e.target.checked)} /> A–Z list (name → table)
+        </label>
       </div>
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
-        <h1 className="text-3xl font-bold">{eventName || "Seating chart"}</h1>
-        <p className="mb-6 text-zinc-600">
-          {eventDate ? `${eventDate} · ` : ""}
-          {tables.length} tables · {alpha.length} guests seated
-        </p>
+      <div className="chart mx-auto max-w-5xl bg-white px-6 py-6">
+        {!tables.length && <p className="text-zinc-500">No tables yet.</p>}
 
-        {/* Part 1: Find your table (A–Z) */}
-        <h2 className="mb-3 border-b-2 border-black pb-1 text-xl font-bold">Find your table (A–Z by last name)</h2>
-        <div className="mb-10 columns-1 gap-8 sm:columns-2 lg:columns-3">
-          {alpha.map((s) => (
-            <div key={s.id} className="break-inside-avoid flex justify-between gap-3 border-b border-dotted border-zinc-300 py-1 text-sm">
-              <span>
-                <b>{s.user!.lastname}</b>, {s.user!.firstname}
-              </span>
-              <span className="whitespace-nowrap font-semibold">{s.table.name}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Part 2: Each table */}
-        <h2 className="mb-3 border-b-2 border-black pb-1 text-xl font-bold" style={{ breakBefore: "page" }}>
-          Tables
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {tables.map((t) => (
-            <div key={t.name} className="break-inside-avoid rounded-lg border border-zinc-300 p-3">
-              <div className="mb-1 flex items-baseline justify-between">
-                <span className="text-lg font-bold">{t.name}</span>
-                <span className="text-xs text-zinc-500">
-                  {t.guests.length}/{t.seats} seated
-                </span>
+        {/* 1. The floor plan with table numbers */}
+        {showMap && tables.length > 0 && (
+          <section className="page">
+            {head(`Floor plan · ${tables.length} tables · ${total} guests seated`)}
+            {placed.length ? (
+              <div className="relative w-full overflow-hidden border border-zinc-300" style={{ aspectRatio: `1 / ${aspect}`, maxHeight: "165mm", marginInline: "auto" }}>
+                {picture && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={picture} alt="Floor plan" className="absolute inset-0 h-full w-full object-fill opacity-60" />
+                )}
+                {placed.map((t) => (
+                  <div
+                    key={t.id}
+                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 border-black bg-white leading-none shadow"
+                    style={{ left: `${t.x}%`, top: `${t.y}%`, width: "2.6rem", height: "2.6rem" }}
+                  >
+                    <span className="text-base font-extrabold">{shortName(t.name)}</span>
+                    <span className="text-[9px] font-semibold">
+                      {t.guests.length}/{t.seats}
+                    </span>
+                  </div>
+                ))}
               </div>
-              {t.guests.length ? (
-                <>
-                  <ol className="text-sm">
+            ) : (
+              <p className="text-sm text-zinc-500">The tables are not placed on a floor plan yet.</p>
+            )}
+            {placed.length > 0 && placed.length < tables.length && (
+              <p className="mt-1 text-xs text-zinc-500">
+                Not on the plan: {tables.filter((t) => t.x == null || t.y == null).map((t) => t.name).join(", ")}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-zinc-500">In each circle: table number, and guests / seats.</p>
+            {showMeals && meals.length > 0 && (
+              <p className="mt-2 text-sm">
+                <b>Meals:</b> {meals.map(([m, n]) => `${m} ${n}`).join(" · ")}
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* 2. Every table with its guests */}
+        {tables.length > 0 && (
+          <section className="page">
+            {head("Guests by table · ★ VIP · ⚠ allergy")}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 print:grid-cols-3">
+              {tables.map((t) => (
+                <div key={t.id} className="avoid rounded border border-black p-2">
+                  <div className="mb-1 flex items-baseline justify-between border-b border-zinc-400 pb-0.5">
+                    <b className="text-base">{t.name}</b>
+                    <span className="text-xs tabular-nums">
+                      {t.guests.length}/{t.seats}
+                    </span>
+                  </div>
+                  {!t.guests.length && <p className="text-xs text-zinc-500">No guests</p>}
+                  <ol className="space-y-0.5 text-[12px] leading-tight">
                     {t.guests.map((g) => (
-                      <li key={g.id} className="flex flex-wrap justify-between gap-x-2">
-                        <span>
-                          {g.user!.vip && "★ "}
-                          {g.user!.firstname} {g.user!.lastname}
-                        </span>
-                        <span className="whitespace-nowrap text-xs">
-                          {g.user!.meal && <span className="text-zinc-500">{g.user!.meal}</span>}
-                          {allergies[g.user!.id] && (
-                            <b className="ml-1 text-red-700">⚠ {allergies[g.user!.id]}</b>
+                      <li key={g.id} className="flex gap-1">
+                        <span className="w-4 shrink-0 text-right text-zinc-500 tabular-nums">{g.seat}</span>
+                        <span className="flex-1">
+                          {g.vip && "★ "}
+                          {g.name}
+                          {showMeals && (g.meal || allergies[g.id]) && (
+                            <span className="block text-[10px] text-zinc-600">
+                              {g.meal}
+                              {allergies[g.id] && <b className="ml-1">⚠ {allergies[g.id]}</b>}
+                            </span>
                           )}
                         </span>
-                        {(notes[g.user!.id] || answers[g.user!.id]) && (
-                          <span className="block w-full text-[11px] leading-tight">
-                            {notes[g.user!.id] && <b className="text-amber-800">📝 {notes[g.user!.id]}</b>}
-                            {answers[g.user!.id] && (
-                              <b className="ml-1 text-green-800">✓ Desk: {answers[g.user!.id].text}</b>
-                            )}
-                          </span>
-                        )}
                       </li>
                     ))}
                   </ol>
-                  {mealSummary(t.guests.map((g) => g.user!)) && (
-                    <p className="mt-1 border-t border-zinc-200 pt-1 text-xs font-semibold text-zinc-700">
-                      Meals: {mealSummary(t.guests.map((g) => g.user!))}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-zinc-400">No guests yet</p>
-              )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </section>
+        )}
 
-        {unseated.length > 0 && (
-          <div className="no-print mt-8 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-            <b>{unseated.length} guest{unseated.length === 1 ? "" : "s"} without a seat:</b>{" "}
-            {unseated.map((g) => `${g.firstname} ${g.lastname}`).join(", ")}
-          </div>
+        {/* 3. A–Z: name → table */}
+        {showIndex && index.length > 0 && (
+          <section className="page">
+            {head(`Guests A–Z · ${index.length} guests`)}
+            <div className="columns-2 gap-6 text-[12px] md:columns-3 print:columns-3">
+              {index.map((g) => (
+                <div key={g.id} className="avoid flex justify-between gap-2 border-b border-zinc-200 py-0.5">
+                  <span>
+                    <b>{g.last}</b>, {g.first}
+                    {g.vip && " ★"}
+                  </span>
+                  <span className="whitespace-nowrap font-bold">{shortName(g.table)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

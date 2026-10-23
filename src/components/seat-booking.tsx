@@ -1530,6 +1530,11 @@ const handleTableClick = () => {
                           <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/seating-chart">
+                          <MapIcon className="mr-2 w-4 h-4" /> Seating chart for the venue (print)
+                        </Link>
+                      </DropdownMenuItem>
                       {brand === "vip" && (
                         <>
                           <DropdownMenuItem asChild>
