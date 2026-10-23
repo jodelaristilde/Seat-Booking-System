@@ -39,7 +39,7 @@ export async function restoreSnapshot(eventId: string): Promise<{ label: string 
   const row = await db.setting.findUnique({ where: { key: key(eventId) } });
   if (!row) return null;
   const s = JSON.parse(row.value) as Snap;
-  await db.$transaction(async (tx: typeof db) => {
+  await db.$transaction(async (tx: Pick<typeof db, "seat" | "table" | "users">) => {
     await tx.seat.deleteMany({ where: { table: { is: { eventId } } } });
     await tx.seat.updateMany({ where: { user: { is: { eventId } } }, data: { userId: null, isBooked: false, isReceived: false } });
     await tx.table.deleteMany({ where: { eventId } });
