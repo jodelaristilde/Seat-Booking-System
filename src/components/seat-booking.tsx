@@ -16,6 +16,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -54,6 +58,8 @@ import {
   BarChart3,
   Sparkles,
   Radio,
+  MoreHorizontal,
+  Users,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -1486,55 +1492,31 @@ const handleTableClick = () => {
                         <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      {/* Mobile-friendly action items */}
+                    <DropdownMenuContent align="end" className="w-60">
+                      {/* The things used most, then Print and More in sub-menus */}
                       {!isStaff && (
-                      <DropdownMenuItem
-                        onClick={() => setIsAssignGuestsDialogOpen(true)}
-                      >
-                        <UserCheck2 className="mr-2 w-4 h-4" /> Assign Multiple
-                        Guests
-                      </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href={activeEventIdForLinks ? `/seat-scanning?event=${activeEventIdForLinks}` : "/seat-scanning"}
-                          className="flex items-center"
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}
                         >
-                          <ScanQrCode className="mr-2 w-4 h-4" /> Scan QR Code
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/scanner" className="flex items-center">
-                          <Camera className="mr-2 w-4 h-4" /> Scanner
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/client-view" className="flex items-center">
-                          <PersonStandingIcon className="mr-2 w-4 h-4" /> Client
-                          View
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/seating-chart">
-                          <Printer className="mr-2 w-4 h-4" /> Seating chart &amp; report
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/print-cards">
-                          <Printer className="mr-2 w-4 h-4" /> Table signs & place cards
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/door-list">
-                          <ListChecks className="mr-2 w-4 h-4" /> Door list (print)
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/seating-chart">
-                          <MapIcon className="mr-2 w-4 h-4" /> Seating chart for the venue (print)
-                        </Link>
-                      </DropdownMenuItem>
+                          <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
+                        </DropdownMenuItem>
+                      )}
+                      {!isStaff && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard/seating-helper">
+                            <Sparkles className="mr-2 w-4 h-4" /> Seat everyone
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {!isStaff && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => window.dispatchEvent(new Event("seating4u:live-link"))}
+                        >
+                          <Radio className="mr-2 w-4 h-4" /> Client live view (share link)
+                        </DropdownMenuItem>
+                      )}
                       {brand === "vip" && (
                         <>
                           <DropdownMenuItem asChild>
@@ -1549,56 +1531,92 @@ const handleTableClick = () => {
                           </DropdownMenuItem>
                         </>
                       )}
-                      {!isStaff && (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => window.dispatchEvent(new Event("seating4u:live-link"))}
-                        >
-                          <Radio className="mr-2 w-4 h-4" /> Client live view (share link)
-                        </DropdownMenuItem>
-                      )}
-                      {!isStaff && (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}
-                        >
-                          <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
-                        </DropdownMenuItem>
-                      )}
-                      {!isStaff && (
-                        <DropdownMenuItem asChild>
-                          <Link href="/dashboard/seating-helper">
-                            <Sparkles className="mr-2 w-4 h-4" /> Seat everyone &amp; seating rules
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/summary">
                           <BarChart3 className="mr-2 w-4 h-4" /> Arrival summary &amp; close out
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/history">
-                          <History className="mr-2 w-4 h-4" /> History
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/kitchen">
-                          <ChefHat className="mr-2 w-4 h-4" /> Kitchen screen
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/ready-check">
-                          <ClipboardCheck className="mr-2 w-4 h-4" /> Ready check
-                        </Link>
-                      </DropdownMenuItem>
-                      {session?.user?.email === "admin" && (
-                        <DropdownMenuItem asChild>
-                          <Link href="/dashboard/manage-users">
-                            Manage Users
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Printer className="mr-2 w-4 h-4" /> Print
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-60">
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/venue-chart">
+                              <MapIcon className="mr-2 w-4 h-4" /> Seating chart for the venue
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/door-list">
+                              <ListChecks className="mr-2 w-4 h-4" /> Door list (A–Z)
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/print-cards">
+                              <Printer className="mr-2 w-4 h-4" /> Table signs &amp; place cards
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/seating-chart">
+                              <Printer className="mr-2 w-4 h-4" /> Seating chart, report &amp; RSVP links
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <MoreHorizontal className="mr-2 w-4 h-4" /> More
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-60">
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/ready-check">
+                              <ClipboardCheck className="mr-2 w-4 h-4" /> Ready check
+                            </Link>
+                          </DropdownMenuItem>
+                          {!isStaff && (
+                            <DropdownMenuItem onClick={() => setIsAssignGuestsDialogOpen(true)}>
+                              <UserCheck2 className="mr-2 w-4 h-4" /> Assign multiple guests
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/kitchen">
+                              <ChefHat className="mr-2 w-4 h-4" /> Kitchen screen
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link
+                              href={activeEventIdForLinks ? `/seat-scanning?event=${activeEventIdForLinks}` : "/seat-scanning"}
+                              className="flex items-center"
+                            >
+                              <ScanQrCode className="mr-2 w-4 h-4" /> Scan QR code
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/scanner" className="flex items-center">
+                              <Camera className="mr-2 w-4 h-4" /> Scanner
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/client-view" className="flex items-center">
+                              <PersonStandingIcon className="mr-2 w-4 h-4" /> Client view (seats)
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/history">
+                              <History className="mr-2 w-4 h-4" /> History
+                            </Link>
+                          </DropdownMenuItem>
+                          {session?.user?.email === "admin" && (
+                            <DropdownMenuItem asChild>
+                              <Link href="/dashboard/manage-users">
+                                <Users className="mr-2 w-4 h-4" /> Manage users
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                     </DropdownMenuContent>
                   </DropdownMenu>
 

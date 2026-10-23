@@ -115,6 +115,54 @@ export default function UserGuide() {
           </div>
         </section>
 
+        {/* What's new: the latest features, short */}
+        <section id="new" className="mb-12">
+          <h2 className="mb-1 text-2xl font-light text-black">New in Seating4U</h2>
+          <p className="mb-4 text-sm text-zinc-500">The latest additions, in short. The video above shows the basics.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">☰ The menu is shorter</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'The things you use most are at the top. Everything you print is under <b>Print</b>; the rest (Ready check, Kitchen screen, Scanner, History…) is under <b>More</b>.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Walk-in guest</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Point at a table with an empty seat → <b>Walk-in guest: add &amp; seat here</b>. Type the name, then <b>Add &amp; check in</b>. A full table stays full.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Move a guest to another table</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Drag a name from <b>Guest Names</b> (right) onto any table. Their party (+1s) moves too. If the table is full, add a seat first.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Delete a guest: the red bin</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Drag a name onto the round <b>red bin</b> next to “Guest Names” and confirm. The guest is taken off the seat and deleted from the list.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Duplicate names in light red</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'A name on the list twice turns <b>light red</b>, with a note at the top and <b>Show them</b> to list only the duplicates. You are also warned right after an Excel import. Staff are told to ask the guest which table is theirs.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Client live view (share link)</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → <b>Client live view</b>: a private link for the bride, family or host. They see every table and who has arrived, live, but can’t change anything. <b>New link</b> turns the old one off.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Names inside the seats</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → More → <b>Client view (seats)</b>: when you are logged in, each seat shows the guest’s name (green ✓ = arrived).' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Check-in pop-up away from the table</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'When a guest checks in, the welcome card shows on the other side of the room so you can see their table flashing.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Hide menu keeps the Arrived list</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'With <b>Hide menu</b> on, the Arrived list stays on the left on every screen. The <b>✓ Arrived list</b> button at the top turns it on or off.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Seating chart for the venue</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → Print → <b>Seating chart for the venue</b>: the floor plan with table numbers, every table with its guests (meals, allergies, VIP), and an A–Z list. Print it or save as PDF for the venue and caterer.' }} />
+            </div>
+          </div>
+        </section>
+
         {/* Contents */}
         <nav className="mb-12 rounded-xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">In this guide</p>
@@ -301,7 +349,7 @@ export default function UserGuide() {
           <Card title="Fill a whole table at once">
             <Steps
               items={[
-                "Open the menu (☰) and click <b>Assign Multiple</b>.",
+                "Open the menu (☰) and click <b>More</b> → <b>Assign multiple guests</b>.",
                 "On the right, pick a table (for example <i>Table 1, 10 of 10 seats available</i>).",
                 { text: "Click <b>Select 10 guests for this table</b>. The next guests in the list are ticked for you.", tip: "Type in the search box first to pick from a group (a family name, for example). You can untick anyone." },
                 "Click <b>Assign … to Table 1</b>, under the table list.",
@@ -394,7 +442,7 @@ export default function UserGuide() {
           <Card title="Ready check (the night before)">
             <Steps
               items={[
-                "Open the menu (☰) and click <b>Ready check</b>.",
+                "Open the menu (☰) → <b>More</b> → <b>Ready check</b>.",
                 "It lists anything that could go wrong at the door: tables on top of each other, guests on the list twice, guests without a table or meal, empty tables, no entrance set.",
                 "Each problem says how to fix it. Click <b>Check again</b> until it says <b>All set</b>.",
               ]}
@@ -403,7 +451,7 @@ export default function UserGuide() {
           <Card title="Door list (paper backup)">
             <Steps
               items={[
-                "Menu (☰) → <b>Door list (print)</b>: every guest A–Z with table, seat, VIP, meal and allergy, and a box to tick.",
+                "Menu (☰) → <b>Print</b> → <b>Door list (A–Z)</b>: every guest A–Z with table, seat, VIP, meal and allergy, and a box to tick.",
                 "Click <b>Print door list</b> the morning of the event. If the Wi-Fi or a laptop fails, the desk keeps going on paper.",
               ]}
             />
@@ -411,7 +459,7 @@ export default function UserGuide() {
           <Card title="Check-in only accounts for your staff">
             <Steps
               items={[
-                "Log in as <b>admin</b>, open the menu (☰) → <b>Manage Users</b>.",
+                "Log in as <b>admin</b>, open the menu (☰) → <b>More</b> → <b>Manage users</b>.",
                 "Create the account with <b>Check-in only (staff)</b> ticked, or click <b>Full access</b> next to an existing account to switch it.",
                 { text: "Staff can check guests in, add a last-minute guest and set meals, allergies and VIP. They cannot delete anything or change tables, the floor plan or the guest list import.", tip: "A change takes effect the next time that person logs in." },
               ]}
@@ -437,7 +485,7 @@ export default function UserGuide() {
           <Card title="Kitchen screen for the caterer">
             <Steps
               items={[
-                "Menu (☰) → <b>Kitchen screen</b> on a tablet or TV in the kitchen (log in with a staff account).",
+                "Menu (☰) → <b>More</b> → <b>Kitchen screen</b> on a tablet or TV in the kitchen (log in with a staff account).",
                 "It shows the meals to serve now for guests who have <b>arrived</b>, table by table, with allergies in red, plus what is still expected. It updates by itself.",
               ]}
             />
@@ -448,7 +496,7 @@ export default function UserGuide() {
           <Card title="Online RSVP">
             <Steps
               items={[
-                "Seating chart page → <b>RSVP links (Excel)</b>: every guest gets their own personal link.",
+                "Menu (☰) → <b>Print</b> → <b>Seating chart, report &amp; RSVP links</b> → <b>RSVP links (Excel)</b>: every guest gets their own personal link.",
                 "Text or email each guest their link. They answer <b>Yes / No</b>, pick a meal and type any allergy.",
                 "Answers show in the RSVP column on the Seating chart page and in the report. A link only works for that one guest.",
               ]}
@@ -474,7 +522,7 @@ export default function UserGuide() {
           <Card title="Table signs & place cards">
             <Steps
               items={[
-                "Menu (☰) → <b>Table signs &amp; place cards</b>.",
+                "Menu (☰) → <b>Print</b> → <b>Table signs &amp; place cards</b>.",
                 "<b>Table signs</b>: one big table number per page, with a QR code guests scan to find their seat.",
                 "<b>Place cards</b>: fold-over name cards, 8 per page. Tick <b>Show the meal</b> to help the servers. VIPs get a ★.",
               ]}
@@ -489,7 +537,7 @@ export default function UserGuide() {
           <Card title="History: who checked in whom, with undo">
             <Steps
               items={[
-                "Menu (☰) → <b>History</b>: every check-in with the time and who did it (a staff login or the guest&apos;s own phone), plus desk notes.",
+                "Menu (☰) → <b>More</b> → <b>History</b>: every check-in with the time and who did it (a staff login or the guest&apos;s own phone), plus desk notes.",
                 "Checked in the wrong person? Click <b>Undo</b> on that line.",
               ]}
             />
@@ -515,7 +563,7 @@ export default function UserGuide() {
           <Card title="Seat everyone in one click">
             <Steps
               items={[
-                "Menu (☰) → <b>Seat everyone &amp; seating rules</b>.",
+                "Menu (☰) → <b>Seat everyone</b>.",
                 "Click <b>Show me first</b> to see who would sit where. Nothing is saved yet.",
                 { text: "Click <b>Seat them now</b>. Every guest without a table gets one: parties (+1s), families (same last name) and <i>keep together</i> guests sit at the same table; <i>keep apart</i> guests go to different tables.", tip: "Guests who already have a seat are never moved. Adjust by hand afterwards if you like." },
               ]}
