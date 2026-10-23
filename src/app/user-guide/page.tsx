@@ -99,7 +99,7 @@ export default function UserGuide() {
         {/* Video walkthrough */}
         <section className="mb-12">
           <h2 className="mb-1 text-2xl font-light text-black">Watch: how to use Seating4U</h2>
-          <p className="mb-4 text-sm text-zinc-500">A 2½-minute video with voice, from setting up the room to the kitchen screen.</p>
+          <p className="mb-4 text-sm text-zinc-500">A 3½-minute video with voice: your venue floor plan, guests, seating, walk-in guests, check-in, handy tools, check-in staff and the kitchen screen.</p>
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
             <video
               className="block aspect-video w-full"
