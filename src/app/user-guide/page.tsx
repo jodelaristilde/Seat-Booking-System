@@ -122,7 +122,7 @@ export default function UserGuide() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">☰ The menu is shorter</p>
-              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Everything to set up your event is in one place: <b>Setup steps</b>, <b>Floor plan</b>, <b>Import guests</b>, <b>New guest</b>, <b>New table</b>, <b>Create tables in bulk</b> and <b>Seat everyone</b>.' }} />
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Everything to set up your event is in one place: <b>Setup steps</b>, <b>Floor plan</b>, <b>Import guests</b>, <b>New guest</b>, <b>New table</b>, <b>Create tables in bulk</b>, <b>Seat everyone</b>, <b>Check-in staff</b> (logins for your door helpers) and <b>Delete all tables</b>.' }} />
             </div>
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">Walk-in guest</p>
@@ -459,8 +459,9 @@ export default function UserGuide() {
           <Card title="Check-in only accounts for your staff">
             <Steps
               items={[
-                "Log in as <b>admin</b>, open the menu (☰) → <b>More</b> → <b>Manage users</b>.",
-                "Create the account with <b>Check-in only (staff)</b> ticked, or click <b>Full access</b> next to an existing account to switch it.",
+                "Open the menu (☰) → <b>Check-in staff</b>.",
+                "Type the helper&apos;s name, a <b>username</b> and a <b>password</b>, then click <b>Create login</b>. Give them the username and password.",
+                "Forgot it? Click <b>New password</b>. Event over? Click the bin to delete the login. You only see the helpers you made.",
                 { text: "Staff can check guests in, add a last-minute guest and set meals, allergies and VIP. They cannot delete anything or change tables, the floor plan or the guest list import.", tip: "A change takes effect the next time that person logs in." },
               ]}
             />

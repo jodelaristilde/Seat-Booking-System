@@ -1527,6 +1527,15 @@ const handleTableClick = () => {
                           <Sparkles className="mr-2 w-4 h-4" /> Seat everyone
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/check-in-staff">
+                          <Users className="mr-2 w-4 h-4" /> Check-in staff
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
+                        <Trash className="mr-2 w-4 h-4" /> Delete all tables
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                     ) : (
                     <DropdownMenuContent align="end" className="w-60">
@@ -1645,6 +1654,13 @@ const handleTableClick = () => {
                               <History className="mr-2 w-4 h-4" /> History
                             </Link>
                           </DropdownMenuItem>
+                          {!isStaff && (
+                            <DropdownMenuItem asChild>
+                              <Link href="/dashboard/check-in-staff">
+                                <Users className="mr-2 w-4 h-4" /> Check-in staff
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                           {session?.user?.email === "admin" && (
                             <DropdownMenuItem asChild>
                               <Link href="/dashboard/manage-users">

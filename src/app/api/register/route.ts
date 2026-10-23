@@ -3,7 +3,7 @@ import { hashPassword } from "@/lib/password";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { setStaff } from "@/lib/roles";
+import { roleOf, setStaff, setStaffOwner } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -19,12 +19,24 @@ export async function POST(request: Request) {
     // Only the very first account can be created without logging in
     // (so a brand-new site can get its "admin" account).
     // After that, only the logged-in "admin" can create accounts.
+    // A regular (full) user may create CHECK-IN STAFF accounts for their own event.
     const userCount = await prisma.user.count();
+    let ownerId: string | null = null;
     if (userCount > 0) {
       const session = await getServerSession(authOptions);
       if (session?.user?.email !== "admin") {
-        return new NextResponse("Unauthorized", { status: 401 });
+        const me = session?.user?.id;
+        if (!me || (await roleOf(me)) === "staff" || staff !== true) {
+          return new NextResponse("Unauthorized", { status: 401 });
+        }
+        ownerId = me;
       }
+    }
+    if (String(email).trim().toLowerCase() === "admin" && userCount > 0) {
+      return new NextResponse("That username is taken", { status: 409 });
+    }
+    if (await prisma.user.findUnique({ where: { email } })) {
+      return new NextResponse("That username is taken", { status: 409 });
     }
 
     const user = await prisma.user.create({
@@ -36,6 +48,7 @@ export async function POST(request: Request) {
     });
 
     if (staff === true) await setStaff(user.id, true);
+    if (ownerId) await setStaffOwner(user.id, ownerId);
 
     // Never send the password back
     return NextResponse.json({ id: user.id, email: user.email, name: user.name });

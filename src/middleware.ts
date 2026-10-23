@@ -41,7 +41,7 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
 ]
 // Only the admin (owner) account may wipe things in bulk
-const ADMIN_API = ["/api/washup", "/api/delete-all-tables"]
+const ADMIN_API = ["/api/washup"]
 const adminOnly = (path: string) => ADMIN_API.some((p) => path === p || path.startsWith(p + "/"))
 
 const staffMayChange = (path: string, method: string) =>

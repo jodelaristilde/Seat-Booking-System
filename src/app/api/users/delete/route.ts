@@ -1,5 +1,6 @@
 import { authOptions } from "@/lib/auth.config"
 import { hashPassword } from "@/lib/password"
+import { mayManage } from "@/lib/roles"
 import { PrismaClient } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { type NextRequest, NextResponse } from "next/server"
@@ -16,7 +17,8 @@ export async function DELETE(request: NextRequest) {
       return new NextResponse("User ID is required", { status: 400 })
     }
 
-    if (session?.user?.email !== "admin") {
+    // admin: any account; a regular user: only the check-in staff they created
+    if (!(await mayManage(session, userId))) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -47,7 +49,8 @@ export async function PATCH(request: NextRequest) {
       return new NextResponse("User ID is required", { status: 400 })
     }
 
-    if (session?.user?.email !== "admin") {
+    // admin: any account; a regular user: only the check-in staff they created
+    if (!(await mayManage(session, userId))) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
