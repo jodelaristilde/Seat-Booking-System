@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -64,6 +65,7 @@ import {
   Plus,
   LayoutGrid,
   Image as ImageIcon,
+  PlayCircle,
   Users,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -1512,40 +1514,92 @@ const handleTableClick = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     {isUser ? (
-                    <DropdownMenuContent align="end" className="w-60">
-                      {/* Regular users: everything to set up the event, in one menu */}
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}>
-                        <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
+                    <DropdownMenuContent align="end" className="w-[19rem] max-h-[85vh] overflow-y-auto p-1.5">
+                      {/* Regular users: the whole setup, in order, each with one line saying what it does */}
+                      <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                        Set up your event, in this order
+                      </DropdownMenuLabel>
+                      {(
+                        [
+                          { n: 1, icon: ImageIcon, title: "Upload the floor plan", hint: "A picture or screenshot of the venue's plan.", go: () => openSetup("floor-map") },
+                          { n: 2, icon: LayoutGrid, title: "Add the tables", hint: "Found on your plan, or many at once.", go: async () => {
+                            // with a floor plan: find the tables on it; without one: create them in bulk
+                            const fm = await fetch("/api/floor-map").then((r) => r.json()).catch(() => null);
+                            if (fm?.image) openSetup("draw-tables");
+                            else handleBulkTableCreation();
+                          } },
+                          { n: 3, icon: FileUp, title: "Import your guest list", hint: "From Excel. First and last name are enough.", go: () => openSetup("import-guests") },
+                          { n: 4, icon: Sparkles, title: "Seat everyone", hint: "One click. Families stay together.", href: "/dashboard/seating-helper" },
+                          { n: 5, icon: Users, title: "Logins for your door helpers", hint: "They can check guests in, not delete.", href: "/dashboard/check-in-staff" },
+                        ] as { n: number; icon: typeof Plus; title: string; hint: string; go?: () => void; href?: string }[]
+                      ).map((it) => {
+                        const body = (
+                          <span className="flex w-full items-start gap-2.5">
+                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lime-600 text-xs font-bold text-white">
+                              {it.n}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="flex items-center gap-1.5 font-semibold">
+                                <it.icon className="h-4 w-4 shrink-0" /> {it.title}
+                              </span>
+                              <span className="block text-xs leading-snug text-zinc-500">{it.hint}</span>
+                            </span>
+                          </span>
+                        );
+                        return it.href ? (
+                          <DropdownMenuItem key={it.n} asChild className="cursor-pointer py-2">
+                            <Link href={it.href}>{body}</Link>
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem key={it.n} className="cursor-pointer py-2" onClick={it.go}>
+                            {body}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      <DropdownMenuItem className="cursor-pointer py-2" onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}>
+                        <span className="flex items-start gap-2.5">
+                          <ListOrdered className="mt-0.5 h-5 w-5 shrink-0 text-lime-700" />
+                          <span>
+                            <span className="block font-semibold">Not sure? Show me step by step</span>
+                            <span className="block text-xs text-zinc-500">A bar at the top walks you through it.</span>
+                          </span>
+                        </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => openSetup("floor-map")}>
-                        <ImageIcon className="mr-2 w-4 h-4" /> Floor plan (upload)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => openSetup("import-guests")}>
-                        <FileUp className="mr-2 w-4 h-4" /> Import guests (Excel)
-                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                        One at a time
+                      </DropdownMenuLabel>
                       <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddGuestOpen(true)}>
-                        <UserPlus className="mr-2 w-4 h-4" /> New guest
+                        <UserPlus className="mr-2 w-4 h-4" /> Add one guest
                       </DropdownMenuItem>
                       <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddTableOpen(true)}>
-                        <Plus className="mr-2 w-4 h-4" /> New table
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer" onClick={handleBulkTableCreation}>
-                        <LayoutGrid className="mr-2 w-4 h-4" /> Create tables in bulk
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/seating-helper">
-                          <Sparkles className="mr-2 w-4 h-4" /> Seat everyone
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/check-in-staff">
-                          <Users className="mr-2 w-4 h-4" /> Check-in staff
-                        </Link>
+                        <Plus className="mr-2 w-4 h-4" /> Add one table
                       </DropdownMenuItem>
                       <UndoItem />
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="cursor-pointer py-2">
+                        <Link href="/user-guide">
+                          <span className="flex items-start gap-2.5">
+                            <PlayCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                            <span>
+                              <span className="block font-semibold">Watch how (3 min video)</span>
+                              <span className="block text-xs text-zinc-500">Every step shown, with voice.</span>
+                            </span>
+                          </span>
+                        </Link>
+                      </DropdownMenuItem>
+
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
-                        <Trash className="mr-2 w-4 h-4" /> Delete all tables
+                        <span className="flex items-start gap-2.5">
+                          <Trash className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            <span className="block font-semibold">Start the room over</span>
+                            <span className="block text-xs text-red-500">Deletes all tables (guests stay). You can undo it.</span>
+                          </span>
+                        </span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                     ) : (
