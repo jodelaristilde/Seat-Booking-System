@@ -17,7 +17,7 @@ interface BookingSidebarProps {
   bookedSeats: Seat[];
   onDeleteBooking: (seatId: string, guestId?: string) => void;
   onToggleReceived: (seatId: string, isReceived: boolean) => void;
-  onDeleteAll: () => void;
+  onDeleteAll?: () => void; // only the admin can delete everything
   // Full-screen floor plan: just the names, no Export / Delete All buttons
   compact?: boolean;
   // check-in only account: no "remove from seat" bins
@@ -258,6 +258,7 @@ export function BookingSidebar({
                     <Download className="h-3 w-3" />
                     {isExporting ? 'Exporting...' : 'Export in Excel'}
                   </Button>
+                  {onDeleteAll && (
                   <Button
                     variant="destructive"
                     size="sm"
@@ -266,6 +267,7 @@ export function BookingSidebar({
                   >
                     Delete All
                   </Button>
+                  )}
                 </>
               )}
             </div>

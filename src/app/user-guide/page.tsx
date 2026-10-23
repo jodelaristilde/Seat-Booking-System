@@ -122,7 +122,7 @@ export default function UserGuide() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">☰ The menu is shorter</p>
-              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'The things you use most are at the top. Everything you print is under <b>Print</b>; the rest (Ready check, Kitchen screen, Scanner, History…) is under <b>More</b>.' }} />
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Everything to set up your event is in one place: <b>Setup steps</b>, <b>Floor plan</b>, <b>Import guests</b>, <b>New guest</b>, <b>New table</b>, <b>Create tables in bulk</b> and <b>Seat everyone</b>.' }} />
             </div>
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">Walk-in guest</p>

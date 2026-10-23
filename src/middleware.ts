@@ -40,6 +40,10 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/vip/call", methods: ["PUT"] }, // a guest's call handled
   { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
 ]
+// Only the admin (owner) account may wipe things in bulk
+const ADMIN_API = ["/api/washup", "/api/delete-all-tables"]
+const adminOnly = (path: string) => ADMIN_API.some((p) => path === p || path.startsWith(p + "/"))
+
 const staffMayChange = (path: string, method: string) =>
   STAFF_API.some((r) => (path === r.path || path.startsWith(r.path + "/")) && r.methods.includes(method))
 
@@ -113,6 +117,12 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
       return NextResponse.json(
         { success: false, message: "Please log in first" },
         { status: 401 }
+      )
+    }
+    if (adminOnly(path) && req.method !== "GET" && token.email !== "admin") {
+      return NextResponse.json(
+        { success: false, message: "Only the admin account can do this." },
+        { status: 403 }
       )
     }
     if (token.role === "staff" && req.method !== "GET" && !staffMayChange(path, req.method)) {

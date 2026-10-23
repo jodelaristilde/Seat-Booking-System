@@ -59,6 +59,11 @@ import {
   Sparkles,
   Radio,
   MoreHorizontal,
+  FileUp,
+  UserPlus,
+  Plus,
+  LayoutGrid,
+  Image as ImageIcon,
   Users,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -77,7 +82,7 @@ import { GuestAccessBanner } from "./GuestAccessBanner";
 import { LiveLinkDialog } from "@/components/LiveLinkDialog";
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
-import { onSetup } from "@/lib/setupEvents";
+import { onSetup, openSetup } from "@/lib/setupEvents";
 import { AddTableForm } from "./add-table-form";
 import { AssignGuestsDialog } from "./assign-guests-dialog";
 import { BookingSidebar } from "./booking-sidebar";
@@ -218,6 +223,10 @@ const SeatBooking = () => {
   const { data: session } = useSession();
   // check-in only account: hide everything that deletes or changes tables
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
+  // the owner account: sees every menu item and the delete-everything buttons
+  const isAdmin = session?.user?.email === "admin";
+  // a regular user (not admin, not check-in staff): one simple Setup menu
+  const isUser = !isAdmin && !isStaff;
   // Setup steps bar: its buttons open screens here
   useEffect(() => onSetup("bulk-tables", () => setBulkTableDialogOpen(true)), []);
   useEffect(() => {
@@ -1492,6 +1501,34 @@ const handleTableClick = () => {
                         <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                       </Button>
                     </DropdownMenuTrigger>
+                    {isUser ? (
+                    <DropdownMenuContent align="end" className="w-60">
+                      {/* Regular users: everything to set up the event, in one menu */}
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}>
+                        <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => openSetup("floor-map")}>
+                        <ImageIcon className="mr-2 w-4 h-4" /> Floor plan (upload)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => openSetup("import-guests")}>
+                        <FileUp className="mr-2 w-4 h-4" /> Import guests (Excel)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddGuestOpen(true)}>
+                        <UserPlus className="mr-2 w-4 h-4" /> New guest
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddTableOpen(true)}>
+                        <Plus className="mr-2 w-4 h-4" /> New table
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={handleBulkTableCreation}>
+                        <LayoutGrid className="mr-2 w-4 h-4" /> Create tables in bulk
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/seating-helper">
+                          <Sparkles className="mr-2 w-4 h-4" /> Seat everyone
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                    ) : (
                     <DropdownMenuContent align="end" className="w-60">
                       {/* The things used most, then Print and More in sub-menus */}
                       {!isStaff && (
@@ -1618,9 +1655,11 @@ const handleTableClick = () => {
                         </DropdownMenuSubContent>
                       </DropdownMenuSub>
                     </DropdownMenuContent>
+                    )}
                   </DropdownMenu>
 
-                  {/* Create New Dropdown */}
+                  {/* Create New Dropdown (regular users have these in the ☰ menu) */}
+                  {!isUser && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="h-8 sm:h-9 px-2 sm:px-3 text-sm font-semibold">
@@ -1652,7 +1691,7 @@ const handleTableClick = () => {
                         New Guest
                       </DropdownMenuItem>
                       {!isStaff && <ImportGuestsforWeb />}
-                      {!isStaff && (
+                      {isAdmin && (
                         <DropdownMenuItem
                           className="cursor-pointer text-red-600"
                           onClick={() => setIsDeleteAllTablesDialogOpen(true)}
@@ -1663,6 +1702,7 @@ const handleTableClick = () => {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  )}
 
                   {/* Avatar Dropdown */}
                   <DropdownMenu>
@@ -1863,7 +1903,7 @@ const handleTableClick = () => {
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
                 onCheckInNow={(id) => handleToggleReceived(id, true)}
-                onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
+                onDeleteAll={isAdmin ? () => setIsDeleteAllDialogOpen(true) : undefined}
                 compact={isFullScreen || isStaff}
                 readOnly={isStaff}
               />

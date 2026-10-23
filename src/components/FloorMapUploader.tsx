@@ -188,14 +188,16 @@ export function FloorMapUploader() {
 
   return (
     <>
-      {userEmail === "admin" && ( // ✅ Only show button if email is "admin"
+      {( // the panel opens for everyone (setup steps, ☰ menu); the toolbar button is for the admin
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm">
-              <ImageIcon className="mr-2 h-4 w-4" />
-              FLOOR MAP
-            </Button>
-          </SheetTrigger>
+          {userEmail === "admin" && (
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <ImageIcon className="mr-2 h-4 w-4" />
+                FLOOR MAP
+              </Button>
+            </SheetTrigger>
+          )}
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
             <SheetHeader>
               <SheetTitle>Floor Map</SheetTitle>
