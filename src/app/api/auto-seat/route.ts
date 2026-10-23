@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { activeEventId } from "@/lib/event";
+import { saveSnapshot } from "@/lib/snapshot";
 import { db } from "@/lib/db";
 import { partiesFor } from "@/lib/party";
 import { readRules } from "@/lib/rules";
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
     for (const m of plan.moves) perTable.set(m.tableId, [...(perTable.get(m.tableId) ?? []), name.get(m.guestId)!]);
 
     if (body?.apply === true && plan.moves.length) {
+      await saveSnapshot(eventId, "Seat everyone"); // so it can be undone
       // the empty seats of each table, in seat order
       const emptySeats = new Map<string, string[]>();
       for (const t of tables as T[]) emptySeats.set(t.id, (t.Seat as S[]).filter((s) => !s.isBooked).map((s) => s.id));

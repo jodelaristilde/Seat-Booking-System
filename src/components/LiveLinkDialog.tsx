@@ -37,7 +37,7 @@ export function LiveLinkDialog() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
       <div className="w-full max-w-lg rounded-xl bg-white p-5 text-zinc-900 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center">
-          <h2 className="mr-auto text-lg font-bold">Client live view</h2>
+          <h2 className="mr-auto text-lg font-bold">Client live view &amp; report</h2>
           <button onClick={() => setOpen(false)} className="rounded p-1 hover:bg-zinc-100" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
@@ -61,6 +61,23 @@ export function LiveLinkDialog() {
           <button onClick={() => confirm("Make a new link? The old link will stop working.") && get(true)} className={`${btn} ml-auto text-zinc-600 hover:bg-zinc-100`}>
             <RefreshCw className="h-4 w-4" /> New link
           </button>
+        </div>
+        {/* after the event: a thank-you report for the host (same private key) */}
+        <div className="mt-4 border-t pt-3">
+          <p className="mb-2 text-sm font-semibold">After the event: report for the host</p>
+          <p className="mb-2 text-xs text-zinc-600">Who came, when they arrived and the meals served. They can print it or save it as a PDF.</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={!url}
+              onClick={() => navigator.clipboard?.writeText(url.replace("/live?", "/report?")).then(() => toast.success("Report link copied"), () => toast.error("Could not copy"))}
+              className={`${btn} border hover:bg-zinc-50 disabled:opacity-50`}
+            >
+              <Copy className="h-4 w-4" /> Copy report link
+            </button>
+            <a href={url ? url.replace("/live?", "/report?") : undefined} target="_blank" rel="noreferrer" className={`${btn} border hover:bg-zinc-50`}>
+              <ExternalLink className="h-4 w-4" /> Open report
+            </a>
+          </div>
         </div>
       </div>
     </div>

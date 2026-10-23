@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
+import { eventVisible, ownerForNew, setEventOwner, viewerScope } from "@/lib/eventAccess";
 
 // Which event a request is about.
 //
@@ -55,6 +56,20 @@ export async function activeEventId(): Promise<string> {
     chosen = (await cookies()).get(EVENT_COOKIE)?.value;
   } catch {
     chosen = undefined;
+  }
+  // A logged-in user (not the admin) only ever works in their own events
+  const scope = await viewerScope();
+  if (scope && !scope.admin) {
+    if (chosen && (await eventExists(chosen)) && (await eventVisible(scope, chosen))) return chosen;
+    if (await eventVisible(scope, fallback)) return fallback;
+    const all = await db.event.findMany({ orderBy: { createdAt: "asc" }, select: { id: true } });
+    for (const e of all as { id: string }[]) if (await eventVisible(scope, e.id)) return e.id;
+    // a brand-new user: their first event
+    const owner = ownerForNew(scope);
+    const ev = await db.event.create({ data: { name: "My event" } });
+    if (owner) await setEventOwner(ev.id, owner);
+    known.set(ev.id, Date.now());
+    return ev.id;
   }
   if (chosen && (await eventExists(chosen))) return chosen;
   return fallback;

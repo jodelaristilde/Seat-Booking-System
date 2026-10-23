@@ -20,6 +20,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
   { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
   { path: "/api/live", methods: ["GET"] }, // the client's read-only live view (signed link only)
+  { path: "/api/host-report", methods: ["GET"] }, // the host's after-event report (same signed link)
   { path: "/api/vip/guest-call", methods: ["POST"] }, // VIP guest taps "Call server" / "Order another bottle" (checked in the route)
 ]
 
@@ -62,8 +63,19 @@ const pageMiddleware = withAuth(
 
     // If user is logged in and tries to access pages other than the allowed ones
     if (token) {
-      const allowedAuthPaths = ["/dashboard", "/client-view", "/seat-scanning", "/check-in", "/live", "/rsvp", "/user-guide"]
+      const allowedAuthPaths = ["/dashboard", "/client-view", "/seat-scanning", "/check-in", "/live", "/report", "/rsvp", "/user-guide"]
       if (!allowedAuthPaths.some((p) => path.startsWith(p))) {
+        return NextResponse.redirect(new URL("/dashboard", req.url))
+      }
+      // A regular user (not the admin, not check-in staff) only uses the setup
+      // pages; the admin's other pages send them back to the dashboard
+      const USER_PAGES = ["/dashboard/seating-helper", "/dashboard/check-in-staff", "/dashboard/ready-check", "/dashboard/print-cards"]
+      if (
+        token.email !== "admin" &&
+        token.role !== "staff" &&
+        path.startsWith("/dashboard/") &&
+        !USER_PAGES.some((p) => path === p || path.startsWith(p + "/"))
+      ) {
         return NextResponse.redirect(new URL("/dashboard", req.url))
       }
     }

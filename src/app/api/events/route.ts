@@ -3,6 +3,7 @@ import { activeEventId, EVENT_COOKIE } from "@/lib/event";
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { brandsFor, setBrand } from "@/lib/brand";
+import { eventVisible, ownerForNew, ownerOfEvent, setEventOwner, viewerScope } from "@/lib/eventAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,14 @@ function withEventCookie(res: NextResponse, id: string) {
 export async function GET() {
   try {
     const active = await activeEventId();
-    const events = await db.event.findMany({ orderBy: { createdAt: "desc" } });
+    const scope = await viewerScope();
+    const allEvents = await db.event.findMany({ orderBy: { createdAt: "desc" } });
+    // each user only sees their own events (the admin sees all, with who owns them)
+    type Ev = { id: string; name: string; date: string | null; createdAt: Date };
+    const events: Ev[] = [];
+    for (const e of allEvents as Ev[]) if (await eventVisible(scope, e.id)) events.push(e);
+    const owners: Record<string, string | null> = {};
+    if (scope?.admin) for (const e of events as { id: string }[]) owners[e.id] = await ownerOfEvent(e.id);
     const brands = await brandsFor();
     const counts = await Promise.all(
       events.map(async (e: { id: string }) => ({
@@ -35,6 +43,7 @@ export async function GET() {
         ...e,
         ...counts.find((c) => c.id === e.id),
         brand: brands[e.id] ?? "seating4u",
+        ...(scope?.admin ? { owner: owners[e.id] } : {}),
       })),
     });
   } catch (error) {
@@ -51,11 +60,15 @@ export async function POST(req: Request) {
     if (!name) return NextResponse.json({ success: false, message: "Please give the event a name" }, { status: 400 });
     await activeEventId(); // make sure older data is already filed under an event
     const date = typeof body?.date === "string" && body.date.trim() ? body.date.trim().slice(0, 40) : null;
+    const scope = await viewerScope();
     const event = await db.event.create({ data: { name, date } });
+    const owner = ownerForNew(scope);
+    if (owner) await setEventOwner(event.id, owner);
     if (body?.brand === "vip") await setBrand(event.id, "vip");
     // Optional: start from another event's room (same venue): floor plan picture,
     // tables (empty seats), entrance and the words read from the picture. No guests.
-    const from = typeof body?.copyFrom === "string" ? body.copyFrom : "";
+    const fromAsked = typeof body?.copyFrom === "string" ? body.copyFrom : "";
+    const from = fromAsked && (await eventVisible(scope, fromAsked)) ? fromAsked : "";
     if (from) {
       const src = await db.event.findUnique({ where: { id: from } });
       if (src) {
@@ -108,7 +121,15 @@ export async function PUT(req: NextRequest) {
     }
     const id = typeof body?.id === "string" ? body.id : "";
     const event = id ? await db.event.findUnique({ where: { id } }) : null;
-    if (!event) return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
+    const scope = await viewerScope();
+    if (!event || !(await eventVisible(scope, id)))
+      return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
+    // the admin gives an event to a user { id, owner: userId | "" }
+    if (typeof body.owner === "string") {
+      if (!scope?.admin) return NextResponse.json({ success: false, message: "Only the admin can do this." }, { status: 403 });
+      await setEventOwner(id, body.owner || null);
+      return NextResponse.json({ success: true });
+    }
     if (typeof body.name === "string" && body.name.trim()) {
       await db.event.update({
         where: { id },
@@ -131,7 +152,8 @@ export async function DELETE(req: Request) {
   try {
     const body = await req.json();
     const id = typeof body?.id === "string" ? body.id : "";
-    if (!id) return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
+    if (!id || !(await eventVisible(await viewerScope(), id)))
+      return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     if (id === (await activeEventId())) {
       return NextResponse.json(
         { success: false, message: "Open another event first; the event open on this computer can't be deleted." },
@@ -144,6 +166,7 @@ export async function DELETE(req: Request) {
     await db.table.deleteMany({ where: { eventId: id } });
     await db.image.deleteMany({ where: { eventId: id } });
     await db.event.delete({ where: { id } });
+    await setEventOwner(id, null);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Events DELETE:", error);

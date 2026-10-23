@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { closedEventIds, forcedOpenIds, isPast, setGuestClosed } from "@/lib/guestAccess";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { eventVisible, viewerScope } from "@/lib/eventAccess";
 
 // GET -> { [eventId]: { open, past, closed } }   (login required)
 // PUT { id, closed }  close / reopen guest check-in for one event
@@ -24,6 +25,8 @@ export async function PUT(req: Request) {
   const body = await req.json();
   if (typeof body?.id !== "string" || typeof body?.closed !== "boolean")
     return NextResponse.json({ success: false, message: "Bad request" }, { status: 400 });
+  if (!(await eventVisible(await viewerScope(), body.id)))
+    return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
   await setGuestClosed(body.id, body.closed);
   return NextResponse.json({ success: true });
 }

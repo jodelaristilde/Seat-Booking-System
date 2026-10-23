@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Sparkles, Trash2, Users, Ban, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { matches } from "@/lib/fold";
+import { fold, matches } from "@/lib/fold";
 import { ruleProblems, type Rule, type RuleKind } from "@/lib/seatPlan";
 import { overTables, usualSeats } from "@/lib/capacity";
 
@@ -128,6 +128,27 @@ export default function SeatingHelper() {
   }, [load]);
 
   const guestById = useMemo(() => new Map(guests.map((g) => [g.id, g])), [guests]);
+  // the same name more than once (seated or not): fix before seating
+  const dupGroups = useMemo(() => {
+    const m = new Map<string, Guest[]>();
+    for (const g of guests) {
+      const k = fold(nm(g)).replace(/\s+/g, " ").trim();
+      if (k) m.set(k, [...(m.get(k) ?? []), g]);
+    }
+    return [...m.values()].filter((l) => l.length > 1);
+  }, [guests]);
+  const deleteCopy = async (g: Guest) => {
+    if (!window.confirm(`Delete this copy of ${nm(g)} from the guest list?`)) return;
+    const r = await fetch("/api/delete-guest", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guestId: g.id }),
+    }).then((x) => x.json()).catch(() => null);
+    if (r?.success) {
+      toast.success("Deleted");
+      load();
+    } else toast.error(r?.message ?? "Could not delete");
+  };
   const tableOf = useCallback((id: string) => guestById.get(id)?.seat[0]?.table.id ?? null, [guestById]);
   const tableName = useMemo(() => new Map(seats.map((s) => [s.table.id, s.table.name])), [seats]);
   const sorted = useMemo(
@@ -197,7 +218,20 @@ export default function SeatingHelper() {
       if (!res?.success) throw new Error(res?.message);
       setPreview(res);
       if (apply) {
-        toast.success(`${res.seated} guest${res.seated === 1 ? "" : "s"} seated`);
+        toast.success(`${res.seated} guest${res.seated === 1 ? "" : "s"} seated`, {
+          duration: 15000,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              const r = await fetch("/api/snapshot", { method: "PUT" }).then((x) => x.json()).catch(() => null);
+              if (r?.success) {
+                toast.success("Undone: everyone is back where they were");
+                setPreview(null);
+                load();
+              } else toast.error(r?.message ?? "Could not undo");
+            },
+          },
+        });
         await load();
       }
     } catch (e) {
@@ -242,6 +276,37 @@ export default function SeatingHelper() {
               {tooFull.map((t) => (
                 <li key={t.name}>
                   <b>{t.name}</b> has {t.guests} guests, but a table holds {t.limit}.
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Duplicate names: fix them before seating */}
+        {dupGroups.length > 0 && (
+          <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
+            <h2 className="mb-1 font-bold text-red-800">
+              {dupGroups.length} name{dupGroups.length === 1 ? " is" : "s are"} on the guest list more than once
+            </h2>
+            <p className="mb-2 text-sm text-red-900">Delete the extra copy before seating, so nobody gets two seats.</p>
+            <ul className="space-y-2">
+              {dupGroups.map((l) => (
+                <li key={l[0].id} className="rounded-lg bg-white p-2">
+                  <b className="text-sm">{nm(l[0])}</b>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {l.map((g, i) => (
+                      <span key={g.id} className="inline-flex items-center gap-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs">
+                        Copy {i + 1}: {g.seat[0]?.table.name ?? "no table"}
+                        {g.seat.length ? (
+                          <span className="text-zinc-500">(remove on the dashboard: red bin)</span>
+                        ) : (
+                          <button onClick={() => deleteCopy(g)} className="font-semibold text-red-700 underline">
+                            Delete
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
                 </li>
               ))}
             </ul>

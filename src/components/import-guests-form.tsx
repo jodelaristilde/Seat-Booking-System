@@ -114,6 +114,13 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
         throw new Error("No valid data found in the file");
       }
 
+      // a copy of the event first, so the import can be undone (menu → Undo)
+      await fetch("/api/snapshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: mode === "update" ? "Update guests from Excel" : "Import guests" }),
+      }).catch(() => undefined);
+
       if (mode === "update") {
         const res = await fetch("/api/update-guests", {
           method: "POST",

@@ -31,7 +31,7 @@ const SeatBooking = () => {
           tableNumber: Number.parseInt(tableName.replace("Table", "")),
           seats: seats.sort((a, b) => a.seat - b.seat),
         }))
-        .sort((a, b) => a.tableNumber - b.tableNumber);
+        .sort((a, b) => (a.seats[0]?.table?.name ?? "").localeCompare(b.seats[0]?.table?.name ?? "", undefined, { numeric: true, sensitivity: "base" }));
 
       setTables(formattedTables);
     }
@@ -70,8 +70,8 @@ const SeatBooking = () => {
     return colors[tableNumber % colors.length];
   };
 
-  const renderCircularTable = (table: TableData) => {
-    const tableColor = getTableColor(table.tableNumber);
+  const renderCircularTable = (table: TableData, idx: number) => {
+    const tableColor = getTableColor(Number.isFinite(table.tableNumber) ? table.tableNumber : idx);
 
     return (
       <motion.div
@@ -91,7 +91,7 @@ const SeatBooking = () => {
           >
             <span className="flex items-center justify-center">
               <span className={`font-semibold text-lg text-center`}>
-                Table {table.tableNumber}
+                {table.seats[0]?.table?.name ?? `Table ${table.tableNumber}`}
               </span>
             </span>
           </div>
@@ -197,7 +197,7 @@ const SeatBooking = () => {
               }}
               transition={{ duration: 0.5 }}
             >
-              {getVisibleTables().map((table) => renderCircularTable(table))}
+              {getVisibleTables().map((table, i) => renderCircularTable(table, i))}
             </motion.div>
           </ScrollArea>
         </motion.div>

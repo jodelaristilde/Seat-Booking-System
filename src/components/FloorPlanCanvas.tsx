@@ -1786,18 +1786,62 @@ export function FloorPlanCanvas({
 
   // The Arrived list. On smaller screens (phones) it goes under the Guest
   // Names list instead of next to the room.
+  // "Not here yet": the guests still expected, by table (late in the night:
+  // chase no-shows, or give their seats to walk-ins)
+  const missing = tables
+    .flatMap((t) =>
+      t.seats
+        .filter((x) => x.isBooked && !x.isReceived && x.user)
+        .map((x) => ({ id: x.id, name: `${x.user!.firstname} ${x.user!.lastname}`.trim(), table: tableNameOf(t), vip: !!x.user!.vip }))
+    )
+    .sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true, sensitivity: "base" }) || a.name.localeCompare(b.name));
   const arrivedList = (cls: string, mobile = false) => (
         <div className={`${cls} arrived-list rounded-lg border border-green-200 bg-green-50/60 overflow-hidden`}>
-          <div className="flex items-center justify-between gap-3 px-2 py-0.5 border-b border-green-200 bg-green-100/70">
-            <span className="font-semibold text-green-900">Arrived</span>
-            <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
+          <div className="flex items-center gap-1 px-1 py-0.5 border-b border-green-200 bg-green-100/70">
+            <button
+              type="button"
+              onClick={() => setShowMissing(false)}
+              className={`flex flex-1 items-center justify-between gap-3 rounded px-1.5 ${!showMissing ? "bg-white/70" : "opacity-70 hover:opacity-100"}`}
+            >
+              <span className="font-semibold text-green-900">Arrived</span>
+              <span className="text-sm font-bold text-green-800 tabular-nums">{arrivals.length}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMissing(true)}
+              title="Guests still expected, by table"
+              className={`flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 text-sm ${showMissing ? "bg-white/70 font-semibold text-zinc-900" : "text-zinc-600 hover:text-zinc-900"}`}
+            >
+              Not here yet <span className="font-bold tabular-nums">{missing.length}</span>
+            </button>
           </div>
           <div
             className={`${mobile ? "max-h-72" : "max-h-40 lg:max-h-[calc(100vh-6rem)]"} overflow-y-auto overscroll-contain`}
             // never taller than the map next to it: the names scroll, the map stays put
             style={!mobile && avail && window.innerWidth >= 1024 ? { maxHeight: Math.max(160, avail.h + (avail.note ?? 0) - 30) } : undefined}
           >
+            {showMissing && (
+              <table className="text-sm border-collapse">
+                <tbody>
+                  {missing.map((m) => (
+                    <tr key={m.id} className="border-b border-green-100 last:border-b-0">
+                      <td className="pl-2 pr-6 py-0.5 text-zinc-700 whitespace-nowrap">
+                        {m.vip && <span className="vip-name mr-0.5 text-amber-600">★</span>}
+                        {m.name}
+                      </td>
+                      <td className="pr-2 py-0.5 text-xs font-semibold text-zinc-500 whitespace-nowrap">{m.table}</td>
+                    </tr>
+                  ))}
+                  {!missing.length && (
+                    <tr>
+                      <td className="px-2 py-2 text-sm text-green-800">Everyone is here ✓</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
             {/* A table so the table names line up a few spaces after the longest name */}
+            {!showMissing && (
             <table className="text-sm border-collapse">
               <tbody>
                 <AnimatePresence initial={false}>
@@ -1843,10 +1887,12 @@ export function FloorPlanCanvas({
                 </AnimatePresence>
               </tbody>
             </table>
+            )}
           </div>
         </div>
   );
   const [arrivedSlot, setArrivedSlot] = useState<HTMLElement | null>(null);
+  const [showMissing, setShowMissing] = useState(false);
   useEffect(() => {
     setArrivedSlot(roomOnly ? null : document.getElementById("arrived-under-guests"));
   }, [roomOnly]);
@@ -2856,6 +2902,42 @@ export function FloorPlanCanvas({
                 {dropTable === id && (
                   <div className="pointer-events-none absolute inset-0 z-40 rounded-full ring-4 ring-blue-500 bg-blue-400/20" style={{ left: "8%", top: "8%", width: "74%", height: "74%" }} />
                 )}
+                {(() => {
+                  // arrival ring: a green line fills around the table as its guests arrive
+                  // (grey = nobody yet). A full table gets the gold glow below instead.
+                  const booked = table.seats.filter((x) => x.isBooked);
+                  const came = booked.filter((x) => x.isReceived).length;
+                  if (!booked.length || came === booked.length || working) return null;
+                  const pct = (came / booked.length) * 100;
+                  const round = shape === "round";
+                  return (
+                    <svg
+                      className="pointer-events-none absolute z-20 overflow-visible"
+                      style={{ left: "4%", top: "4%", width: "82%", height: "82%" }}
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-label={`${came} of ${booked.length} arrived`}
+                    >
+                      {round ? (
+                        <>
+                          <circle cx="50" cy="50" r="48" fill="none" stroke="#d4d4d8" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+                          {came > 0 && (
+                            <circle cx="50" cy="50" r="48" fill="none" stroke="#16a34a" strokeWidth="5" strokeLinecap="round"
+                              pathLength={100} strokeDasharray={`${pct} 100`} transform="rotate(-90 50 50)" vectorEffect="non-scaling-stroke" />
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <rect x="2" y="2" width="96" height="96" rx="6" fill="none" stroke="#d4d4d8" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+                          {came > 0 && (
+                            <rect x="2" y="2" width="96" height="96" rx="6" fill="none" stroke="#16a34a" strokeWidth="5"
+                              pathLength={100} strokeDasharray={`${pct} 100`} vectorEffect="non-scaling-stroke" />
+                          )}
+                        </>
+                      )}
+                    </svg>
+                  );
+                })()}
                 {(() => {
                   // everyone at this table has arrived: gold glow + check
                   const booked = table.seats.filter((x) => x.isBooked);

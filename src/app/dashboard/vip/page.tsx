@@ -226,8 +226,11 @@ export default function VipBoard() {
           const min = i.minimum ?? 0;
           const pct = min ? Math.min(100, Math.round((t.spent / min) * 100)) : 0;
           const done = min > 0 && t.spent >= min;
+          // minimum spend colour: red under half, yellow past half, green when reached
+          const level = !min || done ? "green" : t.spent >= min / 2 ? "yellow" : "red";
+          const border = { green: "border-green-500", yellow: "border-yellow-400", red: "border-red-400" }[level];
           return (
-            <div key={t.id} className={`rounded-xl border-2 bg-white p-3 ${i.status === "booked" ? (done ? "border-green-400" : "border-lime-400") : "border-zinc-200"}`}>
+            <div key={t.id} className={`rounded-xl border-2 bg-white p-3 ${i.status === "booked" ? border : "border-zinc-200"}`}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="whitespace-nowrap text-lg font-extrabold">{t.name}</span>
                 <span
@@ -273,7 +276,10 @@ export default function VipBoard() {
                 </div>
                 {min > 0 && (
                   <div className="mt-1 h-2 rounded-full bg-zinc-100">
-                    <div className={`h-2 rounded-full ${done ? "bg-green-600" : "bg-lime-500"}`} style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-2 rounded-full ${level === "green" ? "bg-green-600" : level === "yellow" ? "bg-yellow-400" : "bg-red-500"}`}
+                      style={{ width: `${Math.max(pct, 3)}%` }}
+                    />
                   </div>
                 )}
               </div>

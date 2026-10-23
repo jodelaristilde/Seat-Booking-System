@@ -1,4 +1,5 @@
 import { activeEventId } from "@/lib/event";
+import { saveSnapshot } from "@/lib/snapshot";
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
@@ -8,6 +9,7 @@ export async function DELETE() {
   try {
     // Only the open event's tables (other events are not touched)
     const eventId = await activeEventId()
+    await saveSnapshot(eventId, "Delete all tables") // so it can be undone
     await prisma.seat.deleteMany({ where: { table: { is: { eventId } } } })
     await prisma.table.deleteMany({ where: { eventId } })
 

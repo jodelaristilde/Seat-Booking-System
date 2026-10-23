@@ -11,7 +11,7 @@ import { CalendarDays, ChevronDown, Plus, Trash2, Pencil, Check, QrCode, Downloa
 import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 
-type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number; brand?: "vip" | "seating4u" };
+type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number; brand?: "vip" | "seating4u"; owner?: string | null };
 
 export function EventSwitcher() {
   const [open, setOpen] = useState(false);
@@ -38,6 +38,18 @@ export function EventSwitcher() {
   };
 
   // per event: can guests look up seats on their phone?
+  const [people, setPeople] = useState<{ id: string; email: string; name: string | null }[] | null>(null);
+  const giveTo = async (e: Ev, owner: string) => {
+    const r = await fetch("/api/events", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: e.id, owner }),
+    }).then((x) => x.json()).catch(() => null);
+    if (r?.success) {
+      toast.success("Owner saved");
+      load();
+    } else toast.error(r?.message ?? "Could not save");
+  };
   const [access, setAccess] = useState<Record<string, { open: boolean; past: boolean; closed: boolean }>>({});
   const load = async () => {
     try {
@@ -46,6 +58,11 @@ export function EventSwitcher() {
       if (json.success) {
         setEvents(json.events);
         setActiveId(json.activeId);
+        // the admin sees who owns each event and can give it to a user
+        if (json.events.some((e: Ev) => "owner" in e) && !people) {
+          const u = await fetch("/api/users").then((r) => (r.ok ? r.json() : [])).catch(() => []);
+          setPeople((u as { id: string; email: string; name: string | null; staff?: boolean }[]).filter((x) => !x.staff));
+        }
       }
       const ga = await fetch("/api/events/guest-access").then((r) => r.json()).catch(() => null);
       if (ga?.success) setAccess(ga.data);
@@ -203,6 +220,24 @@ export function EventSwitcher() {
                             Nightclub VIP
                           </button>
                         </div>{" "}
+                        {/* admin only: whose event is this? (users only see their own events) */}
+                        {"owner" in e && people && (
+                          <select
+                            value={e.owner ?? ""}
+                            onChange={(x) => giveTo(e, x.target.value)}
+                            className="mt-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                            title="Who can see this event. Users only see their own events."
+                          >
+                            <option value="">Owner: admin</option>
+                            {people
+                              .filter((u) => u.email !== "admin")
+                              .map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  Owner: {u.name || u.email}
+                                </option>
+                              ))}
+                          </select>
+                        )}{" "}
                         {/* can guests find their seat on their phone? */}
                         {access[e.id] && (
                           <button

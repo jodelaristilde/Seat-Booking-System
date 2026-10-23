@@ -160,6 +160,38 @@ export default function UserGuide() {
               <p className="font-semibold text-black">Seating chart for the venue</p>
               <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → Print → <b>Seating chart for the venue</b>: the floor plan with table numbers, every table with its guests (meals, allergies, VIP), and an A–Z list. Print it or save as PDF for the venue and caterer.' }} />
             </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Your events stay private</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Each account only sees the events it made. Your check-in helpers see your events. (The admin sees everything and can give an event to an account.)' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Arrival ring around each table</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'A green line fills around a table as its guests arrive. Grey = nobody yet. Everyone here = gold glow.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Not here yet</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Next to <b>Arrived</b>, click <b>Not here yet</b>: the guests still expected, table by table. Handy late in the night.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Undo a big change</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Before <b>Delete all tables</b>, <b>Import guests</b> or <b>Seat everyone</b>, a copy is saved. Click <b>Undo</b> in the message, or ☰ → <b>Undo</b>.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Duplicates before seating</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '<b>Seat everyone</b> lists names that are on the list twice, so you can delete the extra copy first.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Report for the host</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → Client live view → <b>Open report</b>: who came, when, and the meals served. They can print it or save it as a PDF.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">VIP nights: minimum spend colours</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Each VIP table turns <b>red</b> (under half the minimum), <b>yellow</b> (past half), then <b>green</b> (minimum reached).' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Tables with names</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Click the gear on a table to rename it, e.g. <b>Family</b> or <b>Head Table</b>. The name shows on the plan, place cards and guests’ phones.' }} />
+            </div>
           </div>
         </section>
 

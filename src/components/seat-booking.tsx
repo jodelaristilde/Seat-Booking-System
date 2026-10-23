@@ -80,6 +80,7 @@ import type { Person, Seat, TableData } from "../types/booking";
 import { AddGuestForm } from "./add-guest-form";
 import { GuestAccessBanner } from "./GuestAccessBanner";
 import { LiveLinkDialog } from "@/components/LiveLinkDialog";
+import { UndoItem, undoLastChange } from "@/components/UndoItem";
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup, openSetup } from "@/lib/setupEvents";
@@ -378,7 +379,8 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
           tableNumber: Number.parseInt(tableName.replace("Table", "")),
           seats: seats.sort((a, b) => a.seat - b.seat),
         }))
-        .sort((a, b) => a.tableNumber - b.tableNumber);
+        // "Table 2" before "Table 10"; named tables ("Family", "Head Table") sort by name
+        .sort((a, b) => (a.seats[0]?.table?.name ?? "").localeCompare(b.seats[0]?.table?.name ?? "", undefined, { numeric: true, sensitivity: "base" }));
 
       setTables(formattedTables);
       setBookedSeats(initialSeats.filter((seat) => seat.isBooked));
@@ -468,7 +470,8 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
           tableNumber: Number.parseInt(tableName.replace("Table", "")),
           seats: seats.sort((a, b) => a.seat - b.seat),
         }))
-        .sort((a, b) => a.tableNumber - b.tableNumber);
+        // "Table 2" before "Table 10"; named tables ("Family", "Head Table") sort by name
+        .sort((a, b) => (a.seats[0]?.table?.name ?? "").localeCompare(b.seats[0]?.table?.name ?? "", undefined, { numeric: true, sensitivity: "base" }));
 
       setTables(formattedTables);
       setBookedSeats(initialSeats.filter((seat) => seat.isBooked));
@@ -1000,8 +1003,15 @@ const handleTableClick = () => {
             const reached = min > 0 && v.spent >= min;
             return (
               <span
-                className={`pointer-events-none whitespace-nowrap rounded-full px-1.5 font-bold leading-tight tabular-nums ${
-                  !booked ? "bg-zinc-100 text-zinc-600" : reached ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"
+                // minimum spend: red under half, yellow past half, green when reached
+                className={`keep-ink pointer-events-none whitespace-nowrap rounded-full px-1.5 font-bold leading-tight tabular-nums ${
+                  !booked
+                    ? "bg-zinc-100 text-zinc-600"
+                    : !min || reached
+                    ? "bg-green-200 text-green-900"
+                    : v.spent >= min / 2
+                    ? "bg-yellow-200 text-yellow-900"
+                    : "bg-red-200 text-red-900"
                 }`}
                 style={{ fontSize: "clamp(8px, 10cqw, 14px)" }}
                 title={booked ? `${v.info.host} · ${v.info.arrived ?? 0}/${v.info.partySize ?? 0} in · $${v.spent} of $${min}` : "Open"}
@@ -1375,7 +1385,7 @@ const handleTableClick = () => {
         setTables([]);
         setBookedSeats([]);
         setIsDeleteAllTablesDialogOpen(false);
-        toast.success("All tables deleted successfully", { id: toastId });
+        toast.success("All tables deleted", { id: toastId, duration: 15000, action: { label: "Undo", onClick: () => undoLastChange() } });
       } else {
         throw new Error(result.message || "Failed to delete all tables");
       }
@@ -1532,6 +1542,7 @@ const handleTableClick = () => {
                           <Users className="mr-2 w-4 h-4" /> Check-in staff
                         </Link>
                       </DropdownMenuItem>
+                      <UndoItem />
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
                         <Trash className="mr-2 w-4 h-4" /> Delete all tables
@@ -1582,6 +1593,7 @@ const handleTableClick = () => {
                           <BarChart3 className="mr-2 w-4 h-4" /> Arrival summary &amp; close out
                         </Link>
                       </DropdownMenuItem>
+                      {!isStaff && <UndoItem />}
 
                       <DropdownMenuSeparator />
                       <DropdownMenuSub>
