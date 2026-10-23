@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Sparkles, Trash2, Users, Ban, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { HelpTip } from "@/components/HelpTip";
 import { fold, matches } from "@/lib/fold";
 import { ruleProblems, type Rule, type RuleKind } from "@/lib/seatPlan";
 import { overTables, usualSeats } from "@/lib/capacity";
@@ -263,7 +264,14 @@ export default function SeatingHelper() {
         </Link>
       </div>
       <div className="mx-auto max-w-4xl space-y-8 px-6 py-6">
-        <h1 className="text-3xl font-bold">Seating helper</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          Seating helper
+          <HelpTip side="right">
+            <b>Seat everyone</b> gives a seat to every guest who has none. Guests already seated don&apos;t move.
+            <br />
+            <b>Preview</b> first if you like. Changed your mind? Click <b>Undo</b> in the message right after.
+          </HelpTip>
+        </h1>
 
         {/* Problems right now */}
         {(broken.length > 0 || tooFull.length > 0) && (

@@ -20,6 +20,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
   { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
   { path: "/api/live", methods: ["GET"] }, // the client's read-only live view (signed link only)
+  { path: "/api/password-reset", methods: ["POST", "PUT"] }, // "I forgot my password" (checked in the route)
   { path: "/api/host-report", methods: ["GET"] }, // the host's after-event report (same signed link)
   { path: "/api/vip/guest-call", methods: ["POST"] }, // VIP guest taps "Call server" / "Order another bottle" (checked in the route)
 ]
@@ -40,6 +41,7 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/vip/order", methods: ["POST", "PUT"] }, // log a bottle order / mark it served
   { path: "/api/vip/call", methods: ["PUT"] }, // a guest's call handled
   { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
+  { path: "/api/problems", methods: ["POST"] }, // "Report a problem"
 ]
 // Only the admin (owner) account may wipe things in bulk
 const ADMIN_API = ["/api/washup"]

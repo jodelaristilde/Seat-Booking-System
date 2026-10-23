@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { HelpTip } from "@/components/HelpTip";
 import { ArrowLeft, KeyRound, Trash2, UserPlus } from "lucide-react";
 
 type Account = { id: string; email: string; name: string | null; staff?: boolean };
@@ -73,7 +74,13 @@ export default function CheckInStaff() {
         <Link href="/dashboard" className="inline-flex items-center gap-1 rounded border px-3 py-1.5 text-sm hover:bg-zinc-50">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
-        <h1 className="text-lg font-bold">Check-in staff</h1>
+        <h1 className="flex items-center gap-2 text-lg font-bold">
+          Check-in staff
+          <HelpTip side="right">
+            Make one login per helper. Give them the <b>username</b> and <b>password</b>. They log in at www.seating4u.com and can
+            only check guests in. After the event, delete the login with the bin.
+          </HelpTip>
+        </h1>
       </div>
       <div className="mx-auto max-w-2xl space-y-6 p-4">
         <p className="text-sm text-zinc-600">

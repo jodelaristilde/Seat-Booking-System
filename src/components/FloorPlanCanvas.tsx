@@ -39,6 +39,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { TableData } from "@/types/booking";
+import { HelpTip } from "@/components/HelpTip";
 import {
   findShapes,
   readTextInShapes,
@@ -2067,6 +2068,20 @@ export function FloorPlanCanvas({
           >
             <PanelLeftClose className="w-4 h-4 mr-2" /> Hide menu
           </Button>
+        )}
+        {!working && !staff && (
+          <div className="hidden lg:flex items-center gap-2 px-2 text-xs text-zinc-500">
+            <HelpTip side="right">
+              <b>Draw tables</b>: click each table number on your floor plan picture (or <b>Find all tables</b>).
+              <br />
+              <b>Move tables</b>: drag a table to its spot.
+              <br />
+              <b>Point at a table</b> to see its guests, add a walk-in guest, or change it with the gear.
+              <br />
+              <b>Hide menu</b>: full screen for the event day.
+            </HelpTip>
+            How this works
+          </div>
         )}
         {staff ? null : drawing ? (
           <>

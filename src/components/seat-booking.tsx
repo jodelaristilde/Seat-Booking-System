@@ -66,6 +66,9 @@ import {
   LayoutGrid,
   Image as ImageIcon,
   PlayCircle,
+  GraduationCap,
+  Download,
+  MessageSquareWarning,
   Users,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -83,6 +86,10 @@ import { AddGuestForm } from "./add-guest-form";
 import { GuestAccessBanner } from "./GuestAccessBanner";
 import { LiveLinkDialog } from "@/components/LiveLinkDialog";
 import { UndoItem, undoLastChange } from "@/components/UndoItem";
+import { PracticeBanner, startPractice } from "@/components/PracticeBanner";
+import { WelcomeDialog } from "@/components/WelcomeDialog";
+import { ReportProblem, openReportProblem } from "@/components/ReportProblem";
+import { NetworkWatch } from "@/components/NetworkWatch";
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup, openSetup } from "@/lib/setupEvents";
@@ -1406,6 +1413,7 @@ const handleTableClick = () => {
   return (
     <div className={`bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
       <div ref={topBarsRef}>
+        {!isFullScreen && !isStaff && <PracticeBanner />}
         {!isFullScreen && !isStaff && <GuestAccessBanner />}
       </div>
       <AnimatePresence>
@@ -1565,6 +1573,15 @@ const handleTableClick = () => {
                           </span>
                         </span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer py-2" onClick={startPractice}>
+                        <span className="flex items-start gap-2.5">
+                          <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
+                          <span>
+                            <span className="block font-semibold">Practice with sample guests</span>
+                            <span className="block text-xs text-zinc-500">A pretend event to learn. Delete it after.</span>
+                          </span>
+                        </span>
+                      </DropdownMenuItem>
 
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
@@ -1589,6 +1606,15 @@ const handleTableClick = () => {
                             </span>
                           </span>
                         </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer py-2" onClick={openReportProblem}>
+                        <span className="flex items-start gap-2.5">
+                          <MessageSquareWarning className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                          <span>
+                            <span className="block font-semibold">Something wrong? Tell us</span>
+                            <span className="block text-xs text-zinc-500">Write what happened. We&apos;ll look at it.</span>
+                          </span>
+                        </span>
                       </DropdownMenuItem>
 
                       <DropdownMenuSeparator />
@@ -1682,6 +1708,26 @@ const handleTableClick = () => {
                           <MoreHorizontal className="mr-2 w-4 h-4" /> More
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent className="w-60">
+                          <DropdownMenuItem className="cursor-pointer" onClick={openReportProblem}>
+                            <MessageSquareWarning className="mr-2 w-4 h-4" /> Report a problem
+                          </DropdownMenuItem>
+                          {session?.user?.email === "admin" && (
+                            <DropdownMenuItem asChild>
+                              <a href="/api/export-all" download>
+                                <Download className="mr-2 w-4 h-4" /> Download all my data (Excel)
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          {session?.user?.email === "admin" && (
+                            <DropdownMenuItem asChild>
+                              <Link href="/dashboard/problems">
+                                <MessageSquareWarning className="mr-2 w-4 h-4" /> Problems reported
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="cursor-pointer" onClick={startPractice}>
+                            <GraduationCap className="mr-2 w-4 h-4" /> Practice with sample guests
+                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/dashboard/ready-check">
                               <ClipboardCheck className="mr-2 w-4 h-4" /> Ready check
@@ -1817,6 +1863,9 @@ const handleTableClick = () => {
       <div ref={setupBarRef}>{!isFullScreen && !isStaff && <SetupSteps />}</div>
       {!isStaff && <ImportGuestsforWeb noButton />}
       {!isStaff && <LiveLinkDialog />}
+      {isUser && <WelcomeDialog />}
+      <ReportProblem />
+      <NetworkWatch />
 
       {/* Main Content */}
       <div

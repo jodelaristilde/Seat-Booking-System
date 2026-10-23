@@ -192,6 +192,30 @@ export default function UserGuide() {
               <p className="font-semibold text-black">Tables with names</p>
               <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Click the gear on a table to rename it, e.g. <b>Family</b> or <b>Head Table</b>. The name shows on the plan, place cards and guests’ phones.' }} />
             </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Practice with sample guests</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → <b>Practice with sample guests</b>: a pretend event with 16 guests and 4 tables. Try everything, then click <b>I’m done: delete the practice event</b>.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Your Excel file is checked first</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'After you drop your file you see how many guests will be added, and in red any row missing a name, names in the file twice, and guests already on your list. Nothing is added until you click <b>Import</b>.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Forgot your password?</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'On the sign-in page, click <b>Forgot your password?</b> and get a link by email.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">Something wrong? Tell us</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: '☰ → <b>Something wrong? Tell us</b>: write what happened. Your event and screen are added for you.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">No internet?</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'A red bar tells you when the Wi-Fi drops. Wait for it to go away, then try again.' }} />
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-3">
+              <p className="font-semibold text-black">The ? buttons</p>
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Click a small <b>?</b> next to a title for a tip about that screen.' }} />
+            </div>
           </div>
         </section>
 

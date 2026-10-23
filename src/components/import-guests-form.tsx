@@ -1,6 +1,7 @@
 "use client";
 import { fold } from "@/lib/fold";
 import { onSetup } from "@/lib/setupEvents";
+import { HelpTip } from "@/components/HelpTip";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -94,12 +95,44 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
     return response.json();
   };
 
+  // Before anything is added: the file is checked and shown, problems in red
+  const [check, setCheck] = useState<{
+    guests: Guest[];
+    skipped: { row: number; text: string }[];
+    dupInFile: string[];
+    onList: string[];
+  } | null>(null);
   const handleFileUpload = async (files: File[]) => {
     if (!files || files.length === 0) {
-      toast.error("Please select a file to upload");
+      toast.error("Please choose your Excel file");
       return;
     }
+    setError(null);
+    setImportStats(null);
+    setUpdateResult(null);
+    try {
+      const { guests, skipped } = await readFileData(files[0]);
+      if (!guests.length) throw new Error("No guests found in this file. Each row needs a first name and a last name.");
+      const key = (g: { firstname?: string; lastname?: string }) => fold(`${g.firstname ?? ""} ${g.lastname ?? ""}`).replace(/\s+/g, " ").trim();
+      const count = new Map<string, number>();
+      for (const g of guests) count.set(key(g), (count.get(key(g)) ?? 0) + 1);
+      const dupInFile = guests.filter((g, i) => count.get(key(g))! > 1 && guests.findIndex((x) => key(x) === key(g)) === i).map((g) => `${g.firstname} ${g.lastname}`);
+      let onList: string[] = [];
+      if (mode === "new") {
+        const j = await fetch("/api/get-guests").then((r) => r.json()).catch(() => null);
+        const have = new Set(((j?.data ?? []) as { firstname: string; lastname: string }[]).map(key));
+        onList = guests.filter((g) => have.has(key(g))).map((g) => `${g.firstname} ${g.lastname}`);
+      }
+      setCheck({ guests, skipped, dupInFile, onList });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "This file could not be read.";
+      setError(m);
+      toast.error("Please check your file", { description: m });
+    }
+  };
 
+  const runImport = async (guests: Guest[]) => {
+    setCheck(null);
     setIsLoading(true);
     setError(null);
     setImportProgress(null);
@@ -107,12 +140,6 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
     setUpdateResult(null);
 
     try {
-      const file = files[0];
-      const guests = await readFileData(file);
-
-      if (!guests || guests.length === 0) {
-        throw new Error("No valid data found in the file");
-      }
 
       // a copy of the event first, so the import can be undone (menu → Undo)
       await fetch("/api/snapshot", {
@@ -216,7 +243,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
     }
   };
 
-  const readFileData = (file: File): Promise<Guest[]> => {
+  const readFileData = (file: File): Promise<{ guests: Guest[]; skipped: { row: number; text: string }[] }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -235,18 +262,26 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
             throw new Error("Invalid file format");
           }
 
-          const formattedData = (
-            jsonData as Array<Record<string, string | number>>
-          ).map((row) => {
+          const rows = jsonData as Array<Record<string, string | number>>;
+          // the file must have name columns at all
+          const hasNames = rows.some((r) => (r.firstname || r["First Name"] || r["FirstName"]) !== undefined);
+          if (!hasNames) {
+            throw new Error(
+              "We couldn't find a \"First Name\" column. Download the Excel template below, copy your guests into it, and try again."
+            );
+          }
+          const skipped: { row: number; text: string }[] = [];
+          const formattedData = rows.map((row, idx) => {
             const firstname =
               row.firstname || row["First Name"] || row["FirstName"];
             const lastname =
               row.lastname || row["Last Name"] || row["LastName"];
 
             if (!firstname || !lastname) {
-              throw new Error(
-                "Invalid file format. Please use the column names First Name and Last Name (and Table, optional)"
-              );
+              // shown to the person before importing; the row is left out
+              const text = Object.values(row).map((v) => String(v).trim()).filter(Boolean).join(" · ") || "(empty)";
+              skipped.push({ row: idx + 2, text: `${!firstname ? "no first name" : "no last name"}: ${text}` });
+              return null;
             }
 
             const table =
@@ -269,7 +304,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
             };
           });
 
-          resolve(formattedData);
+          resolve({ guests: formattedData.filter((g): g is NonNullable<typeof g> => !!g) as Guest[], skipped });
         } catch (error) {
           reject(error);
         }
@@ -343,7 +378,13 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
       )}
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Import Guests</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Import Guests
+            <HelpTip side="right">
+              1. Tick what your list has. 2. Click <b>Excel template</b> and copy your guests into it (one guest per row).
+              3. Drop the file here. You&apos;ll see your guests and any problems <b>before</b> anything is added.
+            </HelpTip>
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           {/* Add new guests, or update the ones already on the list */}
@@ -425,6 +466,45 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               Remove Duplicates
             </Button> */}
           </div>
+          {check && (
+            <div className="space-y-2 rounded-lg border-2 border-lime-300 bg-lime-50 p-3" data-testid="import-check">
+              <p className="font-semibold">
+                ✓ {check.guests.length} guest{check.guests.length === 1 ? "" : "s"} ready to {mode === "update" ? "update" : "add"}
+              </p>
+              {check.skipped.length > 0 && (
+                <div className="rounded-md bg-red-50 p-2 text-sm text-red-800">
+                  <b>{check.skipped.length} row{check.skipped.length === 1 ? "" : "s"} will be left out</b> (a name is missing). Fix them in Excel, or go on without them:
+                  <ul className="mt-1 max-h-28 list-inside list-disc overflow-y-auto">
+                    {check.skipped.map((r) => (
+                      <li key={r.row}>Row {r.row}: {r.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {check.dupInFile.length > 0 && (
+                <div className="rounded-md bg-red-50 p-2 text-sm text-red-800">
+                  <b>In your file twice:</b> {check.dupInFile.join(", ")}
+                </div>
+              )}
+              {check.onList.length > 0 && (
+                <div className="rounded-md bg-amber-50 p-2 text-sm text-amber-900">
+                  <b>Already on your guest list ({check.onList.length}):</b> {check.onList.slice(0, 12).join(", ")}
+                  {check.onList.length > 12 ? "…" : ""}. Importing adds them a second time.
+                </div>
+              )}
+              {!check.skipped.length && !check.dupInFile.length && !check.onList.length && (
+                <p className="text-sm text-green-800">No problems found.</p>
+              )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button onClick={() => runImport(check.guests)} className="bg-lime-600 text-white hover:bg-lime-700">
+                  {mode === "update" ? "Update" : "Import"} {check.guests.length} guest{check.guests.length === 1 ? "" : "s"}
+                </Button>
+                <Button variant="outline" onClick={() => setCheck(null)}>
+                  Choose another file
+                </Button>
+              </div>
+            </div>
+          )}
           {isLoading && importProgress && (
             <div className="text-center">
               <p>Importing guests...</p>

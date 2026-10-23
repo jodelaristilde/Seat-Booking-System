@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { fold, matches } from "@/lib/fold";
 import { useGuestNotes } from "@/hooks/useGuestNotes";
+import { HelpTip } from "@/components/HelpTip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -210,7 +211,15 @@ export function BookingSidebar({
         <div className="px-2 py-3 bg-white shadow-sm space-y-2">
           {/* Title centred; search box and list share the same edges */}
           <div className="relative flex items-center justify-center">
-            <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap text-center">Guest Names</h2>
+            <h2 className="flex items-center gap-1.5 text-xl font-bold text-gray-800 whitespace-nowrap text-center">
+              Guest Names
+              <HelpTip side="right">
+                <b>Tick the box</b> when a guest arrives. <b>Search</b> a name or a table number.
+                <br />
+                <b>Drag a name</b> onto a table on the plan to move the guest, or onto the <b>red bin</b> to delete them.
+                <br />A name in <b>light red</b> is on the list twice.
+              </HelpTip>
+            </h2>
             {!readOnly && (
               // drop a name here to delete it (asks first)
               <div
