@@ -1716,6 +1716,13 @@ const handleTableClick = () => {
                           </DropdownMenuItem>
                           {session?.user?.email === "admin" && (
                             <DropdownMenuItem asChild>
+                              <Link href="/dashboard/planners">
+                                <Users className="mr-2 w-4 h-4" /> Planners (and View as)
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+                          {session?.user?.email === "admin" && (
+                            <DropdownMenuItem asChild>
                               <a href="/api/export-all" download>
                                 <Download className="mr-2 w-4 h-4" /> Download all my data (Excel)
                               </a>

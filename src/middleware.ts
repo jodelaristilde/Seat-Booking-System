@@ -42,6 +42,7 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/vip/call", methods: ["PUT"] }, // a guest's call handled
   { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
   { path: "/api/problems", methods: ["POST"] }, // "Report a problem"
+  { path: "/api/view-as", methods: ["DELETE"] }, // the admin, viewing as a helper, goes back to admin
 ]
 // Only the admin (owner) account may wipe things in bulk
 const ADMIN_API = ["/api/washup"]

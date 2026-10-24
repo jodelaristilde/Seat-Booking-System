@@ -38,6 +38,15 @@ const authOptions: NextAuthOptions = {
           })
         }
 
+        // remember the last login (admin: Planners page)
+        await prisma.setting
+          .upsert({
+            where: { key: `lastlogin:${user.id}` },
+            update: { value: new Date().toISOString() },
+            create: { key: `lastlogin:${user.id}`, value: new Date().toISOString() },
+          })
+          .catch(() => undefined)
+
         // "staff" = check-in only (set by the admin in Manage Users)
         const role = user.email === "admin" ? "full" : await roleOf(user.id)
         return { id: user.id, email: user.email, name: user.name, role }
