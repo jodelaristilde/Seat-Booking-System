@@ -72,7 +72,10 @@ const pageMiddleware = withAuth(
       }
       // A regular user (not the admin, not check-in staff) only uses the setup
       // pages; the admin's other pages send them back to the dashboard
-      const USER_PAGES = ["/dashboard/seating-helper", "/dashboard/check-in-staff", "/dashboard/ready-check", "/dashboard/print-cards"]
+      const USER_PAGES = [
+        "/dashboard/seating-helper", "/dashboard/check-in-staff", "/dashboard/ready-check", "/dashboard/print-cards",
+        "/dashboard/door-list", "/dashboard/venue-chart", "/dashboard/seating-chart", "/dashboard/summary", "/dashboard/kitchen",
+      ]
       if (
         token.email !== "admin" &&
         token.role !== "staff" &&

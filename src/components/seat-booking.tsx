@@ -66,6 +66,10 @@ import {
   Image as ImageIcon,
   PlayCircle,
   GraduationCap,
+  FileText,
+  Maximize,
+  QrCode,
+  CalendarDays,
   Download,
   MessageSquareWarning,
   Users,
@@ -237,6 +241,30 @@ const SeatBooking = () => {
   const isAdmin = session?.user?.email === "admin";
   // a regular user (not admin, not check-in staff): one simple Setup menu
   const isUser = !isAdmin && !isStaff;
+  // one row of the planner's menu: icon, title, one line saying what it does
+  const prow = (Icon: typeof Plus, title: string, hint: string, go: string | (() => void), key?: string) => {
+    const body = (
+      <span className="flex w-full items-start gap-2.5">
+        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-700" />
+        <span className="min-w-0">
+          <span className="block font-semibold">{title}</span>
+          <span className="block text-xs leading-snug text-zinc-500">{hint}</span>
+        </span>
+      </span>
+    );
+    return typeof go === "string" ? (
+      <DropdownMenuItem key={key ?? title} asChild className="cursor-pointer py-1.5">
+        <Link href={go}>{body}</Link>
+      </DropdownMenuItem>
+    ) : (
+      <DropdownMenuItem key={key ?? title} className="cursor-pointer py-1.5" onClick={go}>
+        {body}
+      </DropdownMenuItem>
+    );
+  };
+  const sectionLabel = (t: string) => (
+    <DropdownMenuLabel className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">{t}</DropdownMenuLabel>
+  );
   // Setup steps bar: its buttons open screens here
   useEffect(() => onSetup("bulk-tables", () => setBulkTableDialogOpen(true)), []);
   useEffect(() => {
@@ -1527,8 +1555,10 @@ const handleTableClick = () => {
                     {isUser ? (
                     <DropdownMenuContent align="end" className="w-[19rem] max-h-[85vh] overflow-y-auto p-1.5">
                       {/* Regular users: the whole setup, in order, each with one line saying what it does */}
+                      {prow(CalendarDays, "My events", "Start a new event, or open another one.", () => window.dispatchEvent(new Event("seating4u:open-events")))}
+                      <DropdownMenuSeparator />
                       <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                        Set up your event, in this order
+                        Before the event, in this order
                       </DropdownMenuLabel>
                       {(
                         [
@@ -1585,6 +1615,24 @@ const handleTableClick = () => {
                           </span>
                         </span>
                       </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      {sectionLabel("Print")}
+                      {prow(QrCode, "Guest QR code (entrance poster)", "Guests scan it to find their seat.", () => window.dispatchEvent(new Event("seating4u:open-qr")))}
+                      {prow(ListChecks, "Door list (A–Z)", "Paper backup for the check-in desk.", "/dashboard/door-list")}
+                      {prow(Printer, "Table signs & place cards", "Numbers for the tables, names for the plates.", "/dashboard/print-cards")}
+                      {prow(MapIcon, "Seating chart for the venue", "Floor plan + guests by table, for staff and caterer.", "/dashboard/venue-chart")}
+
+                      <DropdownMenuSeparator />
+                      {sectionLabel("On the event day")}
+                      {prow(Maximize, "Check-in screen", "Full screen: search a name, tick, done.", () => handleFullScreenToggle(true))}
+                      {prow(Radio, "Live view for your client", "A link: they watch arrivals live. View only.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                      {prow(ChefHat, "Kitchen screen", "Meals to serve as guests arrive, allergies in red.", "/dashboard/kitchen")}
+
+                      <DropdownMenuSeparator />
+                      {sectionLabel("After the event")}
+                      {prow(BarChart3, "Arrival summary & close out", "Who came, no-shows, meals served. Closes guest check-in.", "/dashboard/summary")}
+                      {prow(FileText, "Report for your client", "A thank-you report they can print. (Bottom of the live view window.)", () => window.dispatchEvent(new Event("seating4u:live-link")))}
 
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">

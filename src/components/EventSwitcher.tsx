@@ -93,6 +93,24 @@ export function EventSwitcher() {
   useEffect(() => {
     load();
   }, []);
+  // the menu can open the events window, or the open event's guest QR code
+  useEffect(() => {
+    const openEvents = () => {
+      load();
+      setOpen(true);
+    };
+    const openQr = async () => {
+      const j = await fetch("/api/events").then((r) => r.json()).catch(() => null);
+      const ev = j?.events?.find((e: Ev) => e.id === j.activeId);
+      if (ev) setQrFor(ev);
+    };
+    window.addEventListener("seating4u:open-events", openEvents);
+    window.addEventListener("seating4u:open-qr", openQr);
+    return () => {
+      window.removeEventListener("seating4u:open-events", openEvents);
+      window.removeEventListener("seating4u:open-qr", openQr);
+    };
+  }, []);
 
   const active = events.find((e) => e.id === activeId);
 

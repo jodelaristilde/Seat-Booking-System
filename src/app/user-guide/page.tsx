@@ -122,7 +122,7 @@ export default function UserGuide() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">☰ The menu is shorter</p>
-              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'Everything to set up your event is in one place: <b>Setup steps</b>, <b>Floor plan</b>, <b>Import guests</b>, <b>New guest</b>, <b>New table</b>, <b>Create tables in bulk</b>, <b>Seat everyone</b>, <b>Check-in staff</b> (logins for your door helpers) and <b>Delete all tables</b>.' }} />
+              <p className="mt-0.5 text-sm text-zinc-600" dangerouslySetInnerHTML={{ __html: 'The menu (☰) follows your event from start to finish: <b>My events</b>, <b>Before the event</b> (5 setup steps), <b>Print</b> (guest QR poster, door list, table signs, venue chart), <b>On the event day</b> (check-in screen, live view for your client, kitchen screen) and <b>After the event</b> (summary, report for your client). Each item says what it does.' }} />
             </div>
             <div className="rounded-lg border border-zinc-200 bg-white p-3">
               <p className="font-semibold text-black">Walk-in guest</p>
