@@ -62,7 +62,7 @@ type Pos = { x: number; y: number };
 
 interface FloorPlanCanvasProps {
   tables: TableData[];
-  renderTable: (table: TableData, index: number, hideSeats: boolean) => ReactNode;
+  renderTable: (table: TableData, index: number, hideSeats: boolean, names?: boolean) => ReactNode;
   onTablesChanged: () => void | Promise<void>;
   // "Room only": hide the rest of the dashboard while working on the room
   roomOnly?: boolean;
@@ -235,6 +235,11 @@ export function FloorPlanCanvas({
 
   // ---- Zoom card: a walk-in guest seated straight at this table ----
   const [walk, setWalk] = useState({ first: "", last: "", open: false, busy: false });
+  // the table card: guest names around the table on / off (remembered on this computer)
+  const [zoomNames, setZoomNames] = useState(true);
+  useEffect(() => {
+    if (readStored("zoomNames") === "off") setZoomNames(false);
+  }, []);
   const addWalkIn = async (table: TableData, arrived: boolean) => {
     const first = walk.first.trim();
     const last = walk.last.trim();
@@ -3053,9 +3058,27 @@ export function FloorPlanCanvas({
               <span className="text-xs text-zinc-500 tabular-nums">
                 {booked.length}/{seats.length} seated · {arrived} arrived
               </span>
+              {/* guest names around the table in this card: on / off (remembered) */}
               <button
                 type="button"
-                className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-100"
+                onClick={() => {
+                  zoomPinned.current = true;
+                  setZoomNames((v) => {
+                    writeStored("zoomNames", v ? "off" : "on");
+                    return !v;
+                  });
+                }}
+                aria-pressed={zoomNames}
+                className={`ml-auto rounded-full border px-3 py-1 text-xs font-semibold ${
+                  zoomNames ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+                title="Show or hide the guests' names around the table"
+              >
+                Names on table: {zoomNames ? "On" : "Off"}
+              </button>
+              <button
+                type="button"
+                className="rounded p-1 text-zinc-500 hover:bg-zinc-100"
                 onClick={closeZoom}
                 aria-label="Close"
               >
@@ -3067,7 +3090,7 @@ export function FloorPlanCanvas({
               {/* room around the table so guest names next to the seats are not cut off */}
               <div className="md:w-1/2 shrink-0 flex items-center justify-center px-24 py-10">
                 <div className="relative w-full max-w-[15rem]">
-                  {renderTable(withShape(table), index, false)}
+                  {renderTable(withShape(table), index, false, zoomNames)}
                 </div>
               </div>
               <div className="md:w-1/2 min-w-0">

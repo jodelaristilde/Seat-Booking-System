@@ -200,7 +200,8 @@ const SeatBooking = () => {
   const [isAddGuestOpen, setIsAddGuestOpen] = useState(false);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [totalGuests, setTotalGuests] = useState(0);
-  const [showNames, setShowNames] = useState(false);
+  const [showNamesState, setShowNames] = useState(false);
+  const showNames = showNamesState;
   // "plan" = tables placed like the real room, "grid" = the old rows of circles
   const [viewMode, setViewMode] = useState<"plan" | "grid">("plan");
   useEffect(() => {
@@ -757,8 +758,11 @@ const renderCircularTable = (
     table: TableData,
     index: number,
     inFloorPlan = false,
-    hideSeats = false
+    hideSeats = false,
+    // names next to the seats: undefined = follow the "Guest names" button
+    namesOverride?: boolean
   ) => {
+    const showNames = namesOverride ?? showNamesState;
     const tableId = table.seats[0]?.table?.id || table.tableNumber;
     const tableName = table.seats[0]?.table?.name;
     const tableNumber = table.tableNumber;
@@ -1999,8 +2003,8 @@ const handleTableClick = () => {
             {viewMode === "plan" ? (
               <FloorPlanCanvas
                 tables={getVisibleTables()}
-                renderTable={(table, index, hideSeats) =>
-                  renderCircularTable(table, index, true, hideSeats)
+                renderTable={(table, index, hideSeats, names) =>
+                  renderCircularTable(table, index, true, hideSeats, names)
                 }
                 guestNames={showNames}
                 onGuestNamesChange={setShowNames}
