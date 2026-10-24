@@ -1538,7 +1538,7 @@ const handleTableClick = () => {
                           } },
                           { n: 3, icon: FileUp, title: "Import your guest list", hint: "From Excel. First and last name are enough.", go: () => openSetup("import-guests") },
                           { n: 4, icon: Sparkles, title: "Seat everyone", hint: "One click. Families stay together.", href: "/dashboard/seating-helper" },
-                          { n: 5, icon: Users, title: "Logins for your door helpers", hint: "They can check guests in, not delete.", href: "/dashboard/check-in-staff" },
+                          { n: 5, icon: Users, title: "Manage check-in staff", hint: "Add, reset or remove logins for your door helpers.", href: "/dashboard/check-in-staff" },
                         ] as { n: number; icon: typeof Plus; title: string; hint: string; go?: () => void; href?: string }[]
                       ).map((it) => {
                         const body = (
@@ -1769,7 +1769,7 @@ const handleTableClick = () => {
                           {!isStaff && (
                             <DropdownMenuItem asChild>
                               <Link href="/dashboard/check-in-staff">
-                                <Users className="mr-2 w-4 h-4" /> Check-in staff
+                                <Users className="mr-2 w-4 h-4" /> Manage check-in staff
                               </Link>
                             </DropdownMenuItem>
                           )}

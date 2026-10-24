@@ -75,7 +75,7 @@ export default function CheckInStaff() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
         <h1 className="flex items-center gap-2 text-lg font-bold">
-          Check-in staff
+          Manage check-in staff
           <HelpTip side="right">
             Make one login per helper. Give them the <b>username</b> and <b>password</b>. They log in at www.seating4u.com and can
             only check guests in. After the event, delete the login with the bin.
