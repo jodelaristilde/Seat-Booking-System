@@ -3,7 +3,7 @@ import { hashPassword } from "@/lib/password";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { roleOf, setStaff, setStaffOwner } from "@/lib/roles";
+import { setStaff, setStaffOwner, teamOf } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -25,11 +25,13 @@ export async function POST(request: Request) {
     if (userCount > 0) {
       const session = await getServerSession(authOptions);
       if (session?.user?.email !== "admin") {
+        // an organizer, or one of their check-in staff, adds a check-in staff login
         const me = session?.user?.id;
-        if (!me || (await roleOf(me)) === "staff" || staff !== true) {
+        if (!me || staff !== true) {
           return new NextResponse("Unauthorized", { status: 401 });
         }
-        ownerId = me;
+        const team = await teamOf(me);
+        ownerId = team === "admin" ? null : team;
       }
     }
     if (String(email).trim().toLowerCase() === "admin" && userCount > 0) {

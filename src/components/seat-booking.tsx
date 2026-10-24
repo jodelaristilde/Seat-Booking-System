@@ -1767,13 +1767,11 @@ const handleTableClick = () => {
                               <History className="mr-2 w-4 h-4" /> History
                             </Link>
                           </DropdownMenuItem>
-                          {!isStaff && (
-                            <DropdownMenuItem asChild>
-                              <Link href="/dashboard/check-in-staff">
-                                <Users className="mr-2 w-4 h-4" /> Manage check-in staff
-                              </Link>
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem asChild>
+                            <Link href="/dashboard/check-in-staff">
+                              <Users className="mr-2 w-4 h-4" /> Manage check-in staff
+                            </Link>
+                          </DropdownMenuItem>
                           {session?.user?.email === "admin" && (
                             <DropdownMenuItem asChild>
                               <Link href="/dashboard/manage-users">

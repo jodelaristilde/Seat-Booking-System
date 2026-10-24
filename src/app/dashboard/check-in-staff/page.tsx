@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import { HelpTip } from "@/components/HelpTip";
 import { ArrowLeft, KeyRound, Trash2, UserPlus } from "lucide-react";
 
@@ -14,6 +15,8 @@ type Account = { id: string; email: string; name: string | null; staff?: boolean
 
 export default function CheckInStaff() {
   const [list, setList] = useState<Account[] | null>(null);
+  const { data: session } = useSession();
+  const me = (session?.user as { id?: string } | undefined)?.id;
   const [name, setName] = useState("");
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
@@ -103,11 +106,11 @@ export default function CheckInStaff() {
         </form>
 
         <div className="rounded-xl border bg-white">
-          <p className="border-b px-4 py-2 font-semibold">Your helpers {list ? `(${list.length})` : ""}</p>
+          <p className="border-b px-4 py-2 font-semibold">Your helpers {list ? `(${list.filter((a) => a.id !== me).length})` : ""}</p>
           {!list && <p className="p-4 text-sm text-zinc-500">Loading…</p>}
           {list && !list.length && <p className="p-4 text-sm text-zinc-500">No helpers yet.</p>}
           <ul>
-            {list?.map((a) => (
+            {list?.filter((a) => a.id !== me).map((a) => (
               <li key={a.id} className="flex items-center gap-2 border-b px-4 py-2 last:border-b-0">
                 <div className="flex-1">
                   <p className="font-medium">{a.name || a.email}</p>

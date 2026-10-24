@@ -38,11 +38,33 @@ export async function staffOwnedBy(ownerId: string): Promise<Set<string>> {
   return new Set(rows.map((r: { key: string }) => r.key.slice("staffowner:".length)));
 }
 
+// The "team" an account belongs to: an organizer is their own team; a check-in
+// staff login belongs to the organizer who made it (or "admin" when the admin
+// made it). Everyone on a team may manage the team's check-in staff logins.
+export async function teamOf(userId: string): Promise<string> {
+  if ((await roleOf(userId)) !== "staff") return userId;
+  const row = await db.setting.findUnique({ where: { key: `staffowner:${userId}` } });
+  return row?.value ?? "admin";
+}
+
+export async function teamStaff(team: string): Promise<Set<string>> {
+  if (team !== "admin") return staffOwnedBy(team);
+  const [all, owned] = await Promise.all([
+    staffIds(),
+    db.setting.findMany({ where: { key: { startsWith: "staffowner:" } } }),
+  ]);
+  const has = new Set((owned as { key: string }[]).map((r) => r.key.slice("staffowner:".length)));
+  return new Set([...all].filter((id) => !has.has(id)));
+}
+
 // May this logged-in account manage (reset / delete) that account?
-// admin: anyone but itself; a regular user: only check-in staff they created.
+// admin: anyone; an organizer or one of their check-in staff: the team's
+// check-in staff logins (not their own login).
 export async function mayManage(session: { user?: { id?: string; email?: string | null } } | null, targetId: string) {
-  if (!session?.user?.id) return false;
-  if (session.user.email === "admin") return true;
-  if ((await roleOf(session.user.id)) === "staff") return false;
-  return (await staffOwnedBy(session.user.id)).has(targetId) && (await roleOf(targetId)) === "staff";
+  const me = session?.user?.id;
+  if (!me) return false;
+  if (session?.user?.email === "admin") return true;
+  if (targetId === me) return false;
+  if ((await roleOf(targetId)) !== "staff") return false;
+  return (await teamStaff(await teamOf(me))).has(targetId);
 }

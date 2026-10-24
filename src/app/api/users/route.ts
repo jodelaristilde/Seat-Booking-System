@@ -2,7 +2,7 @@ import { authOptions } from "@/lib/auth.config";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { roleOf, staffIds, staffOwnedBy } from "@/lib/roles";
+import { staffIds, teamOf, teamStaff } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -12,11 +12,11 @@ export async function GET() {
 
     const isAdmin = session?.user?.email === "admin";
     const me = session?.user?.id;
-    if (!isAdmin && (!me || (await roleOf(me)) === "staff")) {
+    if (!isAdmin && !me) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-    // a regular user only sees the check-in staff they created
-    const mine = isAdmin ? null : await staffOwnedBy(me!);
+    // everyone else only sees their team's check-in staff
+    const mine = isAdmin ? null : await teamStaff(await teamOf(me!));
 
     const users = await prisma.user.findMany({
       ...(mine ? { where: { id: { in: [...mine] } } } : {}),
