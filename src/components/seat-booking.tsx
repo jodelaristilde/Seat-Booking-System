@@ -2,7 +2,6 @@
 
 import { BrandLogo } from "@/components/BrandLogo";
 import PasswordVerificationDialog from "@/components/password-verification-dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1725,9 +1724,11 @@ const handleTableClick = () => {
                               </Link>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="cursor-pointer" onClick={startPractice}>
-                            <GraduationCap className="mr-2 w-4 h-4" /> Practice with sample guests
-                          </DropdownMenuItem>
+                          {!isStaff && (
+                            <DropdownMenuItem className="cursor-pointer" onClick={startPractice}>
+                              <GraduationCap className="mr-2 w-4 h-4" /> Practice with sample guests
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem asChild>
                             <Link href="/dashboard/ready-check">
                               <ClipboardCheck className="mr-2 w-4 h-4" /> Ready check
@@ -1835,13 +1836,23 @@ const handleTableClick = () => {
                   {/* Avatar Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Avatar className="cursor-pointer w-8 h-8 sm:w-10 sm:h-10">
-                        <AvatarImage
-                          src="https://github.com/shadcn.png"
-                          alt="@shadcn"
-                        />
-                        <AvatarFallback>JA</AvatarFallback>
-                      </Avatar>
+                      {/* who is logged in, and what kind of account (instead of a photo) */}
+                      <button
+                        type="button"
+                        className="flex max-w-[11rem] items-center gap-2 rounded-full border bg-white py-1 pl-1 pr-3 text-left hover:bg-zinc-50"
+                        title="Your account"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white sm:h-8 sm:w-8">
+                          {(session?.user?.name || session?.user?.email || "?").trim().slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="hidden min-w-0 leading-tight sm:block">
+                          <span className="block truncate text-[11px] text-zinc-500">Logged in as</span>
+                          <span className="block truncate text-sm font-semibold">{session?.user?.name || session?.user?.email}</span>
+                          <span className={`block text-[10px] font-semibold uppercase tracking-wide ${isAdmin ? "text-red-600" : isStaff ? "text-amber-600" : "text-lime-700"}`}>
+                            {isAdmin ? "Admin" : isStaff ? "Check-in staff" : "Organizer"}
+                          </span>
+                        </span>
+                      </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="flex flex-col">
                       <ChangePasswordDialog />
