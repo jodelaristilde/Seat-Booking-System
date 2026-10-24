@@ -2,7 +2,7 @@ import { authOptions } from "@/lib/auth.config";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { staffIds, teamOf, teamStaff } from "@/lib/roles";
+import { roleOf, staffIds, teamOf, teamStaff } from "@/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ export async function GET() {
 
     const isAdmin = session?.user?.email === "admin";
     const me = session?.user?.id;
-    if (!isAdmin && !me) {
+    if (!isAdmin && (!me || (await roleOf(me)) === "staff")) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
     // everyone else only sees their team's check-in staff

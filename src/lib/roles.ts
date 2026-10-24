@@ -64,7 +64,7 @@ export async function mayManage(session: { user?: { id?: string; email?: string 
   const me = session?.user?.id;
   if (!me) return false;
   if (session?.user?.email === "admin") return true;
-  if (targetId === me) return false;
+  if (targetId === me || (await roleOf(me)) === "staff") return false;
   if ((await roleOf(targetId)) !== "staff") return false;
   return (await teamStaff(await teamOf(me))).has(targetId);
 }

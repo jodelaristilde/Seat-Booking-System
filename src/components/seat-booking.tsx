@@ -1767,11 +1767,13 @@ const handleTableClick = () => {
                               <History className="mr-2 w-4 h-4" /> History
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/dashboard/check-in-staff">
-                              <Users className="mr-2 w-4 h-4" /> Manage check-in staff
-                            </Link>
-                          </DropdownMenuItem>
+                          {!isStaff && (
+                            <DropdownMenuItem asChild>
+                              <Link href="/dashboard/check-in-staff">
+                                <Users className="mr-2 w-4 h-4" /> Manage check-in staff
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                           {session?.user?.email === "admin" && (
                             <DropdownMenuItem asChild>
                               <Link href="/dashboard/manage-users">
@@ -1847,7 +1849,7 @@ const handleTableClick = () => {
                           <span className="block truncate text-[11px] text-zinc-500">Logged in as</span>
                           <span className="block truncate text-sm font-semibold">{session?.user?.name || session?.user?.email}</span>
                           <span className={`block text-[10px] font-semibold uppercase tracking-wide ${isAdmin ? "text-red-600" : isStaff ? "text-amber-600" : "text-lime-700"}`}>
-                            {isAdmin ? "Admin" : isStaff ? "Check-in staff" : "Organizer"}
+                            {isAdmin ? "Admin" : isStaff ? "Check-in staff" : "Event planner"}
                           </span>
                         </span>
                       </button>

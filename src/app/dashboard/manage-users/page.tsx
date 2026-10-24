@@ -56,7 +56,7 @@ export default function ManageUsers() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const name = formData.get("name") as string
-    const staff = formData.get("staff") === "on"
+    const staff = formData.get("kind") === "staff"
 
     try {
       // Check for existing user
@@ -239,13 +239,23 @@ export default function ManageUsers() {
                 </div>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm text-zinc-700">
-              <input type="checkbox" name="staff" className="h-4 w-4" />
-              <span>
-                <b>Check-in only (staff)</b>: can check guests in, add a last-minute guest and set meals, but cannot
-                delete anything or change tables
-              </span>
-            </label>
+            <fieldset className="space-y-1.5 rounded-md border p-3 text-sm text-zinc-700">
+              <legend className="px-1 font-semibold">Account type</legend>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="kind" value="planner" defaultChecked className="mt-0.5 h-4 w-4" />
+                <span>
+                  <b>Event planner</b>: sets up their own events (floor plan, guests, seating) and adds their own check-in staff.
+                  Sees only their events.
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="kind" value="staff" className="mt-0.5 h-4 w-4" />
+                <span>
+                  <b>Check-in staff</b>: door only. Checks guests in, adds a last-minute guest. Can&apos;t delete or change
+                  anything. (Event planners usually make these themselves.)
+                </span>
+              </label>
+            </fieldset>
             <div>
               <button
                 type="submit"
@@ -362,7 +372,7 @@ export default function ManageUsers() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       {user.email === "admin" ? (
-                        <span className="text-sm text-zinc-500">Full (admin)</span>
+                        <span className="text-sm text-zinc-500">Admin (everything)</span>
                       ) : (
                         <button
                           onClick={() => setAccess(user, !user.staff)}
@@ -371,9 +381,9 @@ export default function ManageUsers() {
                               ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
                               : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
                           }`}
-                          title={user.staff ? "Click to give full access" : "Click to make check-in only"}
+                          title={user.staff ? "Click to make this an event planner" : "Click to make this check-in staff (door only)"}
                         >
-                          {user.staff ? "Check-in only" : "Full access"}
+                          {user.staff ? "Check-in staff" : "Event planner"}
                         </button>
                       )}
                     </td>

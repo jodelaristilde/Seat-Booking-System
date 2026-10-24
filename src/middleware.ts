@@ -42,8 +42,6 @@ const STAFF_API: { path: string; methods: string[] }[] = [
   { path: "/api/vip/call", methods: ["PUT"] }, // a guest's call handled
   { path: "/api/vip/celebrate", methods: ["PUT"] }, // presentation done
   { path: "/api/problems", methods: ["POST"] }, // "Report a problem"
-  { path: "/api/register", methods: ["POST"] }, // add a check-in staff login (the route only allows staff logins)
-  { path: "/api/users/delete", methods: ["DELETE", "PATCH"] }, // reset / remove a team check-in staff login (checked in the route)
 ]
 // Only the admin (owner) account may wipe things in bulk
 const ADMIN_API = ["/api/washup"]
