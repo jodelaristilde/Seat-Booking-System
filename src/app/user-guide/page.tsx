@@ -103,14 +103,14 @@ export default function UserGuide() {
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
             <video
               className="block aspect-video w-full"
-              src="/videos/seating4u-how-to-use-2026-10-23.mp4"
-              poster="/videos/seating4u-how-to-use-2026-10-23.jpg"
+              src="/videos/seating4u-how-to-use-2026-10-25.mp4"
+              poster="/videos/seating4u-how-to-use-2026-10-25.jpg"
               controls
               preload="metadata"
               playsInline
             >
               Your browser can&apos;t play this video.{" "}
-              <a href="/videos/seating4u-how-to-use-2026-10-23.mp4">Download it here</a>.
+              <a href="/videos/seating4u-how-to-use-2026-10-25.mp4">Download it here</a>.
             </video>
           </div>
         </section>

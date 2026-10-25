@@ -66,6 +66,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* the 1-minute video */}
+      <section className="mx-auto max-w-4xl px-4 pt-10">
+        <h2 className="mb-4 text-center text-3xl font-extrabold">See it in one minute</h2>
+        <div className="overflow-hidden rounded-2xl border bg-black shadow-xl">
+          <video
+            className="block aspect-video w-full"
+            src="/videos/seating4u-promo-2026-10-25.mp4"
+            poster="/videos/seating4u-promo-2026-10-25.jpg"
+            controls
+            preload="metadata"
+            playsInline
+          />
+        </div>
+      </section>
+
       {/* features */}
       <section className="mx-auto max-w-6xl px-4 py-14">
         <h2 className="mb-8 text-center text-3xl font-extrabold">Everything for the event, in one place</h2>
