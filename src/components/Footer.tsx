@@ -21,7 +21,7 @@ const Footer = () => {
               href="/"
               className="flex justify-center items-center space-x-2"
             >
-              <BrandLogo width={130} style={{ height: "auto", maxHeight: 60 }} />
+              <BrandLogo width={170} style={{ height: "auto", maxHeight: 72 }} />
             </Link>
           </div>
 

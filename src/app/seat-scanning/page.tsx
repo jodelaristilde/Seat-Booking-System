@@ -468,7 +468,7 @@ export default function SeatScanning() {
               href="/"
               className="flex justify-center items-center space-x-2"
             >
-              <BrandLogo width={150} style={{ height: "auto", maxHeight: 84 }} />
+              <BrandLogo width={210} style={{ height: "auto", maxHeight: 96 }} />
             </Link>
             <div className="flex gap-2">
               <Button

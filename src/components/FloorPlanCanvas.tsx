@@ -1956,7 +1956,7 @@ export function FloorPlanCanvas({
         >
           {railOpen && (
             // eslint-disable-next-line @next/next/no-img-element
-            <BrandLogo className="w-20 h-auto mb-1 select-none" />
+            <BrandLogo className="w-24 h-auto mb-1 select-none" />
           )}
           {railOpen && (<>
           <Button size="icon" variant="outline" onClick={() => onRoomOnlyChange?.(false)} title="Show the full menu" aria-label="Show the full menu">

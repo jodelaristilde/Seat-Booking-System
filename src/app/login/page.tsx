@@ -38,7 +38,7 @@ export default function LoginPage() {
       <div className="border-b border-zinc-200">
         <div className="max-w-5xl mx-auto px-6 py-20">
           <div className="space-y-1 mb-12">
-            <Image src="/logo.svg" alt="Seating4u Logo" width={230} height={230} />
+            <Image src="/logo.png" alt="Seating4U" width={340} height={121} className="h-auto w-[340px] max-w-full" priority />
           </div>
           
           <div className="grid md:grid-cols-2 gap-16 items-start">

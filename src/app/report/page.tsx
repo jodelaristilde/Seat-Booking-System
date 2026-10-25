@@ -60,7 +60,7 @@ function Report() {
             <h1 className="text-3xl font-bold">{d.event.name}</h1>
             <p className="text-zinc-600">{d.event.date ? `${d.event.date} · ` : ""}Thank you for celebrating with us</p>
           </div>
-          <BrandLogo width={130} style={{ height: "auto", maxHeight: 56 }} />
+          <BrandLogo width={180} style={{ height: "auto", maxHeight: 72 }} />
         </div>
 
         <div className="mb-8 grid grid-cols-3 gap-3 text-center">

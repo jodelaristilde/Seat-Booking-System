@@ -57,7 +57,7 @@ function Live() {
     <div className="guest-page min-h-screen bg-zinc-100 text-zinc-900">
       <div className="sticky top-0 z-10 border-b bg-white px-4 py-3">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
-          <BrandLogo width={120} style={{ height: "auto", maxHeight: 48 }} />
+          <BrandLogo width={170} style={{ height: "auto", maxHeight: 64 }} />
           <div className="mr-auto">
             <h1 className="text-xl font-bold leading-tight">{d.event.name}</h1>
             <p className="text-xs text-zinc-500">

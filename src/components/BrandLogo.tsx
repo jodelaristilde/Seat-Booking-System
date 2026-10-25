@@ -10,7 +10,7 @@ export function BrandLogo({ className, width, height, style, guest }: { classNam
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={brand === "vip" ? "/vip4u-logo-gold.png" : "/logo.svg"}
+      src={brand === "vip" ? "/vip4u-logo-gold.png" : "/logo.png"}
       alt={brand === "vip" ? "VIPService4U" : "Seating4U"}
       width={width}
       height={height}
