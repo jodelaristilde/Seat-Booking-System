@@ -21,7 +21,9 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
   { path: "/api/live", methods: ["GET"] }, // the client's read-only live view (signed link only)
   { path: "/api/password-reset", methods: ["POST", "PUT"] }, // "I forgot my password" (checked in the route)
-  { path: "/api/host-report", methods: ["GET"] }, // the host's after-event report (same signed link)
+  { path: "/api/host-report", methods: ["GET"] },
+  { path: "/api/access-request", methods: ["POST"] }, // "Request access" from the homepage / venues page
+  { path: "/api/reviews", methods: ["GET", "POST"] }, // reviews (posting checks the host link or login in the route)
   { path: "/api/vip/guest-call", methods: ["POST"] }, // VIP guest taps "Call server" / "Order another bottle" (checked in the route)
 ]
 

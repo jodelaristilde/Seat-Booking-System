@@ -4,7 +4,7 @@
 // with "View as" to see exactly what they see. /dashboard/planners
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Check, Eye, Star, Trash2 } from "lucide-react";
 import { viewAs } from "@/components/ViewAsBar";
 
 type Planner = {
@@ -16,6 +16,8 @@ type Planner = {
   guests: number;
   helpers: string[];
 };
+type Req = { id: string; at: string; kind: string; name: string; company: string; email: string; phone: string; message: string; done?: boolean };
+type Review = { id: string; at: string; name: string; role: string; stars: number; text: string; approved?: boolean };
 type Helper = { id: string; name: string; email: string; lastLogin: string | null; team: string };
 
 const ago = (iso: string | null) => {
@@ -26,12 +28,24 @@ const ago = (iso: string | null) => {
 
 export default function Planners() {
   const [data, setData] = useState<{ planners: Planner[]; helpers: Helper[]; adminEvents: number } | null>(null);
+  const [reqs, setReqs] = useState<Req[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const loadExtras = () => {
+    fetch("/api/access-request").then((r) => r.json()).then((j) => j?.success && setReqs(j.requests)).catch(() => undefined);
+    fetch("/api/reviews?all=1").then((r) => r.json()).then((j) => j?.success && setReviews(j.reviews)).catch(() => undefined);
+  };
   useEffect(() => {
     fetch("/api/planners")
       .then((r) => r.json())
       .then((j) => j?.success && setData(j))
       .catch(() => undefined);
+    loadExtras();
   }, []);
+  const put = async (url: string, body: object) => {
+    await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => undefined);
+    loadExtras();
+  };
+  const openReqs = reqs.filter((r) => !r.done);
   const btn = "inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-semibold hover:bg-zinc-50";
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -46,6 +60,34 @@ export default function Planners() {
       </div>
       <div className="mx-auto max-w-5xl space-y-6 p-4">
         {!data && <p className="text-zinc-500">Loading…</p>}
+
+        {/* requests from the homepage / venues page */}
+        <section className="rounded-xl border bg-white">
+          <p className="border-b px-4 py-2 font-semibold">
+            Requests for access {openReqs.length > 0 && <span className="ml-1 rounded-full bg-lime-600 px-2 text-sm text-white">{openReqs.length} new</span>}
+          </p>
+          {!reqs.length && <p className="px-4 py-3 text-sm text-zinc-500">None yet. They come from the homepage and the venues page.</p>}
+          <ul>
+            {reqs.slice(0, 50).map((r) => (
+              <li key={r.id} className={`border-b px-4 py-3 text-sm last:border-b-0 ${r.done ? "opacity-50" : ""}`}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${r.kind === "venue" ? "bg-sky-100 text-sky-800" : "bg-lime-100 text-lime-800"}`}>
+                    {r.kind === "venue" ? "Venue" : "Planner"}
+                  </span>
+                  <b>{r.name}</b>
+                  {r.company && <span>{r.company}</span>}
+                  {r.email && <a href={`mailto:${r.email}`} className="text-blue-700 underline">{r.email}</a>}
+                  {r.phone && <a href={`tel:${r.phone}`} className="text-blue-700 underline">{r.phone}</a>}
+                  <span className="text-zinc-400">{new Date(r.at).toLocaleDateString()}</span>
+                  <button onClick={() => put("/api/access-request", { id: r.id, done: !r.done })} className={`${btn} ml-auto`}>
+                    <Check className="h-4 w-4" /> {r.done ? "Not done" : "Done"}
+                  </button>
+                </div>
+                {r.message && <p className="mt-1 whitespace-pre-wrap text-zinc-700">{r.message}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
         {data && (
           <>
             <div className="grid grid-cols-3 gap-3 text-center">
@@ -123,6 +165,37 @@ export default function Planners() {
             )}
           </>
         )}
+
+        {/* reviews: approve to show them on the homepage */}
+        <section className="rounded-xl border bg-white">
+          <p className="border-b px-4 py-2 font-semibold">Reviews (only approved ones show on the homepage)</p>
+          {!reviews.length && <p className="px-4 py-3 text-sm text-zinc-500">No reviews yet. Hosts can leave one on their report; planners from their menu.</p>}
+          <ul>
+            {reviews.map((r) => (
+              <li key={r.id} className="border-b px-4 py-3 text-sm last:border-b-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex text-amber-500">
+                    {Array.from({ length: r.stars }, (_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-current" />
+                    ))}
+                  </span>
+                  <b>{r.name}</b> <span className="text-zinc-500">{r.role}</span>
+                  <span className="text-zinc-400">{new Date(r.at).toLocaleDateString()}</span>
+                  <button
+                    onClick={() => put("/api/reviews", { id: r.id, approved: !r.approved })}
+                    className={`${btn} ml-auto ${r.approved ? "border-green-400 bg-green-50 text-green-800" : ""}`}
+                  >
+                    {r.approved ? "✓ On the homepage" : "Show on homepage"}
+                  </button>
+                  <button onClick={() => window.confirm("Delete this review?") && put("/api/reviews", { id: r.id, delete: true })} className="rounded p-1 text-red-600 hover:bg-red-50" aria-label="Delete">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-1 text-zinc-700">{r.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );

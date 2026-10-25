@@ -17,8 +17,10 @@ export default function AuthGuard({
   const router = useRouter()
   const pathname = usePathname()
 
-  // Check if current path is seat-scanning
-  const isSeatScanningPage = pathname?.startsWith('/seat-scanning')
+  // Pages anyone can open without logging in: the guest seat finder, the
+  // homepage, the client's live view and report, RSVP, password reset...
+  const PUBLIC = ["/seat-scanning", "/live", "/report", "/rsvp", "/client-view", "/forgot", "/reset", "/venues", "/user-guide", "/login"]
+  const isSeatScanningPage = pathname === "/" || PUBLIC.some((p) => pathname === p || pathname?.startsWith(p + "/"))
 
   useEffect(() => {
     // Skip authentication check for seat-scanning page

@@ -66,6 +66,7 @@ import {
   Image as ImageIcon,
   PlayCircle,
   GraduationCap,
+  Star,
   FileText,
   Maximize,
   QrCode,
@@ -93,6 +94,7 @@ import { PracticeBanner, startPractice } from "@/components/PracticeBanner";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { ReportProblem, openReportProblem } from "@/components/ReportProblem";
 import { NetworkWatch } from "@/components/NetworkWatch";
+import { ReviewDialog, openReview } from "@/components/ReviewForm";
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup, openSetup } from "@/lib/setupEvents";
@@ -1633,6 +1635,7 @@ const handleTableClick = () => {
                       {sectionLabel("After the event")}
                       {prow(BarChart3, "Arrival summary & close out", "Who came, no-shows, meals served. Closes guest check-in.", "/dashboard/summary")}
                       {prow(FileText, "Report for your client", "A thank-you report they can print. (Bottom of the live view window.)", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                      {prow(Star, "Leave us a review", "How is Seating4U working for you?", openReview)}
 
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
@@ -1765,7 +1768,7 @@ const handleTableClick = () => {
                           {session?.user?.email === "admin" && (
                             <DropdownMenuItem asChild>
                               <Link href="/dashboard/planners">
-                                <Users className="mr-2 w-4 h-4" /> Planners (and View as)
+                                <Users className="mr-2 w-4 h-4" /> Planners, requests &amp; reviews
                               </Link>
                             </DropdownMenuItem>
                           )}
@@ -1936,6 +1939,7 @@ const handleTableClick = () => {
       {isUser && <WelcomeDialog />}
       <ReportProblem />
       <NetworkWatch />
+      {isUser && <ReviewDialog />}
 
       {/* Main Content */}
       <div

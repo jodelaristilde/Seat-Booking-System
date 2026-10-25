@@ -7,6 +7,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ReviewForm } from "@/components/ReviewForm";
 
 type G = { name: string; vip: boolean; meal: string; came: boolean; at: string | null };
 type Data = { event: { name: string; date: string | null }; tables: { name: string; guests: G[] }[] };
@@ -133,6 +134,12 @@ function Report() {
               );
             })}
           </div>
+        </section>
+
+        <section className="no-print mt-10 rounded-xl border bg-zinc-50 p-5">
+          <h2 className="mb-1 text-lg font-bold">How was your event?</h2>
+          <p className="mb-3 text-sm text-zinc-600">A few words help us a lot. With your OK, we may show them on our website.</p>
+          <ReviewForm t={t ?? ""} defaultRole="Host" />
         </section>
       </div>
     </div>
