@@ -35,17 +35,17 @@ export default function Venues() {
       <section className="bg-gradient-to-b from-lime-50 to-white">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 print:grid-cols-2 print:py-4">
           <div>
-            <Image src="/logo.jpg" alt="Seating4U" width={180} height={60} className="mb-3 hidden h-14 w-auto print:block" />
+            <Image src="/logo.jpg" alt="Seating4U" width={180} height={60} className="mb-2 hidden h-10 w-auto print:block" />
             <p className="mb-2 flex items-center gap-2 font-semibold uppercase tracking-widest text-lime-700">
               <Building2 className="h-5 w-5" /> For venues
             </p>
-            <h1 className="text-4xl font-extrabold leading-tight print:text-3xl">Offer Seating4U with your room.</h1>
-            <p className="mt-4 text-lg text-zinc-600">
+            <h1 className="text-4xl font-extrabold leading-tight print:text-2xl">Offer Seating4U with your room.</h1>
+            <p className="mt-4 text-lg text-zinc-600 print:mt-2 print:text-sm">
               Every wedding, gala and party in your venue runs smoother when guests find their own seat and the door checks them in
               in seconds. Become a partner venue and recommend Seating4U to the planners who book you.
             </p>
           </div>
-          <div className="overflow-hidden rounded-2xl border shadow-xl">
+          <div className="overflow-hidden rounded-2xl border shadow-xl print:shadow-none">
             <Image src="/home/floorplan.jpg" alt="Your floor plan with every table" width={1224} height={584} className="h-auto w-full" />
           </div>
         </div>
