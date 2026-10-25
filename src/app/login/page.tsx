@@ -1,141 +1,100 @@
 "use client";
+
+// Sign in: just the logo and the form. (What Seating4U is lives on the homepage.)
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import Image from "next/image";
+import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
+    setError("");
     const formData = new FormData(e.currentTarget);
     const response = await signIn("credentials", {
-      email: formData.get("email"),
+      email: String(formData.get("email") ?? "").trim(),
       password: formData.get("password"),
       redirect: false,
-    });
+    }).catch(() => null);
 
-    if (response?.error) {
-      toast.error("Invalid credentials");
+    if (!response || response.error) {
+      setError(!response ? "No internet? Check your connection and try again." : "Wrong username or password. Please try again.");
       setLoading(false);
       return;
     }
-
-    toast.success("Logged in successfully!");
+    toast.success("Welcome back!");
     router.push("/dashboard");
     router.refresh();
-    setLoading(false);
   };
 
+  const input =
+    "block w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-base text-black placeholder-zinc-400 focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-200";
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* About Section */}
-      <div className="border-b border-zinc-200">
-        <div className="max-w-5xl mx-auto px-6 py-20">
-          <div className="space-y-1 mb-12">
-            <Image src="/logo.png" alt="Seating4U" width={340} height={121} className="h-auto w-[340px] max-w-full" priority />
+    <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center bg-gradient-to-b from-lime-50 to-white px-4 py-10">
+      <div className="w-full max-w-sm">
+        <Link href="/" className="mb-6 flex justify-center">
+          <Image src="/logo.png" alt="Seating4U" width={300} height={107} className="h-auto w-[260px]" priority />
+        </Link>
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-lg">
+          <h1 className="text-center text-2xl font-bold text-black">Sign in</h1>
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-semibold text-zinc-700">
+              Username
+            </label>
+            <input id="email" name="email" required autoComplete="username" autoCapitalize="none" className={input} placeholder="Your username" />
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-16 items-start">
-            <div className="space-y-6 text-zinc-600 leading-relaxed">
-              <p>
-                A smart, user-friendly platform that simplifies seating arrangements 
-                for weddings, galas, conferences, and corporate events. Guests scan a 
-                QR code upon arrival to instantly locate their assigned seat.
-              </p>
-              
-              <p>
-                Track arrivals in real-time, see which connections have checked in, 
-                and create a more cohesive event experience. Modern event management 
-                for the digital age.
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="border border-zinc-200 p-4 bg-white">
-                  <div className="text-xs text-zinc-400 mb-1">Feature</div>
-                  <div className="text-sm text-zinc-900">QR Check-in</div>
-                </div>
-                <div className="border border-zinc-200 p-4 bg-white">
-                  <div className="text-xs text-zinc-400 mb-1">Feature</div>
-                  <div className="text-sm text-zinc-900">Live Tracking</div>
-                </div>
-                <div className="border border-zinc-200 p-4 bg-white">
-                  <div className="text-xs text-zinc-400 mb-1">Feature</div>
-                  <div className="text-sm text-zinc-900">Smart Assign</div>
-                </div>
-              </div>
-
-              <div className="border border-zinc-200 p-6 bg-zinc-50">
-                <div className="text-xs text-zinc-400 mb-2">Contact</div>
-                <a 
-                  href="tel:417-893-0047" 
-                  className="text-2xl font-light tracking-tight text-black hover:text-lime-600 transition-colors"
-                >
-                  417-893-0047
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Login Section */}
-      <div className="flex items-center justify-center py-20 px-6 bg-zinc-50">
-        <div className="w-full max-w-md">
-          <div className="border border-zinc-200 bg-white p-12 shadow-sm">
-            <div className="mb-10">
-              <h2 className="text-3xl font-light tracking-tight text-black mb-2">
-                Sign in
-              </h2>
-              <p className="text-zinc-500 text-sm">Access your dashboard</p>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-xs text-zinc-500 mb-3 uppercase tracking-wider">
-                  Username
-                </label>
-                <input
-                  name="email"
-                  required
-                  className="block w-full bg-white border border-zinc-300 px-4 py-3 text-black placeholder-zinc-400 focus:border-lime-500 focus:outline-none transition-colors"
-                  placeholder="Enter username"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="password" className="block text-xs text-zinc-500 mb-3 uppercase tracking-wider">
-                  Password
-                </label>
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  className="block w-full bg-white border border-zinc-300 px-4 py-3 text-black placeholder-zinc-400 focus:border-lime-500 focus:outline-none transition-colors"
-                  placeholder="Enter password"
-                />
-              </div>
-              
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-semibold text-zinc-700">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={show ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                className={`${input} pr-12`}
+                placeholder="Your password"
+              />
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 px-4 bg-lime-500 text-white font-medium hover:bg-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-zinc-500 hover:bg-zinc-100"
+                aria-label={show ? "Hide password" : "Show password"}
               >
-                {loading ? "Processing..." : "Sign in"}
+                {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
-              <a href="/forgot" className="block text-center text-sm text-zinc-500 underline hover:text-zinc-800">
-                Forgot your password?
-              </a>
-            </form>
+            </div>
           </div>
-        </div>
+          {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-lime-600 py-3.5 text-lg font-bold text-white hover:bg-lime-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+          <a href="/forgot" className="block text-center text-sm text-zinc-500 underline hover:text-zinc-800">
+            Forgot your password?
+          </a>
+        </form>
+        <p className="mt-5 text-center text-sm text-zinc-600">
+          New to Seating4U?{" "}
+          <Link href="/#request" className="font-semibold text-lime-700 underline">
+            Request access
+          </Link>
+        </p>
       </div>
     </div>
   );
