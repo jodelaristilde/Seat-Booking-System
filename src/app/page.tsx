@@ -29,9 +29,9 @@ export default function Home() {
       .catch(() => undefined);
   }, []);
   return (
-    <div className="bg-white text-zinc-900">
+    <div className="page-bg text-zinc-900">
       {/* top bar */}
-      <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-white/60 bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <Image src="/logo.png" alt="Seating4U" width={200} height={71} className="h-14 w-auto" priority />
           <nav className="ml-auto flex items-center gap-1 text-sm font-semibold sm:gap-3">
@@ -46,7 +46,7 @@ export default function Home() {
       </header>
 
       {/* hero */}
-      <section className="bg-gradient-to-b from-lime-50 to-white">
+      <section>
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:py-20">
           <div>
             <p className="mb-2 font-semibold uppercase tracking-widest text-lime-700">For weddings, galas and VIP nights</p>
@@ -86,7 +86,7 @@ export default function Home() {
         <h2 className="mb-8 text-center text-3xl font-extrabold">Everything for the event, in one place</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((x) => (
-            <div key={x.title} className="rounded-2xl border p-5">
+            <div key={x.title} className="rounded-2xl border bg-white p-5">
               <x.icon className="mb-3 h-8 w-8 text-lime-600" />
               <h3 className="text-lg font-bold">{x.title}</h3>
               <p className="mt-1 text-zinc-600">{x.text}</p>
@@ -96,7 +96,7 @@ export default function Home() {
       </section>
 
       {/* how it works */}
-      <section id="how" className="bg-zinc-50">
+      <section id="how" className="bg-white/40">
         <div className="mx-auto max-w-6xl space-y-14 px-4 py-14">
           <h2 className="text-center text-3xl font-extrabold">How it works</h2>
           {[
@@ -125,7 +125,7 @@ export default function Home() {
           <h2 className="mb-8 text-center text-3xl font-extrabold">What planners and hosts say</h2>
           <div className="grid gap-4 md:grid-cols-3">
             {reviews.map((r) => (
-              <figure key={r.id} className="rounded-2xl border p-5">
+              <figure key={r.id} className="rounded-2xl border bg-white p-5">
                 <div className="mb-2 flex gap-0.5 text-amber-500">
                   {Array.from({ length: r.stars }, (_, i) => (
                     <Star key={i} className="h-4 w-4 fill-current" />

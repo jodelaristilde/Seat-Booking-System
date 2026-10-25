@@ -314,3 +314,24 @@ html[data-brand="vip"] .arrived-list .last-arrived .vip-name { color: #facc15; }
 /* a thin gold line under the top bar */
 html[data-brand="vip"] nav { border-bottom: 2px solid var(--gold); }
 } /* end: VIP look on screen only (printing stays black on white) */
+
+/* Seating4U background: soft sage green behind every page (not on
+   VIP nights, not when printing). Page wrappers that were plain white or grey
+   become see-through so the sage shows; white cards and boxes stay white. */
+@media screen {
+  html:not([data-brand="vip"]) body {
+    background: #e9f2e1;
+  }
+  html:not([data-brand="vip"]) .min-h-screen.bg-white,
+  html:not([data-brand="vip"]) .min-h-screen.bg-zinc-50,
+  html:not([data-brand="vip"]) .min-h-screen.bg-zinc-100,
+  html:not([data-brand="vip"]) .min-h-screen.bg-gray-50,
+  html:not([data-brand="vip"]) .min-h-screen.bg-\[\#fafafa\],
+  html:not([data-brand="vip"]) .min-h-screen.bg-\[\#f5f5f5\],
+  html:not([data-brand="vip"]) .page-bg {
+    background: transparent !important;
+  }
+  html:not([data-brand="vip"]) footer.bg-white {
+    background: rgba(255, 255, 255, 0.55);
+  }
+}

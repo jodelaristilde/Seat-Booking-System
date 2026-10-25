@@ -40,7 +40,7 @@ export default function LoginPage() {
     "block w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-base text-black placeholder-zinc-400 focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-200";
 
   return (
-    <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center bg-gradient-to-b from-lime-50 to-white px-4 py-10">
+    <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-6 flex justify-center">
           <Image src="/logo.png" alt="Seating4U" width={300} height={107} className="h-auto w-[260px]" priority />

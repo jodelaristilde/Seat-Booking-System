@@ -1444,7 +1444,7 @@ const handleTableClick = () => {
   }
 
   return (
-    <div className={`bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
+    <div className={`page-bg bg-zinc-100 ${isFullScreen ? "overflow-hidden" : ""}`}>
       <div ref={topBarsRef}>
         {!isFullScreen && !isStaff && <PracticeBanner />}
         {!isFullScreen && !isStaff && <GuestAccessBanner />}
@@ -1455,7 +1455,7 @@ const handleTableClick = () => {
             initial={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             transition={{ duration: 0.5 }}
-            className="z-50 bg-white border-b border-zinc-200 px-2 sm:px-4"
+            className="z-50 bg-white/80 backdrop-blur border-b border-zinc-200 px-2 sm:px-4"
           >
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-0 sm:justify-between h-auto min-h-14 py-2">
               {/* Logo, then the open event (click to switch / start a new one) */}
@@ -1952,7 +1952,7 @@ const handleTableClick = () => {
           layout
           className={`w-full ${
             isFullScreen ? (viewMode === "plan" ? "xl:flex-1 xl:min-w-0" : "") : "lg:w-full xl:w-3/4"
-          } bg-zinc-50 overflow-hidden`}
+          } page-bg bg-zinc-50 overflow-hidden`}
           transition={{ duration: 0.5 }}
         >
           <AnimatePresence>

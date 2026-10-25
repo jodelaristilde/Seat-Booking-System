@@ -165,7 +165,7 @@ export function SetupSteps() {
   const link = `${btn} text-zinc-600 underline-offset-2 hover:underline`;
 
   return (
-    <div className="border-b bg-white px-3 py-2 sm:px-4" data-testid="setup-steps">
+    <div className="border-b bg-white/70 px-3 py-2 sm:px-4" data-testid="setup-steps">
       <div className="flex items-center gap-2">
         <span className="hidden text-sm font-bold sm:inline">{allDone ? "✓ Setup done" : "Set up your event"}</span>
         <ol className="flex flex-1 items-center gap-1 overflow-x-auto">

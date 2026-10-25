@@ -16,7 +16,7 @@ const POINTS = [
 
 export default function Venues() {
   return (
-    <div className="bg-white text-zinc-900">
+    <div className="page-bg text-zinc-900">
       <style>{`@media print { .no-print { display: none !important } @page { margin: 10mm } header, footer { display: none !important } }`}</style>
       <header className="no-print sticky top-0 z-30 border-b bg-white/95">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
@@ -32,7 +32,7 @@ export default function Venues() {
         </div>
       </header>
 
-      <section className="bg-gradient-to-b from-lime-50 to-white">
+      <section>
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 print:grid-cols-2 print:py-4">
           <div>
             <Image src="/logo.png" alt="Seating4U" width={200} height={71} className="mb-2 hidden h-12 w-auto print:block" />
@@ -53,7 +53,7 @@ export default function Venues() {
 
       <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 print:grid-cols-2 print:py-2">
         {POINTS.map((p) => (
-          <div key={p.title} className="flex gap-3 rounded-2xl border p-5 print:p-3">
+          <div key={p.title} className="flex gap-3 rounded-2xl border bg-white p-5 print:p-3">
             <p.icon className="h-8 w-8 shrink-0 text-lime-600" />
             <div>
               <h3 className="text-lg font-bold">{p.title}</h3>
@@ -71,7 +71,7 @@ export default function Venues() {
             "You mention Seating4U to the planners who book you (we give you this page to share or print).",
             "Planners get their account, with your room already in it, and we help them with their first event.",
           ].map((t, i) => (
-            <li key={i} className="flex gap-3 rounded-xl bg-zinc-50 p-4">
+            <li key={i} className="flex gap-3 rounded-xl bg-white p-4">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-500 font-extrabold">{i + 1}</span>
               <span>{t}</span>
             </li>
