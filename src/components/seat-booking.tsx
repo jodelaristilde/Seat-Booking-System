@@ -1627,6 +1627,7 @@ const handleTableClick = () => {
 
                       <DropdownMenuSeparator />
                       {sectionLabel("On the event day")}
+                      {prow(ClipboardCheck, "Ready check (the night before)", "Finds anything that could go wrong at the door.", "/dashboard/ready-check")}
                       {prow(Maximize, "Check-in screen", "Full screen: search a name, tick, done.", () => handleFullScreenToggle(true))}
                       {prow(Radio, "Live view for your client", "A link: they watch arrivals live. View only.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
                       {prow(ChefHat, "Kitchen screen", "Meals to serve as guests arrive, allergies in red.", "/dashboard/kitchen")}
