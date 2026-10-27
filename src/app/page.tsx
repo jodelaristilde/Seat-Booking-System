@@ -33,7 +33,7 @@ export default function Home() {
       {/* top bar */}
       <header className="sticky top-0 z-30 border-b border-white/60 bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Image src="/logo.png" alt="Seating4U" width={200} height={71} className="h-14 w-auto" priority />
+          <Image src="/seating4u-logo.png" alt="Seating4U" width={200} height={61} className="h-14 w-auto" priority />
           <nav className="ml-auto flex items-center gap-1 text-sm font-semibold sm:gap-3">
             <a href="#how" className="hidden rounded px-2 py-1 hover:bg-zinc-100 sm:block">How it works</a>
             <Link href="/venues" className="hidden rounded px-2 py-1 hover:bg-zinc-100 sm:block">For venues</Link>

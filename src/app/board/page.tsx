@@ -110,9 +110,7 @@ function Board() {
 
       {/* top: logo, event, count, controls */}
       <div className="flex items-center gap-4 px-[3vw] py-[2vh]">
-        <div className="rounded-xl bg-white/95 px-3 py-1.5">
-          <BrandLogo width={150} style={{ height: "auto", maxHeight: 56 }} />
-        </div>
+        <BrandLogo dark width={200} style={{ height: "auto", maxHeight: 64 }} />
         <h1 className="mr-auto truncate text-[clamp(1.2rem,2.6vw,2.6rem)] font-bold">{d.event.name}</h1>
         <div className="text-right">
           <p className="text-[clamp(1rem,2vw,2rem)] font-extrabold tabular-nums">

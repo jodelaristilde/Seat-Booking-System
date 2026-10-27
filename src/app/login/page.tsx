@@ -43,7 +43,7 @@ export default function LoginPage() {
     <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-6 flex justify-center">
-          <Image src="/logo.png" alt="Seating4U" width={300} height={107} className="h-auto w-[260px]" priority />
+          <Image src="/seating4u-logo.png" alt="Seating4U" width={300} height={92} className="h-auto w-[260px]" priority />
         </Link>
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-lg">
           <h1 className="text-center text-2xl font-bold text-black">Sign in</h1>

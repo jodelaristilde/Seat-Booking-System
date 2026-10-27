@@ -21,7 +21,7 @@ export default function Venues() {
       <header className="no-print sticky top-0 z-30 border-b bg-white/95">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <Link href="/">
-            <Image src="/logo.png" alt="Seating4U" width={200} height={71} className="h-14 w-auto" />
+            <Image src="/seating4u-logo.png" alt="Seating4U" width={200} height={61} className="h-14 w-auto" />
           </Link>
           <nav className="ml-auto flex items-center gap-2 text-sm font-semibold">
             <button onClick={() => window.print()} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 hover:bg-zinc-50">
@@ -35,7 +35,7 @@ export default function Venues() {
       <section>
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 print:grid-cols-2 print:py-4">
           <div>
-            <Image src="/logo.png" alt="Seating4U" width={200} height={71} className="mb-2 hidden h-12 w-auto print:block" />
+            <Image src="/seating4u-logo.png" alt="Seating4U" width={200} height={61} className="mb-2 hidden h-12 w-auto print:block" />
             <p className="mb-2 flex items-center gap-2 font-semibold uppercase tracking-widest text-lime-700">
               <Building2 className="h-5 w-5" /> For venues
             </p>

@@ -1479,7 +1479,7 @@ const handleTableClick = () => {
                   href="/"
                   className="flex justify-center items-center space-x-2"
                 >
-                  <BrandLogo width={210} style={{ height: "auto", maxHeight: 72 }} />
+                  <BrandLogo width={240} style={{ height: "auto", maxHeight: 74 }} />
                 </Link>
                 <EventSwitcher />
               </div>
