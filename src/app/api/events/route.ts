@@ -29,6 +29,12 @@ export async function GET() {
     const owners: Record<string, string | null> = {};
     if (scope?.admin) for (const e of events as { id: string }[]) owners[e.id] = await ownerOfEvent(e.id);
     const brands = await brandsFor();
+    // guests see who else is at their table (on unless the planner turned it off)
+    const mateOff = new Set(
+      ((await db.setting.findMany({ where: { key: { startsWith: "tablemates:" } } })) as { key: string; value: string }[])
+        .filter((r) => r.value === "off")
+        .map((r) => r.key.slice("tablemates:".length))
+    );
     const counts = await Promise.all(
       events.map(async (e: { id: string }) => ({
         id: e.id,
@@ -43,6 +49,7 @@ export async function GET() {
         ...e,
         ...counts.find((c) => c.id === e.id),
         brand: brands[e.id] ?? "seating4u",
+        tablemates: !mateOff.has(e.id),
         ...(scope?.admin ? { owner: owners[e.id] } : {}),
       })),
     });
@@ -128,6 +135,18 @@ export async function PUT(req: NextRequest) {
     if (typeof body.owner === "string") {
       if (!scope?.admin) return NextResponse.json({ success: false, message: "Only the admin can do this." }, { status: 403 });
       await setEventOwner(id, body.owner || null);
+      return NextResponse.json({ success: true });
+    }
+    // show guests who else sits at their table: { id, tablemates: true | false }
+    if (typeof body.tablemates === "boolean") {
+      const token = await getToken({ req });
+      if (token?.role === "staff")
+        return NextResponse.json({ success: false, message: "Check-in staff accounts can't change this." }, { status: 403 });
+      await db.setting.upsert({
+        where: { key: `tablemates:${id}` },
+        update: { value: body.tablemates ? "on" : "off" },
+        create: { key: `tablemates:${id}`, value: body.tablemates ? "on" : "off" },
+      });
       return NextResponse.json({ success: true });
     }
     if (typeof body.name === "string" && body.name.trim()) {

@@ -12,7 +12,7 @@ export function BrandSync() {
   const { status } = useSession();
   useEffect(() => {
     // guest pages (phone seat finder, RSVP) set the look from their own event
-    if (path?.startsWith("/seat-scanning") || path?.startsWith("/rsvp")) return;
+    if (["/seat-scanning", "/rsvp", "/live", "/board", "/report"].some((p) => path?.startsWith(p))) return;
     if (path?.startsWith("/login")) {
       applyBrand("seating4u");
       return;

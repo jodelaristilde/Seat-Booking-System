@@ -77,6 +77,7 @@ export default function SeatScanning() {
   );
   const [loadingFloorMap, setLoadingFloorMap] = useState(false);
   const [tableNotes, setTableNotes] = useState<string | null>(null);
+  const [tablemates, setTablemates] = useState<string[]>([]); // who else sits at the table
 
   // Checking in a group: after "Arrived", ask if more guests came along
   type Arrived = { seatId: string; name: string; table: string };
@@ -414,6 +415,7 @@ export default function SeatScanning() {
     setNoSeatFound(false);
     setSeatIsReceived(false);
     setTableNotes(null); // Reset notes
+    setTablemates([]);
     setGroupMode(null);
     setGroup([]);
     setAskMore(false);
@@ -429,6 +431,7 @@ export default function SeatScanning() {
         if (seatCheckData?.success) {
           setSeatIsReceived(seatCheckData.data.isReceived);
           setTableNotes(seatCheckData.data.table?.notes || null); // Store notes
+          setTablemates(Array.isArray(seatCheckData.tablemates) ? seatCheckData.tablemates : []);
 
           if (seatCheckData.data.isReceived) {
             toast.success(t.welcomeBack);
@@ -739,6 +742,11 @@ export default function SeatScanning() {
             <span className="font-bold text-6xl sm:text-7xl text-zinc-800 dark:text-zinc-200">
               {searchResult.table}
             </span>
+            {tablemates.length > 0 && (
+              <p className="max-w-sm text-center text-lg text-zinc-600 dark:text-zinc-300">
+                {t.sittingWith} <b className="text-zinc-900 dark:text-white">{t.joinNames(tablemates)}</b>
+              </p>
+            )}
           </div>
           
           {/* Floor Map Button */}

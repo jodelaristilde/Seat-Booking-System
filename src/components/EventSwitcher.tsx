@@ -11,7 +11,7 @@ import { CalendarDays, ChevronDown, Plus, Trash2, Pencil, Check, QrCode, Downloa
 import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 
-type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number; brand?: "vip" | "seating4u"; owner?: string | null };
+type Ev = { id: string; name: string; date: string | null; tables?: number; guests?: number; brand?: "vip" | "seating4u"; owner?: string | null; tablemates?: boolean };
 
 export function EventSwitcher() {
   const [open, setOpen] = useState(false);
@@ -80,6 +80,18 @@ export function EventSwitcher() {
     if (!r?.success) return toast.error("Could not change the event type");
     if (e.id === activeId) applyBrand(brand);
     toast.success(brand === "vip" ? `${e.name}: VIPService4U look` : `${e.name}: Seating4U look`);
+    load();
+  };
+  // guests see who else sits at their table, on their phone
+  const toggleMates = async (e: Ev) => {
+    const on = e.tablemates === false;
+    const r = await fetch("/api/events", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: e.id, tablemates: on }),
+    }).then((x) => x.json()).catch(() => null);
+    if (!r?.success) return toast.error(r?.message ?? "Could not change it");
+    toast.success(on ? "Guests will see who sits at their table" : "Guests will only see their own table");
     load();
   };
   const toggleGuests = async (id: string, open: boolean) => {
@@ -280,6 +292,21 @@ export function EventSwitcher() {
                               : access[e.id].past
                               ? "Guest check-in: Closed (date passed)"
                               : "Guest check-in: Closed"}
+                          </button>
+                        )}{" "}
+                        {/* guests see who sits at their table */}
+                        {typeof e.tablemates === "boolean" && (
+                          <button
+                            type="button"
+                            onClick={() => toggleMates(e)}
+                            className={`mt-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                              e.tablemates
+                                ? "border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
+                                : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                            }`}
+                            title="On the guest's phone: 'You're sitting with Fritz A., Kyla A.…' (first name and initial). Click to change."
+                          >
+                            Show who&apos;s at their table: {e.tablemates ? "On" : "Off"}
                           </button>
                         )}
                       </>

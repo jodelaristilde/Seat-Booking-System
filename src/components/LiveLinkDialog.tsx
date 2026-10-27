@@ -5,7 +5,7 @@
 // Opened from the menu (☰) → Client live view.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, ExternalLink, RefreshCw, X } from "lucide-react";
+import { Copy, ExternalLink, RefreshCw, Tv, X } from "lucide-react";
 
 export function LiveLinkDialog() {
   const [open, setOpen] = useState(false);
@@ -61,6 +61,28 @@ export function LiveLinkDialog() {
           <button onClick={() => confirm("Make a new link? The old link will stop working.") && get(true)} className={`${btn} ml-auto text-zinc-600 hover:bg-zinc-100`}>
             <RefreshCw className="h-4 w-4" /> New link
           </button>
+        </div>
+        {/* on the night: the arrivals board for a TV at the entrance (same private key) */}
+        <div className="mt-4 border-t pt-3">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+            <Tv className="h-4 w-4" /> Arrivals board for a TV
+          </p>
+          <p className="mb-2 text-xs text-zinc-600">
+            Open it on a TV or tablet at the entrance. Each guest you check in is welcomed by name with their table, VIPs in gold.
+            Press the full-screen button on it.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a href={url ? url.replace("/live?", "/board?") : undefined} target="_blank" rel="noreferrer" className={`${btn} bg-zinc-900 text-white hover:bg-zinc-700`}>
+              <Tv className="h-4 w-4" /> Open arrivals board
+            </a>
+            <button
+              disabled={!url}
+              onClick={() => navigator.clipboard?.writeText(url.replace("/live?", "/board?")).then(() => toast.success("Board link copied"), () => toast.error("Could not copy"))}
+              className={`${btn} border hover:bg-zinc-50 disabled:opacity-50`}
+            >
+              <Copy className="h-4 w-4" /> Copy board link
+            </button>
+          </div>
         </div>
         {/* after the event: a thank-you report for the host (same private key) */}
         <div className="mt-4 border-t pt-3">

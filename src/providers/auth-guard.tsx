@@ -19,7 +19,7 @@ export default function AuthGuard({
 
   // Pages anyone can open without logging in: the guest seat finder, the
   // homepage, the client's live view and report, RSVP, password reset...
-  const PUBLIC = ["/seat-scanning", "/live", "/report", "/rsvp", "/client-view", "/forgot", "/reset", "/venues", "/user-guide", "/login"]
+  const PUBLIC = ["/seat-scanning", "/live", "/board", "/report", "/rsvp", "/client-view", "/forgot", "/reset", "/venues", "/user-guide", "/login"]
   const isSeatScanningPage = pathname === "/" || PUBLIC.some((p) => pathname === p || pathname?.startsWith(p + "/"))
 
   useEffect(() => {

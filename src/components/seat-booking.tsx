@@ -58,6 +58,7 @@ import {
   BarChart3,
   Sparkles,
   Radio,
+  Tv,
   MoreHorizontal,
   FileUp,
   UserPlus,
@@ -95,6 +96,20 @@ import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { ReportProblem, openReportProblem } from "@/components/ReportProblem";
 import { NetworkWatch } from "@/components/NetworkWatch";
 import { ReviewDialog, openReview } from "@/components/ReviewForm";
+
+// Open the arrivals board (TV) of the current event in a new tab
+async function openBoard() {
+  const w = window.open("about:blank", "_blank");
+  const j = await fetch("/api/live-link").then((r) => r.json()).catch(() => null);
+  if (j?.success && j.link) {
+    const link = String(j.link).replace("/live?", "/board?");
+    if (w) w.location.href = link;
+    else window.location.href = link;
+  } else {
+    w?.close();
+    toast.error(j?.message ?? "Could not open the arrivals board");
+  }
+}
 import { SetupSteps } from "./SetupSteps";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup, openSetup } from "@/lib/setupEvents";
@@ -1630,6 +1645,7 @@ const handleTableClick = () => {
                       {prow(ClipboardCheck, "Ready check (the night before)", "Finds anything that could go wrong at the door.", "/dashboard/ready-check")}
                       {prow(Maximize, "Check-in screen", "Full screen: search a name, tick, done.", () => handleFullScreenToggle(true))}
                       {prow(Radio, "Live view for your client", "A link: they watch arrivals live. View only.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                      {prow(Tv, "Arrivals board for a TV", "At the entrance: each guest is welcomed by name and table.", openBoard)}
                       {prow(ChefHat, "Kitchen screen", "Meals to serve as guests arrive, allergies in red.", "/dashboard/kitchen")}
 
                       <DropdownMenuSeparator />
@@ -1707,6 +1723,11 @@ const handleTableClick = () => {
                           onClick={() => window.dispatchEvent(new Event("seating4u:live-link"))}
                         >
                           <Radio className="mr-2 w-4 h-4" /> Client live view (share link)
+                        </DropdownMenuItem>
+                      )}
+                      {!isStaff && (
+                        <DropdownMenuItem className="cursor-pointer" onClick={openBoard}>
+                          <Tv className="mr-2 w-4 h-4" /> Arrivals board for a TV
                         </DropdownMenuItem>
                       )}
                       {brand === "vip" && (

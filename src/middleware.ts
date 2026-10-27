@@ -19,6 +19,7 @@ const PUBLIC_API: { path: string; methods: string[] }[] = [
   { path: "/api/wayfind", methods: ["GET"] }, // guest phone: line from the entrance to their table (no names)
   { path: "/api/event-info", methods: ["GET"] }, // guest phone: which event this QR code is for (name only)
   { path: "/api/rsvp", methods: ["GET", "POST"] }, // a guest's own RSVP link (signed, one guest only)
+  { path: "/api/board", methods: ["GET"] }, // the arrivals board TV (signed link only)
   { path: "/api/live", methods: ["GET"] }, // the client's read-only live view (signed link only)
   { path: "/api/password-reset", methods: ["POST", "PUT"] }, // "I forgot my password" (checked in the route)
   { path: "/api/host-report", methods: ["GET"] },
@@ -68,7 +69,7 @@ const pageMiddleware = withAuth(
 
     // If user is logged in and tries to access pages other than the allowed ones
     if (token) {
-      const allowedAuthPaths = ["/dashboard", "/client-view", "/seat-scanning", "/check-in", "/live", "/report", "/rsvp", "/user-guide"]
+      const allowedAuthPaths = ["/dashboard", "/client-view", "/seat-scanning", "/check-in", "/live", "/board", "/report", "/rsvp", "/user-guide"]
       if (!allowedAuthPaths.some((p) => path.startsWith(p))) {
         return NextResponse.redirect(new URL("/dashboard", req.url))
       }
