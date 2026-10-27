@@ -72,8 +72,8 @@ export default function Home() {
         <div className="overflow-hidden rounded-2xl border bg-black shadow-xl">
           <video
             className="block aspect-video w-full"
-            src="/videos/seating4u-promo-2026-10-25.mp4"
-            poster="/videos/seating4u-promo-2026-10-25.jpg"
+            src="/videos/seating4u-promo-2026-10-27.mp4"
+            poster="/videos/seating4u-promo-2026-10-27.jpg"
             controls
             preload="metadata"
             playsInline
