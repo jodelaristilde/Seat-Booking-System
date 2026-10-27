@@ -46,7 +46,7 @@ export default function Venues() {
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border shadow-xl print:shadow-none">
-            <Image src="/home/floorplan.jpg" alt="Your floor plan with every table" width={1224} height={584} className="h-auto w-full" />
+            <Image src="/home/floorplan-2026-10-27.jpg" alt="Your floor plan with every table" width={1224} height={584} className="h-auto w-full" />
           </div>
         </div>
       </section>

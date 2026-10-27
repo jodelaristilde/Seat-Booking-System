@@ -20,9 +20,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Seating4U",
-  description:
-    "A seat booking application to manage and reserve seats efficiently.",
+  metadataBase: new URL("https://www.seating4u.com"),
+  title: "Seating4U · We've Got Your Seats",
+  description: "Seating plans from the venue's floor plan, guests find their own table on their phone, and a calm check-in desk.",
+  openGraph: { siteName: "Seating4U", title: "Seating4U · We've Got Your Seats", type: "website" },
 };
 
 export default function RootLayout({

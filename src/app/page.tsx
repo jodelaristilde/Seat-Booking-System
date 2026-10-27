@@ -100,10 +100,10 @@ export default function Home() {
         <div className="mx-auto max-w-6xl space-y-14 px-4 py-14">
           <h2 className="text-center text-3xl font-extrabold">How it works</h2>
           {[
-            { n: 1, t: "Upload the floor plan and your guest list", d: "Drop the venue's plan and your Excel list. The tables and numbers are read for you, then Seat everyone fills the tables.", img: "/home/floorplan.jpg", w: 1224, h: 584 },
-            { n: 2, t: "Guests find their seat on their phone", d: "Put the QR code at the entrance. Guests type their name, see their table, and follow the green line from the door.", img: "/home/phone.jpg", w: 1160, h: 560 },
-            { n: 3, t: "Check in at the door, calmly", d: "Your helpers search a name and tick. Walk-in guest? Add them to an empty seat in two clicks. VIPs get a gold welcome.", img: "/home/walkin.jpg", w: 1224, h: 584 },
-            { n: 4, t: "Share it live, and say thank you", d: "The family follows arrivals on a private link. After the event they get a report: who came, when, and the meals served.", img: "/home/report.jpg", w: 920, h: 800 },
+            { n: 1, t: "Upload the floor plan and your guest list", d: "Drop the venue's plan and your Excel list. The tables and numbers are read for you, then Seat everyone fills the tables.", img: "/home/floorplan-2026-10-27.jpg", w: 1224, h: 584 },
+            { n: 2, t: "Guests find their seat on their phone", d: "Put the QR code at the entrance. Guests type their name, see their table, and follow the green line from the door.", img: "/home/phone-2026-10-27.jpg", w: 1160, h: 560 },
+            { n: 3, t: "Check in at the door, calmly", d: "Your helpers search a name and tick. Walk-in guest? Add them to an empty seat in two clicks. VIPs get a gold welcome.", img: "/home/walkin-2026-10-27.jpg", w: 1224, h: 584 },
+            { n: 4, t: "Share it live, and say thank you", d: "The family follows arrivals on a private link. After the event they get a report: who came, when, and the meals served.", img: "/home/report-2026-10-27.jpg", w: 920, h: 800 },
           ].map((s, i) => (
             <div key={s.n} className={`grid items-center gap-8 md:grid-cols-2 ${i % 2 ? "md:[&>*:first-child]:order-2" : ""}`}>
               <div>
