@@ -1,7 +1,7 @@
 // The setup steps bar opens screens elsewhere on the dashboard with a window
 // event: openSetup("floor-map") etc. A screen not on the page yet (the floor
 // plan while the grid view shows) picks it up when it appears.
-export type SetupTarget = "floor-map" | "draw-tables" | "bulk-tables" | "set-entrance" | "import-guests";
+export type SetupTarget = "floor-map" | "draw-tables" | "find-tables" | "bulk-tables" | "set-entrance" | "import-guests";
 
 export function openSetup(target: SetupTarget) {
   (window as unknown as { __setupPending?: SetupTarget | null }).__setupPending = target;

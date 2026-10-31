@@ -56,7 +56,7 @@ import {
   type PictureLabel,
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
-import { onSetup } from "@/lib/setupEvents";
+import { onSetup, openSetup } from "@/lib/setupEvents";
 
 type Pos = { x: number; y: number };
 
@@ -477,6 +477,12 @@ export function FloorPlanCanvas({
   // the setup steps bar: "Find / draw tables" and "Set the entrance"
   useEffect(() => onSetup("draw-tables", () => setDrawing(true)), []);
   useEffect(() => onSetup("set-entrance", () => setSettingEntrance(true)), []);
+  // the setup wizard moved on: close the door tool (the doors are already saved)
+  useEffect(() => {
+    const h = () => setSettingEntrance(false);
+    window.addEventListener("seating4u:plan-done", h);
+    return () => window.removeEventListener("seating4u:plan-done", h);
+  }, []);
   // changing the entrance: bring the current one into view (it flashes)
   useEffect(() => {
     if (!settingEntrance) return;
@@ -574,6 +580,18 @@ export function FloorPlanCanvas({
   useEffect(() => {
     loadPicture();
   }, [loadPicture]);
+
+  // the setup wizard: "find my tables on the plan" (loads the picture first if needed)
+  useEffect(
+    () =>
+      onSetup("find-tables", async () => {
+        const src = await loadPicture();
+        if (src) startReview(src);
+        else toast.error("Upload the floor plan first.");
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   // ---------- Read tables from the picture ----------
   // Find every table in the picture at once and copy the numbers written on it
@@ -2867,8 +2885,21 @@ export function FloorPlanCanvas({
         {/* Normal view */}
         {/* Only when there is no picture yet (never written over the picture) */}
         {!reviewing && tables.length === 0 && !picture && (
-          <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-sm text-center px-4">
-            No tables yet. Upload your floor plan with the FLOOR MAP button, then click Draw tables.
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
+            <p className="text-lg font-semibold text-zinc-700">No tables yet</p>
+            {!staff && (
+              <>
+                <button
+                  onClick={() => openSetup("floor-map")}
+                  className="rounded-xl bg-lime-600 px-5 py-3 text-base font-bold text-white hover:bg-lime-700"
+                >
+                  Upload the venue&apos;s floor plan
+                </button>
+                <button onClick={() => openSetup("bulk-tables")} className="text-sm text-zinc-600 underline hover:text-zinc-900">
+                  No floor plan? Create your tables
+                </button>
+              </>
+            )}
           </div>
         )}
 

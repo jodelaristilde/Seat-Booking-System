@@ -202,7 +202,7 @@ export function FloorMapUploader() {
             <SheetHeader>
               <SheetTitle>Floor Map</SheetTitle>
               <SheetDescription>
-                Upload or view your venue floor map
+                The venue’s plan: a picture, a screenshot or a PDF. You can change it later.
               </SheetDescription>
             </SheetHeader>
 
@@ -280,7 +280,7 @@ export function FloorMapUploader() {
                               or drag and drop
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              PNG, JPG, GIF up to 10MB
+                              A picture, a screenshot or a PDF
                             </p>
                           </div>
                         </label>
@@ -347,7 +347,7 @@ export function FloorMapUploader() {
                             </span>
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            PNG, JPG, GIF up to 10MB
+                            A picture, a screenshot or a PDF
                           </p>
                         </div>
                       </label>

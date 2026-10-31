@@ -111,6 +111,7 @@ async function openBoard() {
   }
 }
 import { SetupSteps } from "./SetupSteps";
+import { SetupWizard } from "./SetupWizard";
 import { useBrand } from "@/lib/useBrand";
 import { onSetup, openSetup } from "@/lib/setupEvents";
 import { AddTableForm } from "./add-table-form";
@@ -225,6 +226,8 @@ const SeatBooking = () => {
   const showNames = showNamesState;
   // "plan" = tables placed like the real room, "grid" = the old rows of circles
   const [viewMode, setViewMode] = useState<"plan" | "grid">("plan");
+  // the step-by-step setup is on: keep the top bar simple
+  const [wizardOn, setWizardOn] = useState(false);
   useEffect(() => {
     try {
       if (window.localStorage.getItem("dashboardView") === "grid") setViewMode("grid");
@@ -288,7 +291,7 @@ const SeatBooking = () => {
     // drawing tables / the entrance happen on the floor plan view
     const h = (e: Event) => {
       const t = (e as CustomEvent).detail;
-      if (t === "draw-tables" || t === "set-entrance") {
+      if (t === "draw-tables" || t === "find-tables" || t === "set-entrance") {
         setIsFullScreen(false);
         setViewMode("plan");
       }
@@ -1487,7 +1490,7 @@ const handleTableClick = () => {
               {/* Right Section - Now with better mobile layout */}
               <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-4">
                 {/* Primary Actions Group */}
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2 ${wizardOn ? "hidden" : ""}`}>
                   <Button
                     onClick={refreshSeats}
                     size="icon"
@@ -1525,7 +1528,7 @@ const handleTableClick = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 sm:h-9"
+                        className={`h-8 sm:h-9 ${wizardOn ? "hidden" : ""}`}
                         onClick={toggleViewMode}
                       >
                         {viewMode === "plan" ? (
@@ -1547,13 +1550,17 @@ const handleTableClick = () => {
                   </Tooltip>
                 </TooltipProvider>
 
-                {!isStaff && <FloorMapUploader />}
+                {!isStaff && (
+                  <span className={wizardOn ? "hidden" : "contents"}>
+                    <FloorMapUploader />
+                  </span>
+                )}
 
                 <WashupButton />
 
                 {/* Secondary Actions Group */}
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center space-x-2">
+                  <div className={`hidden items-center space-x-2 ${wizardOn ? "" : "sm:flex"}`}>
                     <span className="text-sm font-medium">Full Screen</span>
                     <Switch
                       checked={isFullScreen}
@@ -1955,7 +1962,8 @@ const handleTableClick = () => {
           </motion.nav>
         )}
       </AnimatePresence>
-      <div ref={setupBarRef}>{!isFullScreen && !isStaff && <SetupSteps />}</div>
+      <div ref={setupBarRef}>{!isFullScreen && !isStaff && !wizardOn && <SetupSteps />}</div>
+      {!isStaff && <SetupWizard onActiveChange={setWizardOn} />}
       {!isStaff && <ImportGuestsforWeb noButton />}
       {!isStaff && <LiveLinkDialog />}
       {isUser && <WelcomeDialog />}
