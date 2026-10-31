@@ -893,34 +893,37 @@ export default function SeatScanning() {
 
       {/* After "Arrived": did more guests come along? A screen of its own */}
       {askMore && searchResult && (
-        <div className="fixed inset-0 z-[86] flex flex-col items-center justify-center bg-lime-400 p-6 text-center" data-testid="more-guests">
-          <div className="w-full max-w-sm">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white">
-              <Check className="h-12 w-12 text-green-600" strokeWidth={3} />
-            </div>
-            <p className="mt-4 break-words text-2xl font-bold text-zinc-900">{searchResult.name}</p>
-            <p className="mt-6 text-3xl font-extrabold text-zinc-900">{t.moreGuests}</p>
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="h-20 rounded-3xl bg-green-700 text-3xl font-extrabold text-white shadow-xl hover:bg-green-800"
-                onClick={() => {
-                  setAskMore(false);
-                  setGroupMode("adding");
-                }}
-              >
-                {t.yes}
-              </button>
-              <button
-                type="button"
-                className="h-20 rounded-3xl bg-white text-3xl font-extrabold text-zinc-900 shadow-xl hover:bg-zinc-50"
-                onClick={() => {
-                  setAskMore(false);
-                  setTablePop(true);
-                }}
-              >
-                {t.no}
-              </button>
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto bg-[#e9f2e1] p-4 text-center z-[86]" data-testid="more-guests">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-[3px] border-lime-400 bg-gradient-to-br from-lime-50 via-white to-emerald-50 shadow-2xl shadow-lime-500/25">
+            <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
+            <div className="p-6">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                <Check className="h-10 w-10 text-green-600" strokeWidth={3} />
+              </div>
+              <p className="mt-3 break-words text-xl font-bold text-emerald-900">{searchResult.name}</p>
+              <p className="mt-5 text-3xl font-extrabold text-emerald-950">{t.moreGuests}</p>
+              <div className="mt-7 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className="h-20 rounded-2xl bg-green-600 text-3xl font-extrabold text-white shadow-lg hover:bg-green-700"
+                  onClick={() => {
+                    setAskMore(false);
+                    setGroupMode("adding");
+                  }}
+                >
+                  {t.yes}
+                </button>
+                <button
+                  type="button"
+                  className="h-20 rounded-2xl border-[3px] border-lime-400 bg-white text-3xl font-extrabold text-emerald-950 hover:bg-lime-50"
+                  onClick={() => {
+                    setAskMore(false);
+                    setTablePop(true);
+                  }}
+                >
+                  {t.no}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -951,70 +954,72 @@ export default function SeatScanning() {
 
       {/* Found your name: a screen of its own, one big button */}
       {searchResult && !seatIsReceived && !noSeatFound && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-lime-400 p-6 text-center" data-testid="arrive-pop">
-          <div className="w-full max-w-sm">
-            <p className="text-base font-bold uppercase tracking-widest text-green-900">{t.welcome}</p>
-            <p className="mt-2 break-words text-4xl font-extrabold text-zinc-900">{searchResult.name}</p>
-            {tableNotes && (
-              <p className="mt-4 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
-            )}
-            <p className="mt-4 text-lg text-zinc-800">{t.tapArrived}</p>
-            <button
-              type="button"
-              onClick={doArrive}
-              disabled={isLoading}
-              className="mt-8 h-24 w-full rounded-3xl bg-green-700 text-3xl font-extrabold text-white shadow-xl hover:bg-green-800 disabled:opacity-60"
-            >
-              {isLoading ? t.processing : t.arrivedBig}
-            </button>
-            <button type="button" onClick={notMe} className="mt-6 text-lg text-zinc-800 underline">
-              {t.notMe}
-            </button>
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto bg-[#e9f2e1] p-4 text-center z-[85]" data-testid="arrive-pop">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-[3px] border-lime-400 bg-gradient-to-br from-lime-50 via-white to-emerald-50 shadow-2xl shadow-lime-500/25">
+            <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
+            <div className="p-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">{t.welcome}</p>
+              <p className="mt-2 break-words text-4xl font-extrabold text-emerald-950">{searchResult.name}</p>
+              {tableNotes && (
+                <p className="mt-4 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
+              )}
+              <p className="mt-4 text-lg text-emerald-900">{t.tapArrived}</p>
+              <button type="button" onClick={doArrive} disabled={isLoading} className="mt-7 h-24 w-full rounded-2xl bg-green-600 text-3xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60">
+                {isLoading ? t.processing : t.arrivedBig}
+              </button>
+              <button type="button" onClick={notMe} className="mt-5 text-base text-emerald-800 underline">
+                {t.notMe}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Arrived: "Welcome Fritz Aristilde", a screen of its own */}
       {tablePop && searchResult && seatIsReceived && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-lime-400 p-6 text-center text-zinc-900" data-testid="table-pop">
-          <div className="w-full max-w-sm">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white">
-              <Check className="h-14 w-14 text-green-600" strokeWidth={3} />
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto bg-[#e9f2e1] p-4 text-center z-[85]" data-testid="table-pop">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-[3px] border-lime-400 bg-gradient-to-br from-lime-50 via-white to-emerald-50 shadow-2xl shadow-lime-500/25">
+            <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
+            <div className="p-6">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-600">
+                <Check className="h-12 w-12 text-white" strokeWidth={3} />
+              </div>
+              <p className="mt-4 text-xl font-bold text-emerald-700">{t.welcome}</p>
+              <p className="mt-1 break-words text-4xl font-extrabold text-emerald-950">{searchResult.name}</p>
+              <p className="mt-1 text-lg font-semibold text-emerald-800">{t.arrivedDone}</p>
+              <div className="mt-5 rounded-2xl border-2 border-lime-300 bg-white px-4 py-3">
+                <p className="text-base font-semibold text-emerald-700">{t.yourTable}</p>
+                <p className="text-5xl font-extrabold text-emerald-950">{searchResult.table}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setTablePop(false);
+                  fetchFloorMap();
+                }}
+                disabled={loadingFloorMap}
+                className="mt-6 flex items-center justify-center gap-3 h-20 w-full rounded-2xl bg-green-600 text-2xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
+              >
+                <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
+              </button>
+              <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-emerald-800 underline">
+                {t.done}
+              </button>
             </div>
-            <p className="mt-5 text-2xl font-bold text-green-900">{t.welcome}</p>
-            <p className="mt-1 break-words text-4xl font-extrabold">{searchResult.name}</p>
-            <p className="mt-2 text-xl font-semibold text-green-900">{t.arrivedDone}</p>
-            <div className="mt-6 rounded-2xl bg-white/50 px-4 py-3">
-              <p className="text-lg text-green-900">{t.yourTable}</p>
-              <p className="text-5xl font-extrabold">{searchResult.table}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setTablePop(false);
-                fetchFloorMap();
-              }}
-              disabled={loadingFloorMap}
-              className="mt-7 flex h-20 w-full items-center justify-center gap-3 rounded-3xl bg-green-700 text-2xl font-extrabold text-white shadow-xl disabled:opacity-60"
-            >
-              <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
-            </button>
-            <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-zinc-900 underline">
-              {t.done}
-            </button>
           </div>
         </div>
       )}
 
       {/* Done with the group: just the names and their tables, until Close */}
       {groupMode === "done" && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-lime-400 p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-4 border-green-500 bg-white shadow-2xl">
-            <div className="bg-green-600 px-5 py-3 text-center">
-              <p className="text-sm font-bold uppercase tracking-wide text-green-100">{t.arrivedHeader} ✓</p>
-              <p className="text-2xl font-extrabold text-white">{t.yourGroup}</p>
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto bg-[#e9f2e1] p-4 text-center z-[90]">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border-[3px] border-lime-400 bg-gradient-to-br from-lime-50 via-white to-emerald-50 shadow-2xl shadow-lime-500/25">
+            <div className="h-2 bg-gradient-to-r from-lime-400 via-emerald-500 to-lime-400" />
+            <div className="px-5 pt-5 text-center">
+              <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">{t.arrivedHeader} ✓</p>
+              <p className="text-3xl font-extrabold text-emerald-950">{t.yourGroup}</p>
             </div>
-            <ul className="max-h-[55dvh] divide-y divide-green-100 overflow-y-auto px-4">
+            <ul className="mx-4 mt-3 max-h-[45dvh] divide-y divide-lime-200 overflow-y-auto rounded-xl border-2 border-lime-300 bg-white px-3 text-left">
               {sortedGroup.map((g) => (
                 <li key={g.seatId} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="text-lg font-semibold text-zinc-900">{g.name}</span>
@@ -1024,7 +1029,7 @@ export default function SeatScanning() {
                 </li>
               ))}
             </ul>
-            <div className="p-4">
+            <div className="p-5">
               <button
                 type="button"
                 onClick={() => {
@@ -1032,14 +1037,14 @@ export default function SeatScanning() {
                   fetchFloorMap();
                 }}
                 disabled={loadingFloorMap}
-                className="mb-3 flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-xl font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                className="mb-3 flex items-center justify-center gap-2 h-20 w-full rounded-2xl bg-green-600 text-2xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
               >
                 <MapPin className="h-6 w-6" /> {loadingFloorMap ? t.loadingShort : t.showTable}
               </button>
               <button
                 type="button"
                 onClick={closeGroup}
-                className="h-14 w-full rounded-xl bg-green-600 text-xl font-bold text-white shadow hover:bg-green-700"
+                className="h-14 w-full rounded-2xl border-[3px] border-lime-400 bg-white text-xl font-bold text-emerald-950 hover:bg-lime-50"
               >
                 {t.close}
               </button>
