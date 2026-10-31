@@ -82,6 +82,7 @@ export default function SeatScanning() {
   // Checking in a group: after "Arrived", ask if more guests came along
   type Arrived = { seatId: string; name: string; table: string };
   const [askMore, setAskMore] = useState(false);
+  const [tablePop, setTablePop] = useState(false); // "Your table" pop-up after arriving
   const [groupMode, setGroupMode] = useState<null | "adding" | "done">(null);
   const [group, setGroup] = useState<Arrived[]>([]);
   const [groupQuery, setGroupQuery] = useState("");
@@ -363,6 +364,57 @@ export default function SeatScanning() {
     setListening(false);
   };
 
+  // "I've arrived" (on the pop-up)
+  const doArrive = async () => {
+              if (!searchResult) return;
+              try {
+                setIsLoading(true);
+                const response = await fetch(
+                  "/api/seat-checkin",
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      seatId: searchResult.seatId,
+                    }),
+                  }
+                );
+                const data = await response.json();
+                if (data.success) {
+                  setSeatIsReceived(true);
+                  setGroup([
+                    {
+                      seatId: searchResult.seatId,
+                      name: searchResult.name,
+                      table: searchResult.table,
+                    },
+                  ]);
+                  setAskMore(true);
+                } else {
+                  toast.error(
+                    t.couldNotCheckIn
+                  );
+                }
+              } catch (err) {
+                console.error(err);
+                toast.error(t.couldNotCheckIn);
+              } finally {
+                setIsLoading(false);
+              }
+            };
+
+  // "Not you?" on the arrive pop-up: back to an empty search
+  const notMe = () => {
+    setSelectedUser(null);
+    setSearchResult(null);
+    setSeatIsReceived(false);
+    setTableNotes(null);
+    setSearchValue("");
+    window.setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
+
   // "Close" on the group card: everyone is checked in, back to an empty search
   const closeGroup = () => {
     setGroupMode(null);
@@ -434,7 +486,7 @@ export default function SeatScanning() {
           setTablemates(Array.isArray(seatCheckData.tablemates) ? seatCheckData.tablemates : []);
 
           if (seatCheckData.data.isReceived) {
-            toast.success(t.welcomeBack);
+            setTablePop(true);
           }
         }
       } catch (error) {
@@ -814,46 +866,7 @@ export default function SeatScanning() {
           
           {/* Check In button */}
           <Button
-            onClick={async () => {
-              if (!searchResult) return;
-              try {
-                setIsLoading(true);
-                const response = await fetch(
-                  "/api/seat-checkin",
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      seatId: searchResult.seatId,
-                    }),
-                  }
-                );
-                const data = await response.json();
-                if (data.success) {
-                  setSeatIsReceived(true);
-                  toast.success(t.welcomeName(searchResult.name));
-                  setGroup([
-                    {
-                      seatId: searchResult.seatId,
-                      name: searchResult.name,
-                      table: searchResult.table,
-                    },
-                  ]);
-                  setAskMore(true);
-                } else {
-                  toast.error(
-                    t.couldNotCheckIn
-                  );
-                }
-              } catch (err) {
-                console.error(err);
-                toast.error(t.couldNotCheckIn);
-              } finally {
-                setIsLoading(false);
-              }
-            }}
+            onClick={doArrive}
             disabled={isLoading}
             className="w-full h-20 text-2xl sm:text-3xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
           >
@@ -871,7 +884,13 @@ export default function SeatScanning() {
       </div>
 
       {/* After "Arrived": did more guests come along? */}
-      <Dialog open={askMore} onOpenChange={setAskMore}>
+      <Dialog
+        open={askMore}
+        onOpenChange={(o) => {
+          setAskMore(o);
+          if (!o) setTablePop(true);
+        }}
+      >
         <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
           <DialogTitle className="text-center text-2xl">{t.moreGuests}</DialogTitle>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -887,7 +906,10 @@ export default function SeatScanning() {
             <Button
               variant="outline"
               className="h-14 text-xl font-bold rounded-xl"
-              onClick={() => setAskMore(false)}
+              onClick={() => {
+                setAskMore(false);
+                setTablePop(true);
+              }}
             >
               {t.no}
             </Button>
@@ -918,6 +940,65 @@ export default function SeatScanning() {
         </DialogContent>
       </Dialog>
 
+      {/* Found your name: one big button, no scrolling */}
+      {searchResult && !seatIsReceived && !noSeatFound && !isFloorMapOpen && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/40 p-3 sm:items-center" data-testid="arrive-pop">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-zinc-900">
+            <p className="text-sm font-bold uppercase tracking-widest text-green-700">{t.welcome}</p>
+            <p className="mt-1 break-words text-3xl font-extrabold text-zinc-900 dark:text-white">{searchResult.name}</p>
+            {tableNotes && (
+              <p className="mt-3 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
+            )}
+            <p className="mt-3 text-base text-zinc-600 dark:text-zinc-300">{t.tapArrived}</p>
+            <button
+              type="button"
+              onClick={doArrive}
+              disabled={isLoading}
+              className="mt-5 h-20 w-full rounded-2xl bg-green-600 text-3xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
+            >
+              {isLoading ? t.processing : t.arrivedBig}
+            </button>
+            <button type="button" onClick={notMe} className="mt-4 text-base text-zinc-500 underline">
+              {t.notMe}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Arrived: your table, and a big button to find it */}
+      {tablePop && searchResult && seatIsReceived && groupMode !== "adding" && groupMode !== "done" && !isFloorMapOpen && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/40 p-3 sm:items-center" data-testid="table-pop">
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white text-center shadow-2xl dark:bg-zinc-900">
+            <div className="bg-green-600 px-5 py-4">
+              <p className="text-lg font-bold text-green-50">✓ {t.welcomeName(searchResult.name.split(" ")[0])}</p>
+            </div>
+            <div className="p-6">
+              <p className="text-lg font-semibold text-zinc-500">{t.yourTable}</p>
+              <p className="text-6xl font-extrabold text-zinc-900 dark:text-white">{searchResult.table}</p>
+              {tablemates.length > 0 && (
+                <p className="mt-3 text-base text-zinc-600 dark:text-zinc-300">
+                  {t.sittingWith} <b className="text-zinc-900 dark:text-white">{t.joinNames(tablemates)}</b>
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setTablePop(false);
+                  fetchFloorMap();
+                }}
+                disabled={loadingFloorMap}
+                className="mt-6 flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-2xl font-extrabold text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
+              >
+                <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.showTable}
+              </button>
+              <button type="button" onClick={() => setTablePop(false)} className="mt-4 text-base text-zinc-500 underline">
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Done with the group: just the names and their tables, until Close */}
       {groupMode === "done" && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
@@ -937,6 +1018,17 @@ export default function SeatScanning() {
               ))}
             </ul>
             <div className="p-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setGroupMode(null);
+                  fetchFloorMap();
+                }}
+                disabled={loadingFloorMap}
+                className="mb-3 flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-xl font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+              >
+                <MapPin className="h-6 w-6" /> {loadingFloorMap ? t.loadingShort : t.showTable}
+              </button>
               <button
                 type="button"
                 onClick={closeGroup}
