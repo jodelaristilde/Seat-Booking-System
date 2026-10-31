@@ -97,26 +97,12 @@ export function SetupWizard({
       );
       const saved = read(KEY(j.event.id));
       // open after every log-in (log-in clears "off"), unless closed since
-      const k = j.counts,
-        f = j.flags;
       if (saved === "off") setOn(false);
       else {
         setOn(true);
-        // where they are: the first step not done yet
-        const first = !j.event.date
-          ? 0
-          : !k.pictures && !f.noFloorPlan
-            ? 1
-            : !k.tables
-              ? 2
-              : !k.entrances && !f.noEntrance
-                ? 3
-                : !k.guests
-                  ? 4
-                  : k.unseated
-                    ? 5
-                    : 6;
-        setStep(saved && /^\d$/.test(saved) ? Number(saved) : first);
+        // after log-in: always from the start (event, then the floor plan…);
+        // steps already done show a green tick, so Next goes quickly
+        setStep(saved && /^\d$/.test(saved) ? Number(saved) : 0);
       }
       setAside(null);
     }
