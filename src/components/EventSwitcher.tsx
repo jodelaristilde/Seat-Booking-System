@@ -82,18 +82,6 @@ export function EventSwitcher() {
     toast.success(brand === "vip" ? `${e.name}: VIPService4U look` : `${e.name}: Seating4U look`);
     load();
   };
-  // guests see who else sits at their table, on their phone
-  const toggleMates = async (e: Ev) => {
-    const on = e.tablemates === false;
-    const r = await fetch("/api/events", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: e.id, tablemates: on }),
-    }).then((x) => x.json()).catch(() => null);
-    if (!r?.success) return toast.error(r?.message ?? "Could not change it");
-    toast.success(on ? "Guests will see who sits at their table" : "Guests will only see their own table");
-    load();
-  };
   const toggleGuests = async (id: string, open: boolean) => {
     await fetch("/api/events/guest-access", {
       method: "PUT",
