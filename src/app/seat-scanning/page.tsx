@@ -390,7 +390,7 @@ export default function SeatScanning() {
                       table: searchResult.table,
                     },
                   ]);
-                  setAskMore(true);
+                  setTablePop(true);
                 } else {
                   toast.error(
                     t.couldNotCheckIn
@@ -403,6 +403,22 @@ export default function SeatScanning() {
                 setIsLoading(false);
               }
             };
+
+  // Done (or the map closed): back to the start, ready for the next guest
+  const startOver = () => {
+    setTablePop(false);
+    setAskMore(false);
+    setGroupMode(null);
+    setGroup([]);
+    setGroupQuery("");
+    setSelectedUser(null);
+    setSearchResult(null);
+    setSeatIsReceived(false);
+    setTableNotes(null);
+    setSearchValue("");
+    window.scrollTo(0, 0);
+    window.setTimeout(() => nameInputRef.current?.focus(), 50);
+  };
 
   // "Not you?" on the arrive pop-up: back to an empty search
   const notMe = () => {
@@ -932,56 +948,59 @@ export default function SeatScanning() {
         </DialogContent>
       </Dialog>
 
-      {/* Found your name: one big button, no scrolling */}
+      {/* Found your name: a screen of its own, one big button */}
       {searchResult && !seatIsReceived && !noSeatFound && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/40 p-3 sm:items-center" data-testid="arrive-pop">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-zinc-900">
-            <p className="text-sm font-bold uppercase tracking-widest text-green-700">{t.welcome}</p>
-            <p className="mt-1 break-words text-3xl font-extrabold text-zinc-900 dark:text-white">{searchResult.name}</p>
+        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-white p-6 text-center dark:bg-zinc-950" data-testid="arrive-pop">
+          <div className="w-full max-w-sm">
+            <p className="text-base font-bold uppercase tracking-widest text-green-700">{t.welcome}</p>
+            <p className="mt-2 break-words text-4xl font-extrabold text-zinc-900 dark:text-white">{searchResult.name}</p>
             {tableNotes && (
-              <p className="mt-3 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
+              <p className="mt-4 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
             )}
-            <p className="mt-3 text-base text-zinc-600 dark:text-zinc-300">{t.tapArrived}</p>
+            <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-300">{t.tapArrived}</p>
             <button
               type="button"
               onClick={doArrive}
               disabled={isLoading}
-              className="mt-5 h-20 w-full rounded-2xl bg-green-600 text-3xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
+              className="mt-8 h-24 w-full rounded-3xl bg-green-600 text-3xl font-extrabold text-white shadow-xl hover:bg-green-700 disabled:opacity-60"
             >
               {isLoading ? t.processing : t.arrivedBig}
             </button>
-            <button type="button" onClick={notMe} className="mt-4 text-base text-zinc-500 underline">
+            <button type="button" onClick={notMe} className="mt-6 text-lg text-zinc-500 underline">
               {t.notMe}
             </button>
           </div>
         </div>
       )}
 
-      {/* Arrived: your table, and a big button to find it */}
-      {tablePop && searchResult && seatIsReceived && groupMode !== "adding" && groupMode !== "done" && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/40 p-3 sm:items-center" data-testid="table-pop">
-          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white text-center shadow-2xl dark:bg-zinc-900">
-            <div className="bg-green-600 px-5 py-4">
-              <p className="text-lg font-bold text-green-50">✓ {t.welcomeName(searchResult.name.split(" ")[0])}</p>
+      {/* Arrived: "Welcome Fritz Aristilde", a screen of its own */}
+      {tablePop && searchResult && seatIsReceived && !isFloorMapOpen && (
+        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-green-600 p-6 text-center text-white" data-testid="table-pop">
+          <div className="w-full max-w-sm">
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white">
+              <Check className="h-14 w-14 text-green-600" strokeWidth={3} />
             </div>
-            <div className="p-6">
-              <p className="text-lg font-semibold text-zinc-500">{t.yourTable}</p>
-              <p className="text-6xl font-extrabold text-zinc-900 dark:text-white">{searchResult.table}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setTablePop(false);
-                  fetchFloorMap();
-                }}
-                disabled={loadingFloorMap}
-                className="mt-6 flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-2xl font-extrabold text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
-              >
-                <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.showTable}
-              </button>
-              <button type="button" onClick={() => setTablePop(false)} className="mt-4 text-base text-zinc-500 underline">
-                {t.close}
-              </button>
+            <p className="mt-5 text-2xl font-bold text-green-50">{t.welcome}</p>
+            <p className="mt-1 break-words text-4xl font-extrabold">{searchResult.name}</p>
+            <p className="mt-2 text-xl font-semibold text-green-50">{t.arrivedDone}</p>
+            <div className="mt-6 rounded-2xl bg-white/15 px-4 py-3">
+              <p className="text-lg text-green-50">{t.yourTable}</p>
+              <p className="text-5xl font-extrabold">{searchResult.table}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTablePop(false);
+                fetchFloorMap();
+              }}
+              disabled={loadingFloorMap}
+              className="mt-7 flex h-20 w-full items-center justify-center gap-3 rounded-3xl bg-white text-2xl font-extrabold text-green-700 shadow-xl disabled:opacity-60"
+            >
+              <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
+            </button>
+            <button type="button" onClick={startOver} className="mt-6 text-lg font-semibold text-white underline">
+              {t.done}
+            </button>
           </div>
         </div>
       )}
@@ -1096,7 +1115,10 @@ export default function SeatScanning() {
           src={floorMapImage?.data ?? null}
           title={way ? way.table.name : t.floorPlan}
           hint={way ? (way.entrances.length ? t.followLine : t.circled) : ""}
-          onClose={() => setIsFloorMapOpen(false)}
+          onClose={() => {
+            setIsFloorMapOpen(false);
+            if (seatIsReceived) startOver();
+          }}
         >
           {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
         </MapViewer>
