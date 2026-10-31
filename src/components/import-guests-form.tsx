@@ -277,10 +277,12 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
             const lastname =
               row.lastname || row["Last Name"] || row["LastName"];
 
-            if (!firstname || !lastname) {
+            // one name is enough (a business, "Delta Catering", has no last name)
+            const has = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== "";
+            if (!has(firstname) && !has(lastname)) {
               // shown to the person before importing; the row is left out
               const text = Object.values(row).map((v) => String(v).trim()).filter(Boolean).join(" · ") || "(empty)";
-              skipped.push({ row: idx + 2, text: `${!firstname ? "no first name" : "no last name"}: ${text}` });
+              skipped.push({ row: idx + 2, text: `no name: ${text}` });
               return null;
             }
 
@@ -293,8 +295,9 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
             const note = row.note ?? row.Note ?? row.NOTE ?? row.Notes ?? row.notes ?? row.Message ?? row.message;
             const party = Number(row["Party Size"] ?? row["Party size"] ?? row.Party ?? row.party ?? row["Party"] ?? "");
             return {
-              firstname: String(firstname).trim(),
-              lastname: String(lastname).trim(),
+              // only a last name? use it as the name
+              firstname: has(firstname) ? String(firstname).trim() : String(lastname).trim(),
+              lastname: has(firstname) && has(lastname) ? String(lastname).trim() : "",
               ...(table !== undefined && String(table).trim() ? { table: String(table).trim() } : {}),
               ...(vip !== undefined && String(vip).trim() ? { vip: String(vip).trim() } : {}),
               ...(meal !== undefined && String(meal).trim() ? { meal: String(meal).trim() } : {}),
@@ -486,7 +489,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
 
               {check.skipped.length > 0 && (
                 <div className="rounded-md bg-red-50 p-2 text-sm text-red-800">
-                  <b>{check.skipped.length} row{check.skipped.length === 1 ? "" : "s"} will be left out</b> (a name is missing). Fix them in Excel, or go on without them:
+                  <b>{check.skipped.length} row{check.skipped.length === 1 ? "" : "s"} will be left out</b> (the row has no name at all). Fix them in Excel, or go on without them:
                   <ul className="mt-1 max-h-28 list-inside list-disc overflow-y-auto">
                     {check.skipped.map((r) => (
                       <li key={r.row}>Row {r.row}: {r.text}</li>

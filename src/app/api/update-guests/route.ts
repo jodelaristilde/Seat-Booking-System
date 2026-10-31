@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const notFound: string[] = [];
     for (const r of rows) {
       const first = str(r.firstname), last = str(r.lastname);
-      if (!first || !last) continue;
+      if (!first) continue;
       const ids = byName.get(`${fold(first)}|${fold(last)}`);
       if (!ids) {
         notFound.push(`${first} ${last}`);

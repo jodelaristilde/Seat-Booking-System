@@ -16,9 +16,10 @@ export async function POST(request: NextRequest) {
     const firstname = typeof body.firstname === "string" ? body.firstname.trim() : "";
     const lastname = typeof body.lastname === "string" ? body.lastname.trim() : "";
 
-    if (!firstname || !lastname) {
+    // a last name is optional (a business invited as a guest has none)
+    if (!firstname) {
       return NextResponse.json(
-        { error: "First name and last name are required" },
+        { error: "A name is required" },
         { status: 400 }
       );
     }
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     const party = Math.min(20, Math.max(1, Math.round(Number(body.party) || 1)));
     const companions: string[] = [];
     for (let i = 1; i < party; i++) {
-      const c = await db.users.create({ data: { firstname, lastname: `${lastname} +${i}`, eventId, meal: null } });
+      const c = await db.users.create({ data: { firstname, lastname: lastname ? `${lastname} +${i}` : `+${i}`, eventId, meal: null } });
       companions.push(c.id);
       if (rawTable) await seatAt(c.id);
     }

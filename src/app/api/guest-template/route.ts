@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 type Col = { key: GuestField | "first" | "last" | "table"; name: string; width: number; req: boolean; tip: string; help: string };
 const ALL: Col[] = [
   { key: "first", name: "First Name", width: 16, req: true, tip: "Required.", help: "Required." },
-  { key: "last", name: "Last Name", width: 18, req: true, tip: "Required.", help: "Required." },
+  { key: "last", name: "Last Name", width: 18, req: true, tip: "Leave empty for a business (put its name in First Name).", help: "Leave empty for a business: put its name in First Name." },
   { key: "table", name: "Table", width: 12, req: false, tip: "A number (5) or a name (Head Table). Leave empty to seat them later.", help: "5 or Head Table seats the guest right away; missing tables are created. Leave empty to seat them later." },
   { key: "meal", name: "Meal", width: 14, req: false, tip: "Pick from the list or type your own (e.g. Vegan).", help: "Pick from the list (Chicken, Fish, Beef, Veg, Kids) or type your own." },
   { key: "allergy", name: "Allergy", width: 18, req: false, tip: "e.g. Nuts, Gluten. Shown in red to the caterer.", help: "e.g. Nuts, Gluten (shown in red to the caterer)." },

@@ -121,20 +121,19 @@ export function AddGuestForm({ isOpen, onClose, onSuccess, tables = [] }: AddGue
                 id="firstname"
                 value={firstname}
                 onChange={(e) => setFirstname(e.target.value)}
-                placeholder="Enter first name"
+                placeholder="First name, or the business name"
                 required
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="lastname" className="text-sm font-medium">
-                Last Name
+                Last Name <span className="font-normal text-zinc-500">(empty for a business)</span>
               </label>
               <Input
                 id="lastname"
                 value={lastname}
                 onChange={(e) => setLastname(e.target.value)}
                 placeholder="Enter last name"
-                required
               />
             </div>
           </div>

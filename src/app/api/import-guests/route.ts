@@ -42,9 +42,7 @@ export async function POST(request: Request) {
       (guest): guest is Guest =>
         guest &&
         typeof guest.firstname === "string" &&
-        typeof guest.lastname === "string" &&
-        guest.firstname.trim() !== "" &&
-        guest.lastname.trim() !== ""
+        guest.firstname.trim() !== ""
     );
 
     if (validGuests.length === 0) {
