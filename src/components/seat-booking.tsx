@@ -1685,7 +1685,7 @@ const handleTableClick = () => {
                           className="cursor-pointer"
                           onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}
                         >
-                          <ListOrdered className="mr-2 w-4 h-4" /> Setup steps
+                          <ListOrdered className="mr-2 w-4 h-4" /> Set up my event, step by step
                         </DropdownMenuItem>
                       )}
                       {!isStaff && (
