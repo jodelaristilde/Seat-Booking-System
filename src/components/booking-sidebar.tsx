@@ -25,6 +25,10 @@ interface BookingSidebarProps {
   readOnly?: boolean;
   // check a guest in straight away (after reading their note)
   onCheckInNow?: (seatId: string) => void;
+  // guests on the list without a seat yet, and how to give them one
+  unseated?: { id: string; name: string }[];
+  seatTables?: { id: string; name: string; free: number }[];
+  onSeatGuest?: (guestId: string, tableId: string) => Promise<void>;
 }
 
 export function BookingSidebar({
@@ -35,7 +39,11 @@ export function BookingSidebar({
   compact = false,
   readOnly = false,
   onCheckInNow,
+  unseated = [],
+  seatTables = [],
+  onSeatGuest,
 }: BookingSidebarProps) {
+  const [seating, setSeating] = useState<string | null>(null);
   // guests with a note (seat hidden from their phone until the desk says yes)
   const { notes } = useGuestNotes();
   const [isOpen, setIsOpen] = useState(false);
@@ -311,6 +319,59 @@ export function BookingSidebar({
 
         <ScrollArea className="flex-1 px-2 py-0.5">
           <div>
+            {/* on the guest list but not at a table yet (e.g. added without a table) */}
+            {(() => {
+              const q = searchQueries.name.trim();
+              const list = unseated.filter((g) => !q || matches(g.name, q));
+              if (!list.length) return null;
+              return (
+                <div className="mb-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-2" data-testid="not-seated">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-800">
+                    No seat yet ({list.length})
+                  </p>
+                  <ul className="space-y-1">
+                    {list.slice(0, 30).map((g) => (
+                      <li key={g.id} className="flex items-center gap-2 text-sm">
+                        <span className="min-w-0 flex-1 truncate font-medium text-gray-900">{g.name}</span>
+                        {readOnly || !onSeatGuest ? (
+                          <span className="text-xs text-amber-800">ask the organizer</span>
+                        ) : (
+                          <select
+                            value=""
+                            disabled={seating === g.id}
+                            onChange={async (e) => {
+                              const t = e.target.value;
+                              if (!t) return;
+                              setSeating(g.id);
+                              try {
+                                await onSeatGuest(g.id, t);
+                                toast.success(`${g.name} seated at ${seatTables.find((x) => x.id === t)?.name ?? "the table"}`);
+                              } catch {
+                                toast.error("Could not seat this guest. Try another table.");
+                              } finally {
+                                setSeating(null);
+                              }
+                            }}
+                            className="h-8 max-w-[9rem] rounded-md border border-amber-400 bg-white px-1 text-xs font-semibold"
+                            aria-label={`Pick a table for ${g.name}`}
+                          >
+                            <option value="">{seating === g.id ? "Seating…" : "Pick a table…"}</option>
+                            {seatTables
+                              .filter((t) => t.free > 0)
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name} ({t.free} free)
+                                </option>
+                              ))}
+                          </select>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {list.length > 30 && <p className="mt-1 text-xs text-amber-800">and {list.length - 30} more: type a name above.</p>}
+                </div>
+              );
+            })()}
             {visibleBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
               <table className="w-auto text-sm border-collapse">
@@ -459,7 +520,7 @@ export function BookingSidebar({
                   )}
                 </tbody>
               </table>
-            ) : (
+            ) : unseated.length > 0 && !searchQueries.name.trim() ? null : (
               <div className="text-center text-gray-500 py-8">
                 <User className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                 <p className="text-sm font-medium">

@@ -394,6 +394,14 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
     }));
   };
 
+  // guests on the list who have no seat yet (shown at the top of Guest Names)
+  const unseatedGuests = (allGuests || [])
+    .filter((g) => !g.seat || g.seat.length === 0)
+    .map((g) => ({ id: g.id, name: `${g.firstname} ${g.lastname}`.trim() }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const seatTables = getTableInfo()
+    .map((t) => ({ id: String(t.id), name: t.name, free: t.seats.filter((x) => !x.isBooked).length }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   const handleAssignGuests = async (guestIds: string[], tableId: string) => {
     try {
       const response = await fetch("/api/assign-guests", {
@@ -2109,6 +2117,9 @@ const handleTableClick = () => {
                 onDeleteBooking={handleDeleteBooking}
                 onToggleReceived={handleToggleReceived}
                 onCheckInNow={(id) => handleToggleReceived(id, true)}
+                unseated={unseatedGuests}
+                seatTables={seatTables}
+                onSeatGuest={(gid, tid) => handleAssignGuests([gid], tid)}
                 onDeleteAll={isAdmin ? () => setIsDeleteAllDialogOpen(true) : undefined}
                 compact={isFullScreen || isStaff}
                 readOnly={isStaff}
@@ -2125,6 +2136,9 @@ const handleTableClick = () => {
             onDeleteBooking={handleDeleteBooking}
             onToggleReceived={handleToggleReceived}
             onCheckInNow={(id) => handleToggleReceived(id, true)}
+            unseated={unseatedGuests}
+            seatTables={seatTables}
+            onSeatGuest={(gid, tid) => handleAssignGuests([gid], tid)}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
             compact={isStaff}
             readOnly={isStaff}
