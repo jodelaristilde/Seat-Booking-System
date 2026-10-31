@@ -390,7 +390,7 @@ export default function SeatScanning() {
                       table: searchResult.table,
                     },
                   ]);
-                  setTablePop(true);
+                  setAskMore(true);
                 } else {
                   toast.error(
                     t.couldNotCheckIn
@@ -891,39 +891,40 @@ export default function SeatScanning() {
         </div>
       </div>
 
-      {/* After "Arrived": did more guests come along? */}
-      <Dialog
-        open={askMore}
-        onOpenChange={(o) => {
-          setAskMore(o);
-          if (!o) setTablePop(true);
-        }}
-      >
-        <DialogContent className="w-[92vw] max-w-sm rounded-2xl p-6">
-          <DialogTitle className="text-center text-2xl">{t.moreGuests}</DialogTitle>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button
-              className="h-14 text-xl font-bold rounded-xl bg-green-600 text-white hover:bg-green-700"
-              onClick={() => {
-                setAskMore(false);
-                setGroupMode("adding");
-              }}
-            >
-              {t.yes}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-14 text-xl font-bold rounded-xl"
-              onClick={() => {
-                setAskMore(false);
-                setTablePop(true);
-              }}
-            >
-              {t.no}
-            </Button>
+      {/* After "Arrived": did more guests come along? A screen of its own */}
+      {askMore && searchResult && (
+        <div className="fixed inset-0 z-[86] flex flex-col items-center justify-center bg-white p-6 text-center dark:bg-zinc-950" data-testid="more-guests">
+          <div className="w-full max-w-sm">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-12 w-12 text-green-600" strokeWidth={3} />
+            </div>
+            <p className="mt-4 break-words text-2xl font-bold text-zinc-900 dark:text-white">{searchResult.name}</p>
+            <p className="mt-6 text-3xl font-extrabold text-zinc-900 dark:text-white">{t.moreGuests}</p>
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                className="h-20 rounded-3xl bg-green-600 text-3xl font-extrabold text-white shadow-xl hover:bg-green-700"
+                onClick={() => {
+                  setAskMore(false);
+                  setGroupMode("adding");
+                }}
+              >
+                {t.yes}
+              </button>
+              <button
+                type="button"
+                className="h-20 rounded-3xl border-2 border-zinc-300 bg-white text-3xl font-extrabold text-zinc-900 hover:bg-zinc-50"
+                onClick={() => {
+                  setAskMore(false);
+                  setTablePop(true);
+                }}
+              >
+                {t.no}
+              </button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* QR Code Dialog */}
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
@@ -998,14 +999,6 @@ export default function SeatScanning() {
             >
               <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
             </button>
-            {/* one phone for the family: check the next person in */}
-            <button
-              type="button"
-              onClick={startOver}
-              className="mt-4 flex h-16 w-full items-center justify-center rounded-3xl border-2 border-white text-xl font-bold text-white hover:bg-white/10"
-            >
-              {t.anotherGuest}
-            </button>
             <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-white underline">
               {t.done}
             </button>
@@ -1015,7 +1008,7 @@ export default function SeatScanning() {
 
       {/* Done with the group: just the names and their tables, until Close */}
       {groupMode === "done" && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-green-600 p-4">
           <div className="w-full max-w-sm overflow-hidden rounded-2xl border-4 border-green-500 bg-white shadow-2xl">
             <div className="bg-green-600 px-5 py-3 text-center">
               <p className="text-sm font-bold uppercase tracking-wide text-green-100">{t.arrivedHeader} ✓</p>
