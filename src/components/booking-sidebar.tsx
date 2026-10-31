@@ -39,6 +39,7 @@ export function BookingSidebar({
   // guests with a note (seat hidden from their phone until the desk says yes)
   const { notes } = useGuestNotes();
   const [isOpen, setIsOpen] = useState(false);
+  const boxPress = useRef(false); // finger/mouse is on an arrived box
   const [searchQueries, setSearchQueries] = useState({
     name: "",
     seat: "",
@@ -342,6 +343,11 @@ export function BookingSidebar({
                       // drag a name onto a table on the floor plan to move the guest there
                       draggable={!!seat.user && !readOnly}
                       onDragStart={(e) => {
+                        // pressing on the arrived box ticks it; it never picks the name up
+                        if (boxPress.current) {
+                          e.preventDefault();
+                          return;
+                        }
                         if (!seat.user) return;
                         e.dataTransfer.setData(
                           "application/x-seating4u-guest",
@@ -357,14 +363,33 @@ export function BookingSidebar({
                           : "Drag onto a table to move this guest, or onto the red bin to delete"
                       }
                     >
-                      <td className="py-0.5 pr-1.5 align-middle">
-                        <Checkbox
-                          id={`received-${seat.id}`}
-                          checked={seat.isReceived}
-                          onCheckedChange={() => markArrived(seat)}
-                          aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
-                          title="Arrived"
-                        />
+                      <td
+                        className="w-11 cursor-pointer py-0.5 pr-1 align-middle"
+                        onPointerDown={() => {
+                          boxPress.current = true;
+                        }}
+                        onPointerUp={() => {
+                          boxPress.current = false;
+                        }}
+                        onPointerLeave={() => {
+                          boxPress.current = false;
+                        }}
+                        onClick={(e) => {
+                          // a click anywhere in this big square ticks the box
+                          if ((e.target as HTMLElement).closest("button")) return;
+                          markArrived(seat);
+                        }}
+                        title="Arrived"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-green-100">
+                          <Checkbox
+                            id={`received-${seat.id}`}
+                            checked={seat.isReceived}
+                            onCheckedChange={() => markArrived(seat)}
+                            aria-label={`${seat.user?.firstname} ${seat.user?.lastname} arrived`}
+                            className="h-6 w-6 rounded-md border-2 [&_svg]:h-5 [&_svg]:w-5"
+                          />
+                        </span>
                       </td>
                       <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
                         {/* only the box marks arrival; clicking the name does nothing */}

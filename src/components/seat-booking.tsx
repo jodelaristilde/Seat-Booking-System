@@ -239,7 +239,11 @@ const SeatBooking = () => {
   useEffect(() => {
     const show = () => setViewMode("plan");
     window.addEventListener("floor-map-uploaded", show);
-    return () => window.removeEventListener("floor-map-uploaded", show);
+    window.addEventListener("seating4u:show-plan", show);
+    return () => {
+      window.removeEventListener("floor-map-uploaded", show);
+      window.removeEventListener("seating4u:show-plan", show);
+    };
   }, []);
   const toggleViewMode = () => {
     setViewMode((m) => {

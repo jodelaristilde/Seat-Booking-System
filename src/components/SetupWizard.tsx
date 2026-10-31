@@ -169,9 +169,10 @@ export function SetupWizard({
     load();
   };
   // a step that needs the floor plan: step aside, open that tool
-  const onPlan = (target: SetupTarget, text: string) => {
+  const onPlan = (target: SetupTarget | null, text: string) => {
     setAside({ text });
-    openSetup(target);
+    if (target) openSetup(target);
+    else window.dispatchEvent(new Event("seating4u:show-plan"));
   };
 
   if (!on || !p) return <div ref={anchor} />;
@@ -382,7 +383,9 @@ export function SetupWizard({
     next = { label: "Next", fn: () => go(5), off: !c.guests };
   } else if (step === 5) {
     title =
-      c.guests && !c.unseated ? "Everyone has a seat" : "Give everyone a seat";
+      c.guests && !c.unseated
+        ? "Everyone has a seat"
+        : "Seat everyone for you?";
     body = (
       <div className="space-y-3">
         {c.guests > 0 &&
@@ -392,23 +395,42 @@ export function SetupWizard({
           <>
             <p className="text-zinc-600">
               {c.unseated} guest{c.unseated === 1 ? "" : "s"} still without a
-              table. One click seats everyone; families and parties stay
-              together.
+              table.
             </p>
             <Link href="/dashboard/seating-helper" className={big}>
               <Sparkles className="h-9 w-9 shrink-0 text-lime-600" />
               <span>
-                <b className="block text-lg">Seat everyone for me</b>
+                <b className="block text-lg">Yes, seat everyone for me</b>
                 <span className="text-zinc-600">
-                  You can still move anyone after.
+                  One click. Families and parties stay together. You can still
+                  move anyone after.
                 </span>
               </span>
             </Link>
+            <button
+              className={big}
+              onClick={() =>
+                onPlan(
+                  null,
+                  "Click an empty seat on a table, then pick the guest for it. Do this for each guest. When you're done, click Next.",
+                )
+              }
+            >
+              <UserPlus className="h-9 w-9 shrink-0 text-zinc-500" />
+              <span>
+                <b className="block text-lg">
+                  No, I&apos;ll assign the seats myself
+                </b>
+                <span className="text-zinc-600">
+                  Click a seat, pick the guest. You choose every seat.
+                </span>
+              </span>
+            </button>
           </>
         )}
       </div>
     );
-    next = { label: "Next", fn: () => go(6), off: !c.guests || c.unseated > 0 };
+    next = c.guests && !c.unseated ? { label: "Next", fn: () => go(6) } : null;
   } else {
     title = "You're ready!";
     body = (
@@ -487,7 +509,11 @@ export function SetupWizard({
                   go(step + 1);
                 }}
                 disabled={step === 2 && !c.tables}
-                title={step === 2 && !c.tables ? "Click “Use these tables” on the plan first" : undefined}
+                title={
+                  step === 2 && !c.tables
+                    ? "Click “Use these tables” on the plan first"
+                    : undefined
+                }
                 className="ml-auto inline-flex items-center gap-1 rounded-lg bg-lime-600 px-5 py-2 text-sm font-bold text-white hover:bg-lime-700 disabled:bg-zinc-300"
               >
                 Next <ArrowRight className="h-4 w-4" />

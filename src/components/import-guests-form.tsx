@@ -376,7 +376,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[560px]">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Import Guests
@@ -408,7 +408,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               </button>
             ))}
           </div>
-          {mode === "update" ? (
+          {!check && (mode === "update" ? (
             <p className="text-sm text-zinc-600">
               For guests <b>already on your list</b>. Upload an Excel file with <b>First Name</b>, <b>Last Name</b> and
               any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>, <b>Note</b>. Each guest is found by name (accents don&apos;t matter)
@@ -436,7 +436,9 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               seat guests later.
             </p>
           </div>
-          )}
+          ))}
+          {!check && (
+          <>
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />
           </div>
@@ -466,11 +468,22 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               Remove Duplicates
             </Button> */}
           </div>
+          </>
+          )}
           {check && (
             <div className="space-y-2 rounded-lg border-2 border-lime-300 bg-lime-50 p-3" data-testid="import-check">
               <p className="font-semibold">
                 ✓ {check.guests.length} guest{check.guests.length === 1 ? "" : "s"} ready to {mode === "update" ? "update" : "add"}
               </p>
+              <div className="flex flex-wrap gap-2 pb-1">
+                <Button onClick={() => runImport(check.guests)} className="h-12 bg-lime-600 px-6 text-lg font-bold text-white hover:bg-lime-700">
+                  {mode === "update" ? "Update" : "Import"} {check.guests.length} guest{check.guests.length === 1 ? "" : "s"}
+                </Button>
+                <Button variant="outline" onClick={() => setCheck(null)}>
+                  Choose another file
+                </Button>
+              </div>
+
               {check.skipped.length > 0 && (
                 <div className="rounded-md bg-red-50 p-2 text-sm text-red-800">
                   <b>{check.skipped.length} row{check.skipped.length === 1 ? "" : "s"} will be left out</b> (a name is missing). Fix them in Excel, or go on without them:
@@ -495,14 +508,6 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               {!check.skipped.length && !check.dupInFile.length && !check.onList.length && (
                 <p className="text-sm text-green-800">No problems found.</p>
               )}
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button onClick={() => runImport(check.guests)} className="bg-lime-600 text-white hover:bg-lime-700">
-                  {mode === "update" ? "Update" : "Import"} {check.guests.length} guest{check.guests.length === 1 ? "" : "s"}
-                </Button>
-                <Button variant="outline" onClick={() => setCheck(null)}>
-                  Choose another file
-                </Button>
-              </div>
             </div>
           )}
           {isLoading && importProgress && (
