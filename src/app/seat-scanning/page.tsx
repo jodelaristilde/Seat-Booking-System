@@ -986,10 +986,9 @@ export default function SeatScanning() {
               </div>
               <p className="mt-4 text-xl font-bold text-emerald-700">{t.welcome}</p>
               <p className="mt-1 break-words text-4xl font-extrabold text-emerald-950">{searchResult.name}</p>
-              <p className="mt-1 text-lg font-semibold text-emerald-800">{t.arrivedDone}</p>
               <div className="mt-5 rounded-2xl border-2 border-lime-300 bg-white px-4 py-3">
-                <p className="text-base font-semibold text-emerald-700">{t.yourTable}</p>
-                <p className="text-5xl font-extrabold text-emerald-950">{searchResult.table}</p>
+                <p className="text-lg font-semibold text-emerald-700">{t.youAreOn}</p>
+                <p className="text-6xl font-extrabold text-emerald-950">{searchResult.table}</p>
               </div>
               <button
                 type="button"
@@ -998,9 +997,9 @@ export default function SeatScanning() {
                   fetchFloorMap();
                 }}
                 disabled={loadingFloorMap}
-                className="mt-6 flex items-center justify-center gap-3 h-20 w-full rounded-2xl bg-green-600 text-2xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
+                className="mt-6 flex items-center justify-center gap-3 h-20 w-full rounded-2xl bg-blue-600 text-2xl font-extrabold text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
               >
-                <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
+                <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.showTable}
               </button>
               <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-emerald-800 underline">
                 {t.done}
@@ -1037,7 +1036,7 @@ export default function SeatScanning() {
                   fetchFloorMap();
                 }}
                 disabled={loadingFloorMap}
-                className="mb-3 flex items-center justify-center gap-2 h-20 w-full rounded-2xl bg-green-600 text-2xl font-extrabold text-white shadow-lg hover:bg-green-700 disabled:opacity-60"
+                className="mb-3 flex items-center justify-center gap-2 h-20 w-full rounded-2xl bg-blue-600 text-2xl font-extrabold text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
               >
                 <MapPin className="h-6 w-6" /> {loadingFloorMap ? t.loadingShort : t.showTable}
               </button>
