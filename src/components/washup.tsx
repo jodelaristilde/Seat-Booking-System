@@ -96,7 +96,7 @@ export default function WashupButton() {
           </div>
           <DialogDescription className="pt-3 text-base">
             This action cannot be undone. For the open event it deletes all
-            tables, seats and guests, the floor map, the doors, and the event's
+            tables, seats and guests, the floor map, the doors, and the event&apos;s
             name and date. The step-by-step setup then starts again at step 1.
           </DialogDescription>
         </DialogHeader>
