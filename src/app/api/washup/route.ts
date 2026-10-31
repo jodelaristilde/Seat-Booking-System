@@ -20,6 +20,14 @@ export async function DELETE() {
     // Finally delete Tables
     await prisma.table.deleteMany({ where: { eventId } });
 
+    // The floor map, the doors, the name and date, and the setup progress too:
+    // the event starts again from step 1 like a new one
+    await prisma.image.deleteMany({ where: { eventId } });
+    await prisma.event.update({ where: { id: eventId }, data: { name: "New event", date: null, entrances: [] } });
+    await prisma.setting.deleteMany({
+      where: { OR: [{ key: `setup:${eventId}` }, { key: { startsWith: `log:${eventId}:` } }, { key: `snapshot:${eventId}` }] },
+    });
+
     return NextResponse.json(
       { message: 'All data deleted successfully' },
       { status: 200 }

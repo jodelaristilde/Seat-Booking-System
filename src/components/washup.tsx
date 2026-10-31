@@ -53,6 +53,12 @@ export default function WashupButton() {
         setOpen(false);
         setConfirmText('');
         
+        // the step-by-step setup starts again at step 1
+        try {
+          for (const k of Object.keys(localStorage)) if (k.startsWith('seating4u-wizard:')) localStorage.removeItem(k);
+        } catch {
+          /* private window */
+        }
         // Refresh the page after successful deletion
         setTimeout(() => {
           window.location.reload();
@@ -89,8 +95,9 @@ export default function WashupButton() {
             <DialogTitle className="text-xl">Delete All Data</DialogTitle>
           </div>
           <DialogDescription className="pt-3 text-base">
-            This action cannot be undone. This will permanently delete all
-            tables, seats, and guests from the database.
+            This action cannot be undone. For the open event it deletes all
+            tables, seats and guests, the floor map, the doors, and the event's
+            name and date. The step-by-step setup then starts again at step 1.
           </DialogDescription>
         </DialogHeader>
 
