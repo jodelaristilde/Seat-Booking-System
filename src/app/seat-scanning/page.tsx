@@ -893,17 +893,17 @@ export default function SeatScanning() {
 
       {/* After "Arrived": did more guests come along? A screen of its own */}
       {askMore && searchResult && (
-        <div className="fixed inset-0 z-[86] flex flex-col items-center justify-center bg-white p-6 text-center dark:bg-zinc-950" data-testid="more-guests">
+        <div className="fixed inset-0 z-[86] flex flex-col items-center justify-center bg-lime-400 p-6 text-center" data-testid="more-guests">
           <div className="w-full max-w-sm">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white">
               <Check className="h-12 w-12 text-green-600" strokeWidth={3} />
             </div>
-            <p className="mt-4 break-words text-2xl font-bold text-zinc-900 dark:text-white">{searchResult.name}</p>
-            <p className="mt-6 text-3xl font-extrabold text-zinc-900 dark:text-white">{t.moreGuests}</p>
+            <p className="mt-4 break-words text-2xl font-bold text-zinc-900">{searchResult.name}</p>
+            <p className="mt-6 text-3xl font-extrabold text-zinc-900">{t.moreGuests}</p>
             <div className="mt-8 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                className="h-20 rounded-3xl bg-green-600 text-3xl font-extrabold text-white shadow-xl hover:bg-green-700"
+                className="h-20 rounded-3xl bg-green-700 text-3xl font-extrabold text-white shadow-xl hover:bg-green-800"
                 onClick={() => {
                   setAskMore(false);
                   setGroupMode("adding");
@@ -913,7 +913,7 @@ export default function SeatScanning() {
               </button>
               <button
                 type="button"
-                className="h-20 rounded-3xl border-2 border-zinc-300 bg-white text-3xl font-extrabold text-zinc-900 hover:bg-zinc-50"
+                className="h-20 rounded-3xl bg-white text-3xl font-extrabold text-zinc-900 shadow-xl hover:bg-zinc-50"
                 onClick={() => {
                   setAskMore(false);
                   setTablePop(true);
@@ -951,23 +951,23 @@ export default function SeatScanning() {
 
       {/* Found your name: a screen of its own, one big button */}
       {searchResult && !seatIsReceived && !noSeatFound && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-white p-6 text-center dark:bg-zinc-950" data-testid="arrive-pop">
+        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-lime-400 p-6 text-center" data-testid="arrive-pop">
           <div className="w-full max-w-sm">
-            <p className="text-base font-bold uppercase tracking-widest text-green-700">{t.welcome}</p>
-            <p className="mt-2 break-words text-4xl font-extrabold text-zinc-900 dark:text-white">{searchResult.name}</p>
+            <p className="text-base font-bold uppercase tracking-widest text-green-900">{t.welcome}</p>
+            <p className="mt-2 break-words text-4xl font-extrabold text-zinc-900">{searchResult.name}</p>
             {tableNotes && (
               <p className="mt-4 rounded-xl bg-yellow-50 p-3 text-left text-base text-yellow-900">📝 {tableNotes}</p>
             )}
-            <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-300">{t.tapArrived}</p>
+            <p className="mt-4 text-lg text-zinc-800">{t.tapArrived}</p>
             <button
               type="button"
               onClick={doArrive}
               disabled={isLoading}
-              className="mt-8 h-24 w-full rounded-3xl bg-green-600 text-3xl font-extrabold text-white shadow-xl hover:bg-green-700 disabled:opacity-60"
+              className="mt-8 h-24 w-full rounded-3xl bg-green-700 text-3xl font-extrabold text-white shadow-xl hover:bg-green-800 disabled:opacity-60"
             >
               {isLoading ? t.processing : t.arrivedBig}
             </button>
-            <button type="button" onClick={notMe} className="mt-6 text-lg text-zinc-500 underline">
+            <button type="button" onClick={notMe} className="mt-6 text-lg text-zinc-800 underline">
               {t.notMe}
             </button>
           </div>
@@ -976,16 +976,16 @@ export default function SeatScanning() {
 
       {/* Arrived: "Welcome Fritz Aristilde", a screen of its own */}
       {tablePop && searchResult && seatIsReceived && !isFloorMapOpen && (
-        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-green-600 p-6 text-center text-white" data-testid="table-pop">
+        <div className="fixed inset-0 z-[85] flex flex-col items-center justify-center bg-lime-400 p-6 text-center text-zinc-900" data-testid="table-pop">
           <div className="w-full max-w-sm">
             <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white">
               <Check className="h-14 w-14 text-green-600" strokeWidth={3} />
             </div>
-            <p className="mt-5 text-2xl font-bold text-green-50">{t.welcome}</p>
+            <p className="mt-5 text-2xl font-bold text-green-900">{t.welcome}</p>
             <p className="mt-1 break-words text-4xl font-extrabold">{searchResult.name}</p>
-            <p className="mt-2 text-xl font-semibold text-green-50">{t.arrivedDone}</p>
-            <div className="mt-6 rounded-2xl bg-white/15 px-4 py-3">
-              <p className="text-lg text-green-50">{t.yourTable}</p>
+            <p className="mt-2 text-xl font-semibold text-green-900">{t.arrivedDone}</p>
+            <div className="mt-6 rounded-2xl bg-white/50 px-4 py-3">
+              <p className="text-lg text-green-900">{t.yourTable}</p>
               <p className="text-5xl font-extrabold">{searchResult.table}</p>
             </div>
             <button
@@ -995,11 +995,11 @@ export default function SeatScanning() {
                 fetchFloorMap();
               }}
               disabled={loadingFloorMap}
-              className="mt-7 flex h-20 w-full items-center justify-center gap-3 rounded-3xl bg-white text-2xl font-extrabold text-green-700 shadow-xl disabled:opacity-60"
+              className="mt-7 flex h-20 w-full items-center justify-center gap-3 rounded-3xl bg-green-700 text-2xl font-extrabold text-white shadow-xl disabled:opacity-60"
             >
               <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
             </button>
-            <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-white underline">
+            <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-zinc-900 underline">
               {t.done}
             </button>
           </div>
@@ -1008,7 +1008,7 @@ export default function SeatScanning() {
 
       {/* Done with the group: just the names and their tables, until Close */}
       {groupMode === "done" && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-green-600 p-4">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-lime-400 p-4">
           <div className="w-full max-w-sm overflow-hidden rounded-2xl border-4 border-green-500 bg-white shadow-2xl">
             <div className="bg-green-600 px-5 py-3 text-center">
               <p className="text-sm font-bold uppercase tracking-wide text-green-100">{t.arrivedHeader} ✓</p>
