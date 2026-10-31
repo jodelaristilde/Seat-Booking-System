@@ -58,6 +58,7 @@ import {
   BarChart3,
   Sparkles,
   Radio,
+  LayoutGrid,
   Pencil,
   Tv,
   MoreHorizontal,
@@ -1652,6 +1653,7 @@ const handleTableClick = () => {
                               {prow(FileUp, "Import more guests (Excel)", "Add or update guests from a file.", () => openSetup("import-guests"))}
                               {prow(Sparkles, "Seat everyone", "One click. Families stay together.", "/dashboard/seating-helper")}
                               {prow(ImageIcon, "Change the floor plan", "Upload a new picture of the room.", () => openSetup("floor-map"))}
+                              {prow(LayoutGrid, "Draw my room", "No plan from the venue? Draw the stage, bar, doors and tables.", "/dashboard/room-builder")}
                               <UndoItem />
                               {prow(GraduationCap, "Practice with sample guests", "A pretend event to learn. Delete it after.", startPractice)}
                               <DropdownMenuSeparator />

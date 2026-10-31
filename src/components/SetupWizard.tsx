@@ -269,21 +269,27 @@ export function SetupWizard({
           </span>
         </button>
         {!c.pictures && (
-          <button
-            className={big}
-            onClick={async () => {
-              await flag({ noFloorPlan: true });
-              go(2);
-            }}
-          >
-            <LayoutGrid className="h-9 w-9 shrink-0 text-zinc-500" />
-            <span>
-              <b className="block text-lg">No, I&apos;ll create my tables</b>
-              <span className="text-zinc-600">
-                Tell us how many tables and seats. That&apos;s all.
+          <>
+            <Link href="/dashboard/room-builder" className={big}>
+              <LayoutGrid className="h-9 w-9 shrink-0 text-lime-600" />
+              <span>
+                <b className="block text-lg">No, I&apos;ll draw my room</b>
+                <span className="text-zinc-600">
+                  Put the stage, dance floor, bar, doors and tables where they
+                  are.
+                </span>
               </span>
-            </span>
-          </button>
+            </Link>
+            <button
+              className="text-sm text-zinc-600 underline hover:text-zinc-900"
+              onClick={async () => {
+                await flag({ noFloorPlan: true });
+                go(2);
+              }}
+            >
+              Skip it: just create my tables
+            </button>
+          </>
         )}
       </div>
     );

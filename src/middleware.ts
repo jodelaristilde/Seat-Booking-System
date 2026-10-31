@@ -77,7 +77,7 @@ const pageMiddleware = withAuth(
       // pages; the admin's other pages send them back to the dashboard
       const USER_PAGES = [
         "/dashboard/seating-helper", "/dashboard/check-in-staff", "/dashboard/ready-check", "/dashboard/print-cards",
-        "/dashboard/door-list", "/dashboard/venue-chart", "/dashboard/seating-chart", "/dashboard/summary", "/dashboard/kitchen",
+        "/dashboard/door-list", "/dashboard/venue-chart", "/dashboard/seating-chart", "/dashboard/summary", "/dashboard/kitchen", "/dashboard/room-builder",
       ]
       if (
         token.email !== "admin" &&

@@ -2895,8 +2895,11 @@ export function FloorPlanCanvas({
                 >
                   Upload the venue&apos;s floor plan
                 </button>
+                <a href="/dashboard/room-builder" className="rounded-xl border-2 border-lime-600 bg-white px-5 py-2.5 text-base font-bold text-lime-800 hover:bg-lime-50">
+                  No floor plan? Draw your room
+                </a>
                 <button onClick={() => openSetup("bulk-tables")} className="text-sm text-zinc-600 underline hover:text-zinc-900">
-                  No floor plan? Create your tables
+                  Or just create your tables
                 </button>
               </>
             )}
