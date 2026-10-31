@@ -332,7 +332,17 @@ export function BookingSidebar({
                   <ul className="space-y-1">
                     {list.slice(0, 30).map((g) => (
                       <li key={g.id} className="flex items-center gap-2 text-sm">
-                        <span className="min-w-0 flex-1 truncate font-medium text-gray-900">{g.name}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-gray-900">
+                            {g.name}
+                            {notes[g.id] && (
+                              <span className="ml-1.5 rounded bg-amber-200 px-1 text-[11px] font-bold text-amber-900" title={notes[g.id]}>
+                                📝 Note
+                              </span>
+                            )}
+                          </span>
+                          {notes[g.id] && <span className="block whitespace-pre-wrap text-xs font-semibold text-amber-900">{notes[g.id]}</span>}
+                        </span>
                         {readOnly || !onSeatGuest ? (
                           <span className="text-xs text-amber-800">ask the organizer</span>
                         ) : (
