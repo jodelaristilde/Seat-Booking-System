@@ -96,11 +96,27 @@ export function SetupWizard({
         /^\d{4}-\d{2}-\d{2}$/.test(j.event.date ?? "") ? j.event.date : "",
       );
       const saved = read(KEY(j.event.id));
-      const fresh = !j.counts.tables && !j.counts.guests && !j.flags.checked;
-      if (saved === "off" || (saved === null && !fresh)) setOn(false);
+      // open on every event that isn't set up yet, unless the planner closed it
+      const k = j.counts,
+        f = j.flags;
+      if (saved === "off" || f.checked) setOn(false);
       else {
         setOn(true);
-        setStep(saved && /^\d$/.test(saved) ? Number(saved) : 0);
+        // where they are: the first step not done yet
+        const first = !j.event.date
+          ? 0
+          : !k.pictures && !f.noFloorPlan
+            ? 1
+            : !k.tables
+              ? 2
+              : !k.entrances && !f.noEntrance
+                ? 3
+                : !k.guests
+                  ? 4
+                  : k.unseated
+                    ? 5
+                    : 6;
+        setStep(saved && /^\d$/.test(saved) ? Number(saved) : first);
       }
       setAside(null);
     }
@@ -475,7 +491,9 @@ export function SetupWizard({
         document.documentElement.requestFullscreen?.().catch(() => undefined);
         window.dispatchEvent(new Event("seating4u:checkin-screen"));
         exit(false);
-        toast.success("Your event is set up! This is your check-in screen. Press Esc to see the menu again.");
+        toast.success(
+          "Your event is set up! This is your check-in screen. Press Esc to see the menu again.",
+        );
         await flag({ checked: true });
       },
     };
