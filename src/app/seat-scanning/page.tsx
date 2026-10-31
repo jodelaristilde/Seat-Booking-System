@@ -998,7 +998,15 @@ export default function SeatScanning() {
             >
               <MapPin className="h-7 w-7" /> {loadingFloorMap ? t.loadingShort : t.viewLocation}
             </button>
-            <button type="button" onClick={startOver} className="mt-6 text-lg font-semibold text-white underline">
+            {/* one phone for the family: check the next person in */}
+            <button
+              type="button"
+              onClick={startOver}
+              className="mt-4 flex h-16 w-full items-center justify-center rounded-3xl border-2 border-white text-xl font-bold text-white hover:bg-white/10"
+            >
+              {t.anotherGuest}
+            </button>
+            <button type="button" onClick={startOver} className="mt-5 text-lg font-semibold text-white underline">
               {t.done}
             </button>
           </div>
