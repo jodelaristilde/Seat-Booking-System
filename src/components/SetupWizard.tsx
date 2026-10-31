@@ -96,10 +96,10 @@ export function SetupWizard({
         /^\d{4}-\d{2}-\d{2}$/.test(j.event.date ?? "") ? j.event.date : "",
       );
       const saved = read(KEY(j.event.id));
-      // open on every event that isn't set up yet, unless the planner closed it
+      // open after every log-in (log-in clears "off"), unless closed since
       const k = j.counts,
         f = j.flags;
-      if (saved === "off" || f.checked) setOn(false);
+      if (saved === "off") setOn(false);
       else {
         setOn(true);
         // where they are: the first step not done yet

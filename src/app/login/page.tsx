@@ -31,6 +31,12 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+    // every log-in starts with the step-by-step setup again
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith("seating4u-wizard:")) localStorage.removeItem(k);
+    } catch {
+      /* private window */
+    }
     toast.success("Welcome back!");
     router.push("/dashboard");
     router.refresh();
