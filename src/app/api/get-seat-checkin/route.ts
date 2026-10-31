@@ -40,12 +40,12 @@ export async function GET(req: NextRequest) {
         { status: 404 },
       )
     }
-    // first names of the others at the same table (the planner can turn this off per event)
+    // first names of the others at the same table: off unless turned on for the event
     let tablemates: string[] = []
     const off = seat.table?.eventId
       ? await db.setting.findUnique({ where: { key: `tablemates:${seat.table.eventId}` } })
       : null
-    if (seat.table?.id && off?.value !== "off") {
+    if (seat.table?.id && off?.value === "on") {
       const others = await db.seat.findMany({
         where: { tableId: seat.table.id, isBooked: true, NOT: { id: seat.id } },
         select: { seat: true, user: { select: { firstname: true, lastname: true } } },

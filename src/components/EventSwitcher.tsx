@@ -294,21 +294,6 @@ export function EventSwitcher() {
                               : "Guest check-in: Closed"}
                           </button>
                         )}{" "}
-                        {/* guests see who sits at their table */}
-                        {typeof e.tablemates === "boolean" && (
-                          <button
-                            type="button"
-                            onClick={() => toggleMates(e)}
-                            className={`mt-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                              e.tablemates
-                                ? "border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
-                                : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                            }`}
-                            title="On the guest's phone: 'You're sitting with Fritz A., Kyla A.…' (first name and initial). Click to change."
-                          >
-                            Show who&apos;s at their table: {e.tablemates ? "On" : "Off"}
-                          </button>
-                        )}
                       </>
                     )}
                   </div>
