@@ -471,11 +471,12 @@ export function SetupWizard({
     next = {
       label: "Finish",
       fn: async () => {
-        await flag({ checked: true });
+        // straight to the check-in screen: menus hidden, whole screen
+        document.documentElement.requestFullscreen?.().catch(() => undefined);
+        window.dispatchEvent(new Event("seating4u:checkin-screen"));
         exit(false);
-        toast.success(
-          "Your event is set up. On the day, open the menu (☰) → Check-in screen.",
-        );
+        toast.success("Your event is set up! This is your check-in screen. Press Esc to see the menu again.");
+        await flag({ checked: true });
       },
     };
   }

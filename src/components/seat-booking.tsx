@@ -58,12 +58,12 @@ import {
   BarChart3,
   Sparkles,
   Radio,
+  Pencil,
   Tv,
   MoreHorizontal,
   FileUp,
   UserPlus,
   Plus,
-  LayoutGrid,
   Image as ImageIcon,
   PlayCircle,
   GraduationCap,
@@ -286,9 +286,6 @@ const SeatBooking = () => {
       </DropdownMenuItem>
     );
   };
-  const sectionLabel = (t: string) => (
-    <DropdownMenuLabel className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">{t}</DropdownMenuLabel>
-  );
   // Setup steps bar: its buttons open screens here
   useEffect(() => onSetup("bulk-tables", () => setBulkTableDialogOpen(true)), []);
   useEffect(() => {
@@ -1263,6 +1260,15 @@ const handleTableClick = () => {
       toast.info("Press Esc to exit full-screen mode");
     }
   };
+  // the step-by-step setup finished: open the check-in screen
+  useEffect(() => {
+    const h = () => {
+      setViewMode("plan");
+      setIsFullScreen(true);
+    };
+    window.addEventListener("seating4u:checkin-screen", h);
+    return () => window.removeEventListener("seating4u:checkin-screen", h);
+  }, []);
 
   const handleChangePassword = async () => {
     try {
@@ -1582,133 +1588,94 @@ const handleTableClick = () => {
                     </DropdownMenuTrigger>
                     {isUser ? (
                     <DropdownMenuContent align="end" className="w-[19rem] max-h-[85vh] overflow-y-auto p-1.5">
-                      {/* Regular users: the whole setup, in order, each with one line saying what it does */}
+                      {/* Regular users: a short menu. The setup itself is the step-by-step; the rest sits in 4 groups. */}
                       {prow(CalendarDays, "My events", "Start a new event, or open another one.", () => window.dispatchEvent(new Event("seating4u:open-events")))}
+                      {prow(ListOrdered, "Set up my event, step by step", "One question at a time, with Next.", () => window.dispatchEvent(new Event("seating4u:show-setup")))}
+                      {prow(Maximize, "Check-in screen", "On the event day: search a name, tick, done.", () => handleFullScreenToggle(true))}
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                        Before the event, in this order
-                      </DropdownMenuLabel>
-                      {(
-                        [
-                          { n: 1, icon: ImageIcon, title: "Upload the floor plan", hint: "A picture or screenshot of the venue's plan.", go: () => openSetup("floor-map") },
-                          { n: 2, icon: LayoutGrid, title: "Add the tables", hint: "Found on your plan, or many at once.", go: async () => {
-                            // with a floor plan: find the tables on it; without one: create them in bulk
-                            const fm = await fetch("/api/floor-map").then((r) => r.json()).catch(() => null);
-                            if (fm?.image) openSetup("draw-tables");
-                            else handleBulkTableCreation();
-                          } },
-                          { n: 3, icon: FileUp, title: "Import your guest list", hint: "From Excel. First and last name are enough.", go: () => openSetup("import-guests") },
-                          { n: 4, icon: Sparkles, title: "Seat everyone", hint: "One click. Families stay together.", href: "/dashboard/seating-helper" },
-                          { n: 5, icon: Users, title: "Manage check-in staff", hint: "Add, reset or remove logins for your door helpers.", href: "/dashboard/check-in-staff" },
-                        ] as { n: number; icon: typeof Plus; title: string; hint: string; go?: () => void; href?: string }[]
-                      ).map((it) => {
-                        const body = (
-                          <span className="flex w-full items-start gap-2.5">
-                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lime-600 text-xs font-bold text-white">
-                              {it.n}
-                            </span>
-                            <span className="min-w-0">
-                              <span className="flex items-center gap-1.5 font-semibold">
-                                <it.icon className="h-4 w-4 shrink-0" /> {it.title}
+                      {[
+                        {
+                          icon: Printer,
+                          title: "Print",
+                          hint: "QR code, door list, table signs, chart",
+                          items: (
+                            <>
+                              {prow(QrCode, "Guest QR code (entrance poster)", "Guests scan it to find their seat.", () => window.dispatchEvent(new Event("seating4u:open-qr")))}
+                              {prow(ListChecks, "Door list (A–Z)", "Paper backup for the check-in desk.", "/dashboard/door-list")}
+                              {prow(Printer, "Table signs & place cards", "Numbers for the tables, names for the plates.", "/dashboard/print-cards")}
+                              {prow(MapIcon, "Seating chart for the venue", "Floor plan + guests by table, for staff and caterer.", "/dashboard/venue-chart")}
+                            </>
+                          ),
+                        },
+                        {
+                          icon: CalendarDays,
+                          title: "Event day",
+                          hint: "Door staff, live view, TV board, kitchen",
+                          items: (
+                            <>
+                              {prow(ClipboardCheck, "Ready check (the night before)", "Finds anything that could go wrong at the door.", "/dashboard/ready-check")}
+                              {prow(Users, "Check-in staff logins", "Add, reset or remove logins for your door helpers.", "/dashboard/check-in-staff")}
+                              {prow(Radio, "Live view for your client", "A link: they watch arrivals live. View only.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                              {prow(Tv, "Arrivals board for a TV", "At the entrance: each guest is welcomed by name and table.", openBoard)}
+                              {prow(ChefHat, "Kitchen screen", "Meals to serve as guests arrive, allergies in red.", "/dashboard/kitchen")}
+                            </>
+                          ),
+                        },
+                        {
+                          icon: BarChart3,
+                          title: "After the event",
+                          hint: "Summary, report for your client, review",
+                          items: (
+                            <>
+                              {prow(BarChart3, "Arrival summary & close out", "Who came, no-shows, meals served. Closes guest check-in.", "/dashboard/summary")}
+                              {prow(FileText, "Report for your client", "A thank-you report they can print.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                              {prow(Star, "Leave us a review", "How is Seating4U working for you?", openReview)}
+                            </>
+                          ),
+                        },
+                        {
+                          icon: Pencil,
+                          title: "Change guests & tables",
+                          hint: "Add one, import more, seat everyone, undo",
+                          items: (
+                            <>
+                              {prow(UserPlus, "Add one guest", "A last-minute guest.", () => setIsAddGuestOpen(true))}
+                              {prow(Plus, "Add one table", "One more table in the room.", () => setIsAddTableOpen(true))}
+                              {prow(FileUp, "Import more guests (Excel)", "Add or update guests from a file.", () => openSetup("import-guests"))}
+                              {prow(Sparkles, "Seat everyone", "One click. Families stay together.", "/dashboard/seating-helper")}
+                              {prow(ImageIcon, "Change the floor plan", "Upload a new picture of the room.", () => openSetup("floor-map"))}
+                              <UndoItem />
+                              {prow(GraduationCap, "Practice with sample guests", "A pretend event to learn. Delete it after.", startPractice)}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
+                                <span className="flex items-start gap-2.5">
+                                  <Trash className="mt-0.5 h-4 w-4 shrink-0" />
+                                  <span>
+                                    <span className="block font-semibold">Start the room over</span>
+                                    <span className="block text-xs text-red-500">Deletes all tables (guests stay). You can undo it.</span>
+                                  </span>
+                                </span>
+                              </DropdownMenuItem>
+                            </>
+                          ),
+                        },
+                      ].map((g) => (
+                        <DropdownMenuSub key={g.title}>
+                          <DropdownMenuSubTrigger className="cursor-pointer py-1.5">
+                            <span className="flex w-full items-start gap-2.5">
+                              <g.icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-700" />
+                              <span className="min-w-0">
+                                <span className="block font-semibold">{g.title}</span>
+                                <span className="block text-xs leading-snug text-zinc-500">{g.hint}</span>
                               </span>
-                              <span className="block text-xs leading-snug text-zinc-500">{it.hint}</span>
                             </span>
-                          </span>
-                        );
-                        return it.href ? (
-                          <DropdownMenuItem key={it.n} asChild className="cursor-pointer py-2">
-                            <Link href={it.href}>{body}</Link>
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem key={it.n} className="cursor-pointer py-2" onClick={it.go}>
-                            {body}
-                          </DropdownMenuItem>
-                        );
-                      })}
-                      <DropdownMenuItem className="cursor-pointer py-2" onClick={() => window.dispatchEvent(new Event("seating4u:show-setup"))}>
-                        <span className="flex items-start gap-2.5">
-                          <ListOrdered className="mt-0.5 h-5 w-5 shrink-0 text-lime-700" />
-                          <span>
-                            <span className="block font-semibold">Not sure? Show me step by step</span>
-                            <span className="block text-xs text-zinc-500">A bar at the top walks you through it.</span>
-                          </span>
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer py-2" onClick={startPractice}>
-                        <span className="flex items-start gap-2.5">
-                          <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
-                          <span>
-                            <span className="block font-semibold">Practice with sample guests</span>
-                            <span className="block text-xs text-zinc-500">A pretend event to learn. Delete it after.</span>
-                          </span>
-                        </span>
-                      </DropdownMenuItem>
-
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-[19rem] max-h-[85vh] overflow-y-auto p-1.5">{g.items}</DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      ))}
                       <DropdownMenuSeparator />
-                      {sectionLabel("Print")}
-                      {prow(QrCode, "Guest QR code (entrance poster)", "Guests scan it to find their seat.", () => window.dispatchEvent(new Event("seating4u:open-qr")))}
-                      {prow(ListChecks, "Door list (A–Z)", "Paper backup for the check-in desk.", "/dashboard/door-list")}
-                      {prow(Printer, "Table signs & place cards", "Numbers for the tables, names for the plates.", "/dashboard/print-cards")}
-                      {prow(MapIcon, "Seating chart for the venue", "Floor plan + guests by table, for staff and caterer.", "/dashboard/venue-chart")}
-
-                      <DropdownMenuSeparator />
-                      {sectionLabel("On the event day")}
-                      {prow(ClipboardCheck, "Ready check (the night before)", "Finds anything that could go wrong at the door.", "/dashboard/ready-check")}
-                      {prow(Maximize, "Check-in screen", "Full screen: search a name, tick, done.", () => handleFullScreenToggle(true))}
-                      {prow(Radio, "Live view for your client", "A link: they watch arrivals live. View only.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
-                      {prow(Tv, "Arrivals board for a TV", "At the entrance: each guest is welcomed by name and table.", openBoard)}
-                      {prow(ChefHat, "Kitchen screen", "Meals to serve as guests arrive, allergies in red.", "/dashboard/kitchen")}
-
-                      <DropdownMenuSeparator />
-                      {sectionLabel("After the event")}
-                      {prow(BarChart3, "Arrival summary & close out", "Who came, no-shows, meals served. Closes guest check-in.", "/dashboard/summary")}
-                      {prow(FileText, "Report for your client", "A thank-you report they can print. (Bottom of the live view window.)", () => window.dispatchEvent(new Event("seating4u:live-link")))}
-                      {prow(Star, "Leave us a review", "How is Seating4U working for you?", openReview)}
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                        One at a time
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddGuestOpen(true)}>
-                        <UserPlus className="mr-2 w-4 h-4" /> Add one guest
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAddTableOpen(true)}>
-                        <Plus className="mr-2 w-4 h-4" /> Add one table
-                      </DropdownMenuItem>
-                      <UndoItem />
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="cursor-pointer py-2">
-                        <Link href="/user-guide">
-                          <span className="flex items-start gap-2.5">
-                            <PlayCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-                            <span>
-                              <span className="block font-semibold">Watch how (3 min video)</span>
-                              <span className="block text-xs text-zinc-500">Every step shown, with voice.</span>
-                            </span>
-                          </span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer py-2" onClick={openReportProblem}>
-                        <span className="flex items-start gap-2.5">
-                          <MessageSquareWarning className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                          <span>
-                            <span className="block font-semibold">Something wrong? Tell us</span>
-                            <span className="block text-xs text-zinc-500">Write what happened. We&apos;ll look at it.</span>
-                          </span>
-                        </span>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
-                        <span className="flex items-start gap-2.5">
-                          <Trash className="mt-0.5 h-4 w-4 shrink-0" />
-                          <span>
-                            <span className="block font-semibold">Start the room over</span>
-                            <span className="block text-xs text-red-500">Deletes all tables (guests stay). You can undo it.</span>
-                          </span>
-                        </span>
-                      </DropdownMenuItem>
+                      {prow(PlayCircle, "Watch how (3 min video)", "Every step shown, with voice.", "/user-guide")}
+                      {prow(MessageSquareWarning, "Something wrong? Tell us", "Write what happened. We'll look at it.", openReportProblem)}
                     </DropdownMenuContent>
                     ) : (
                     <DropdownMenuContent align="end" className="w-60">
@@ -1966,7 +1933,7 @@ const handleTableClick = () => {
           </motion.nav>
         )}
       </AnimatePresence>
-      <div ref={setupBarRef}>{!isFullScreen && !isStaff && !wizardOn && <SetupSteps />}</div>
+      <div ref={setupBarRef}>{!isFullScreen && isAdmin && !wizardOn && <SetupSteps />}</div>
       {!isStaff && <SetupWizard onActiveChange={setWizardOn} />}
       {!isStaff && <ImportGuestsforWeb noButton />}
       {!isStaff && <LiveLinkDialog />}
