@@ -529,7 +529,7 @@ export function SetupWizard({
       <>
         <div ref={anchor} />
         {createPortal(
-          <div className="fixed bottom-4 left-1/2 z-[60] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border-2 border-lime-500 bg-white p-4 shadow-2xl">
+          <div className="fixed bottom-4 right-4 z-[60] w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-2 border-lime-500 bg-white p-4 shadow-2xl">
             <p className="text-xs font-bold uppercase tracking-wider text-lime-700">
               Step {step + 1} of {TITLES.length} · {TITLES[step]}
             </p>
