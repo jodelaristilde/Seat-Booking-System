@@ -15,6 +15,7 @@ import {
   Check,
   DoorOpen,
   FileSpreadsheet,
+  Hash,
   ImageIcon,
   LayoutGrid,
   PartyPopper,
@@ -95,6 +96,16 @@ export function SetupWizard({
       setDate(
         /^\d{4}-\d{2}-\d{2}$/.test(j.event.date ?? "") ? j.event.date : "",
       );
+      // back from the seating helper's Next: go on to that step
+      const jump = read("seating4u-wizard-jump");
+      if (jump && /^\d$/.test(jump)) {
+        write(KEY(j.event.id), jump);
+        try {
+          localStorage.removeItem("seating4u-wizard-jump");
+        } catch {
+          /* private window */
+        }
+      }
       const saved = read(KEY(j.event.id));
       // open after every log-in (log-in clears "off"), unless closed since
       if (saved === "off") setOn(false);
@@ -310,6 +321,27 @@ export function SetupWizard({
             </span>
           </button>
         )}
+        {c.pictures > 0 && (
+          <button
+            className={big}
+            onClick={() =>
+              onPlan(
+                "number-tables",
+                "Click each table on your floor plan and type its number. When all your tables are on, click Done drawing, then Next.",
+              )
+            }
+          >
+            <Hash className="h-9 w-9 shrink-0 text-lime-600" />
+            <span>
+              <b className="block text-lg">
+                I&apos;ll click each table and type its number
+              </b>
+              <span className="text-zinc-600">
+                You choose every number. Best when the plan has no numbers.
+              </span>
+            </span>
+          </button>
+        )}
         <button className={big} onClick={() => openSetup("bulk-tables")}>
           <LayoutGrid
             className={`h-9 w-9 shrink-0 ${c.pictures ? "text-zinc-500" : "text-lime-600"}`}
@@ -405,7 +437,7 @@ export function SetupWizard({
               {c.unseated} guest{c.unseated === 1 ? "" : "s"} still without a
               table.
             </p>
-            <Link href="/dashboard/seating-helper" className={big}>
+            <Link href="/dashboard/seating-helper?from=setup" className={big}>
               <Sparkles className="h-9 w-9 shrink-0 text-lime-600" />
               <span>
                 <b className="block text-lg">Yes, seat everyone for me</b>

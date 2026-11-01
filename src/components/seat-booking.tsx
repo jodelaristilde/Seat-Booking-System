@@ -293,7 +293,7 @@ const SeatBooking = () => {
     // drawing tables / the entrance happen on the floor plan view
     const h = (e: Event) => {
       const t = (e as CustomEvent).detail;
-      if (t === "draw-tables" || t === "find-tables" || t === "set-entrance") {
+      if (t === "draw-tables" || t === "number-tables" || t === "find-tables" || t === "set-entrance") {
         setIsFullScreen(false);
         setViewMode("plan");
       }

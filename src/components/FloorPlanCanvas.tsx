@@ -386,6 +386,11 @@ export function FloorPlanCanvas({
 
   // "Draw tables": pick a shape and seats, then drag on the picture
   const [drawing, setDrawing] = useState(false);
+  // ask for the number of every table you click (instead of reading it from the plan)
+  const [askNumber, setAskNumber] = useState(false);
+  useEffect(() => {
+    if (!drawing) setAskNumber(false);
+  }, [drawing]);
   const [drawShape, setDrawShape] = useState<Shape>("round");
   const [drawSeats, setDrawSeatsRaw] = useState(10);
   // "Seats per table": one preset for every new table, remembered
@@ -476,6 +481,15 @@ export function FloorPlanCanvas({
   };
   // the setup steps bar: "Find / draw tables" and "Set the entrance"
   useEffect(() => onSetup("draw-tables", () => setDrawing(true)), []);
+  // "Click each table and type its number": drawing, asking the number each time
+  useEffect(
+    () =>
+      onSetup("number-tables", () => {
+        setAskNumber(true);
+        setDrawing(true);
+      }),
+    []
+  );
   useEffect(() => onSetup("set-entrance", () => setSettingEntrance(true)), []);
   // the setup wizard moved on: close the door tool (the doors are already saved)
   useEffect(() => {
@@ -1164,6 +1178,21 @@ export function FloorPlanCanvas({
     }
   };
 
+  // The number for a new table: the one read from the plan, or the next free
+  // one; when "Ask me the number" is on, the person types it (cancel = no table)
+  const confirmName = (suggested: string): string | null => {
+    if (!askNumber) return suggested;
+    const v = window.prompt("Number or name for this table:", suggested.replace(/^table\s*/i, ""));
+    if (v === null || !v.trim()) return null;
+    const n = nameFromText(v.trim()) || v.trim();
+    const name = /^\d+$/.test(n) ? `Table ${n}` : n;
+    if (tables.some((t) => tableNameOf(t).trim().toLowerCase() === name.toLowerCase())) {
+      toast.message(`${name} is already on the plan.`);
+      return null;
+    }
+    return name;
+  };
+
   // ---------- drawing tables on the picture ----------
   // The box being drawn, in % of the plan. Round and square tables are kept
   // truly round/square on screen, whichever way the mouse goes.
@@ -1222,9 +1251,10 @@ export function FloorPlanCanvas({
       toast.message(`${tableNameOf(under)} is already there. Draw the new table in an empty spot.`);
       return;
     }
+    const name = confirmName(`Table ${nextFreeNumber(tables.map(tableNameOf))}`);
+    if (!name) return;
     setDrawBusy(true);
     try {
-      const name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
       const res = await fetch("/api/floor-plan-apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1287,7 +1317,11 @@ export function FloorPlanCanvas({
         // read (or that number is already used) ask for it
         let name = num?.name ?? "";
         const taken = (n: string) => tables.some((t) => tableNameOf(t).trim().toLowerCase() === n.toLowerCase());
-        if (!name || taken(name)) {
+        if (askNumber) {
+          const chosen = confirmName(name || `Table ${nextFreeNumber(tables.map(tableNameOf))}`);
+          if (!chosen) return;
+          name = chosen;
+        } else if (!name || taken(name)) {
           const typed = window.prompt(
             name ? `${name} is already on the plan. Number or name for this table:` : "Couldn't read the number here. Number or name for this table:",
             name ? "" : String(nextFreeNumber(tables.map(tableNameOf)))
@@ -1328,6 +1362,9 @@ export function FloorPlanCanvas({
       if (!name || taken.has(name.toLowerCase())) {
         name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
       }
+      const chosen = confirmName(name);
+      if (!chosen) return;
+      name = chosen;
       // every new table gets the preset number of seats (Seats per table)
       const seats = drawSeats;
       const res = await fetch("/api/floor-plan-apply", {
@@ -2134,6 +2171,10 @@ export function FloorPlanCanvas({
             >
               <Undo2 className="w-4 h-4 mr-2" /> Undo last
             </Button>
+            <label className="ml-1 flex cursor-pointer items-center gap-1.5 rounded-md border border-lime-400 bg-lime-50 px-2 py-1 text-sm font-semibold text-lime-900">
+              <input type="checkbox" checked={askNumber} onChange={(e) => setAskNumber(e.target.checked)} className="h-4 w-4" />
+              Ask me each table&apos;s number
+            </label>
             <span className="text-sm text-zinc-600 ml-1">1. Shape:</span>
             {SHAPES.map((s) => (
               <Button

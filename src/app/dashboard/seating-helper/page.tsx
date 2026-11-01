@@ -5,7 +5,7 @@
 // /dashboard/seating-helper (login required)
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Trash2, Users, Ban, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Trash2, Users, Ban, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
 import { fold, matches } from "@/lib/fold";
@@ -92,6 +92,19 @@ function GuestPicker({
 }
 
 export default function SeatingHelper() {
+  // opened from the step-by-step setup: a Next button goes on to its last step
+  const [fromSetup, setFromSetup] = useState(false);
+  useEffect(() => {
+    setFromSetup(new URLSearchParams(window.location.search).get("from") === "setup");
+  }, []);
+  const goNext = () => {
+    try {
+      localStorage.setItem("seating4u-wizard-jump", "6");
+    } catch {
+      /* private window */
+    }
+    window.location.href = "/dashboard";
+  };
   const [guests, setGuests] = useState<Guest[]>([]);
   const [seats, setSeats] = useState<SeatRow[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -262,6 +275,14 @@ export default function SeatingHelper() {
         <Link href="/dashboard" className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
+        {fromSetup && (
+          <button
+            onClick={goNext}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-lime-600 px-5 py-2 text-base font-bold text-white hover:bg-lime-700"
+          >
+            Next <ArrowRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="mx-auto max-w-4xl space-y-8 px-6 py-6">
         <h1 className="flex items-center gap-2 text-3xl font-bold">
@@ -493,6 +514,16 @@ export default function SeatingHelper() {
           </div>
         </section>
       </div>
+      {fromSetup && (
+        <div className="mx-auto max-w-4xl px-6 pb-10">
+          <button
+            onClick={goNext}
+            className="flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-lime-600 text-xl font-bold text-white hover:bg-lime-700"
+          >
+            Next: you&apos;re almost ready <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
