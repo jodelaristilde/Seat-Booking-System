@@ -5,12 +5,12 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 type Pt = { x: number; y: number; dir?: number };
-// one entrance only (the newest one), with the way in (dir: 0 right, 90 down, 180 left, 270 up)
+// up to 2 entrances (the newest ones), each with the way in (dir: 0 right, 90 down, 180 left, 270 up)
 const clean = (v: unknown): Pt[] =>
   Array.isArray(v)
     ? v
         .filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y))
-        .slice(-1)
+        .slice(-2)
         .map((p) => ({
           x: Math.min(100, Math.max(0, Number(p.x))),
           y: Math.min(100, Math.max(0, Number(p.y))),

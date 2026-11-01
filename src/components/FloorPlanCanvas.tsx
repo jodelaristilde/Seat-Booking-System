@@ -440,6 +440,7 @@ export function FloorPlanCanvas({
   const [settingEntrance, setSettingEntrance] = useState(false);
   const [entrances, setEntrances] = useState<{ x: number; y: number; dir?: number }[]>([]);
   const [entrancesLoaded, setEntrancesLoaded] = useState(false);
+  const [selEnt, setSelEnt] = useState(0); // the entrance that Turn arrow / Delete / a click acts on
   useEffect(() => {
     fetch("/api/event-entrance")
       .then((r) => r.json())
@@ -2468,26 +2469,35 @@ export function FloorPlanCanvas({
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-green-50 px-3 py-2 text-sm text-green-900">
           <DoorOpen className="h-4 w-4" />
           <span className="flex-1">
-            Click the <b>door</b> where guests come in (one entrance). Click somewhere else to move it. The green arrow shows
-            the way in: click <b>Turn arrow</b> to change it. Guests&apos; phones draw a line from the door to their table.
+            Click the <b>door</b> where guests come in (up to <b>2 entrances</b>). Click a pin to pick it, then click somewhere
+            else to move it. The green arrow shows the way in: <b>Turn arrow</b> changes it. Guests&apos; phones draw the line from
+            whichever entrance is the shortest walk to their table, around the tables.
           </span>
-          {entrances.length > 0 && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => {
-                  const e0 = entrances[0];
-                  saveEntrances([{ ...e0, dir: (entryAngle(e0) + 90) % 360 }]);
-                }}
-                className="bg-green-600 text-white hover:bg-green-700"
-              >
-                ↻ Turn arrow
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => saveEntrances([])}>
-                Delete entrance
-              </Button>
-            </>
-          )}
+          {entrances.length > 0 && (() => {
+            const i = Math.min(selEnt, entrances.length - 1);
+            const which = entrances.length > 1 ? ` ${i + 1}` : "";
+            return (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)))}
+                  className="bg-green-600 text-white hover:bg-green-700"
+                >
+                  ↻ Turn arrow{which}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    saveEntrances(entrances.filter((_, j) => j !== i));
+                    setSelEnt(0);
+                  }}
+                >
+                  Delete entrance{which}
+                </Button>
+              </>
+            );
+          })()}
           {entrances.length === 0 && (
             <Button size="sm" variant="ghost" onClick={() => setSettingEntrance(false)} title="The reminder stays until it is set">
               Later
@@ -2890,9 +2900,17 @@ export function FloorPlanCanvas({
           <div
             className="absolute inset-0 z-50 cursor-crosshair"
             onClick={(e) => {
-              // one entrance: a new click moves it there (the arrow is worked out again)
+              // up to 2 entrances: a click adds one; with 2, it moves the one picked
+              // (its arrow is worked out again for the new spot)
               const p = pointToPercent(e.clientX, e.clientY);
-              saveEntrances([{ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }]);
+              const pt = { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 };
+              if (entrances.length < 2) {
+                saveEntrances([...entrances, pt]);
+                setSelEnt(entrances.length);
+              } else {
+                const i = Math.min(selEnt, 1);
+                saveEntrances(entrances.map((q, j) => (j === i ? pt : q)));
+              }
             }}
           >
             {entrances.map((pt, i) => (
@@ -2902,15 +2920,18 @@ export function FloorPlanCanvas({
                 <span className="entrance-flash entrance-flash-2 pointer-events-none absolute left-0 top-0 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-green-400" />
                 <button
                   type="button"
-                  className="entrance-pin absolute left-0 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg ring-4 ring-green-200 hover:bg-red-600"
-                  title="Click to turn the arrow"
+                  className={`entrance-pin absolute left-0 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg hover:bg-green-700 ${
+                    entrances.length > 1 && i === Math.min(selEnt, entrances.length - 1) ? "ring-4 ring-amber-400" : "ring-4 ring-green-200"
+                  }`}
+                  title="Click to pick this entrance; click again to turn its arrow"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // clicking the pin turns the arrow a quarter turn
+                    // first click picks it; clicking the picked one turns its arrow a quarter turn
+                    if (entrances.length > 1 && i !== Math.min(selEnt, entrances.length - 1)) return setSelEnt(i);
                     saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)));
                   }}
                 >
-                  <DoorOpen className="h-3.5 w-3.5" /> Entrance
+                  <DoorOpen className="h-3.5 w-3.5" /> Entrance{entrances.length > 1 ? ` ${i + 1}` : ""}
                 </button>
                 {/* which way guests walk in */}
                 <span

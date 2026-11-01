@@ -123,9 +123,9 @@ export default function RoomBuilder() {
   );
 
   const add = (kind: Kind) => {
-    // one entrance only: move the one you have instead of adding a second
-    if (kind === "door" && items.some((x) => x.kind === "door"))
-      return toast.message("You already have the entrance. Drag it to move it, or delete it first.");
+    // 2 entrances at most
+    if (kind === "door" && items.filter((x) => x.kind === "door").length >= 2)
+      return toast.message("You already have 2 entrances. Drag one to move it, or delete one first.");
     const part = PARTS.find((p) => p[0] === kind);
     setItems((list) => {
       const n = list.length;
@@ -311,7 +311,7 @@ export default function RoomBuilder() {
         if (!r?.success) throw new Error("tables");
         if (r.removed) toast.message(`${r.removed} table${r.removed === 1 ? "" : "s"} removed. Their guests are in "No seat yet".`);
       }
-      const doors = items.filter((x) => x.kind === "door").slice(0, 1).map((d) => ({ x: d.x, y: d.y }));
+      const doors = items.filter((x) => x.kind === "door").slice(0, 2).map((d) => ({ x: d.x, y: d.y }));
       await fetch("/api/event-entrance", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
