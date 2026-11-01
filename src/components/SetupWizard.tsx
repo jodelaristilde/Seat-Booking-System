@@ -134,14 +134,26 @@ export function SetupWizard({
       load();
     };
     window.addEventListener("seating4u:show-setup", show);
+    // "Next" in another window (the guest import): go on to that step
+    const goTo = (e: Event) => {
+      const n = Number((e as CustomEvent).detail);
+      if (!Number.isFinite(n)) return;
+      setStep(n);
+      setAside(null);
+      if (evId.current) write(KEY(evId.current), String(n));
+      load();
+    };
+    window.addEventListener("seating4u:wizard-go", goTo);
     return () => {
       clearInterval(t);
       window.removeEventListener("seating4u:show-setup", show);
+      window.removeEventListener("seating4u:wizard-go", goTo);
     };
   }, [load]);
 
   useEffect(() => {
     onActiveChange?.(on);
+    (window as unknown as { __seating4uWizard?: boolean }).__seating4uWizard = on;
   }, [on, onActiveChange]);
 
   // the card covers everything under the top bar
@@ -327,7 +339,7 @@ export function SetupWizard({
             onClick={() =>
               onPlan(
                 "number-tables",
-                "Click inside each table on your plan: it fills in and its number is copied. No number on it? Type one. When all your tables are on, click Done drawing, then Next.",
+                "Click inside each table on your plan: it fills in, same size, with its number. No number on it? It gets the next one. When all your tables are on, click Done drawing, then Next.",
               )
             }
           >
@@ -337,7 +349,7 @@ export function SetupWizard({
                 I&apos;ll click each table myself
               </b>
               <span className="text-zinc-600">
-                The number on the plan is copied. No number? You type it.
+                The number on the plan is copied. No number? It gets the next one.
               </span>
             </span>
           </button>

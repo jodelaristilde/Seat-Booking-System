@@ -21,6 +21,7 @@ import {
   Armchair,
   Undo2,
   Type,
+  ArrowRight,
   Circle,
   Square,
   RectangleHorizontal,
@@ -57,6 +58,7 @@ import {
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
 import { onSetup, openSetup } from "@/lib/setupEvents";
+import { entryAngle } from "@/lib/entryArrow";
 
 type Pos = { x: number; y: number };
 
@@ -470,6 +472,8 @@ export function FloorPlanCanvas({
   // or tables are drawn/moved again.
   const [askTick, setAskTick] = useState(0);
   const askEntrance =
+    // (not while the step-by-step setup is open: it asks for the entrance itself)
+    !(typeof window !== "undefined" && (window as unknown as { __seating4uWizard?: boolean }).__seating4uWizard) &&
     entrancesLoaded && !roomOnly && !staff && !working && tables.length > 0 &&
     ((entrances.length === 0 && entranceLater !== tables.length) || entranceCheckAfterTables);
   const setAskEntrance = (open: boolean) => {
@@ -485,7 +489,6 @@ export function FloorPlanCanvas({
   useEffect(
     () =>
       onSetup("number-tables", () => {
-        setAskNumber(true);
         setDrawing(true);
       }),
     []
@@ -1178,6 +1181,42 @@ export function FloorPlanCanvas({
     }
   };
 
+  // Every table you click gets the same size as the tables already there
+  // (the middle size), so a big grey area on the plan can't make a giant table.
+  const refSize = (): [number, number] | null => {
+    const s = tables
+      .map((t) => [Number(t.seats[0]?.table?.sizeW) || 0, Number(t.seats[0]?.table?.sizeH) || 0] as [number, number])
+      .filter(([w, h]) => w > 0 && h > 0)
+      .sort((a, b) => a[0] - b[0]);
+    return s.length ? s[Math.floor(s.length / 2)] : null;
+  };
+  const sameSize = <T extends { w: number; h: number }>(shape: T): T => {
+    const r = refSize();
+    if (r) return { ...shape, w: r[0], h: r[1] };
+    const maxW = 8; // the first table: never bigger than a normal round table
+    if (shape.w > maxW) return { ...shape, w: maxW, h: (shape.h * maxW) / shape.w };
+    return shape;
+  };
+  // "Same size for all": every table takes the middle size
+  const sameSizeForAll = async () => {
+    const r = refSize();
+    if (!r) return toast.message("Add a table first.");
+    const body = {
+      positions: tables
+        .map((t) => {
+          const id = tableIdOf(t);
+          const p = positions[id];
+          return p ? { id, x: p.x, y: p.y, sizeW: r[0], sizeH: r[1] } : null;
+        })
+        .filter(Boolean),
+    };
+    const res = await fetch("/api/table-positions", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+    if (!res?.ok) return toast.error("Could not change the sizes");
+    await onTablesChanged();
+    await loadPositions();
+    toast.success("All tables are the same size now");
+  };
+
   // A table whose number could not be read from the plan: the next free
   // number, or, when "Ask me…" is on, the person types it (cancel = no table)
   const confirmName = (suggested: string): string | null => {
@@ -1317,7 +1356,10 @@ export function FloorPlanCanvas({
         // read (or that number is already used) ask for it
         let name = num?.name ?? "";
         const taken = (n: string) => tables.some((t) => tableNameOf(t).trim().toLowerCase() === n.toLowerCase());
-        if (!name || taken(name)) {
+        if ((!name || taken(name)) && !askNumber) {
+          // no number on the plan here: the next free number, automatically
+          name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
+        } else if (!name || taken(name)) {
           const typed = window.prompt(
             name ? `${name} is already on the plan. Number or name for this table:` : "Couldn't read the number here. Number or name for this table:",
             name ? "" : String(nextFreeNumber(tables.map(tableNameOf)))
@@ -1329,7 +1371,7 @@ export function FloorPlanCanvas({
           toast.message(`${name} is already on the plan.`);
           return;
         }
-        const size = num?.shape ?? { x, y, w: 5, h: (5 * aspect) || 5 };
+        const size = sameSize(num?.shape ?? { x, y, w: 5, h: (5 * aspect) || 5 });
         const res = await fetch("/api/floor-plan-apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1372,8 +1414,8 @@ export function FloorPlanCanvas({
               name,
               x: found.shape.x,
               y: found.shape.y,
-              w: found.shape.w,
-              h: found.shape.h,
+              w: sameSize(found.shape).w,
+              h: sameSize(found.shape).h,
               shape: found.shape.shape,
               seats,
             },
@@ -2171,6 +2213,9 @@ export function FloorPlanCanvas({
               <input type="checkbox" checked={askNumber} onChange={(e) => setAskNumber(e.target.checked)} className="h-4 w-4" />
               Ask me the number when the plan has none
             </label>
+            <Button onClick={sameSizeForAll} size="sm" variant="outline" disabled={drawBusy || saving || tables.length < 2} title="Give every table the same size">
+              <Circle className="w-4 h-4 mr-2" /> Same size for all tables
+            </Button>
             <span className="text-sm text-zinc-600 ml-1">1. Shape:</span>
             {SHAPES.map((s) => (
               <Button
@@ -2854,6 +2899,13 @@ export function FloorPlanCanvas({
                 >
                   <DoorOpen className="h-3.5 w-3.5" /> Entrance
                 </button>
+                {/* which way guests walk in */}
+                <span
+                  className="pointer-events-none absolute left-0 top-0 text-green-600 drop-shadow-[0_0_2px_white]"
+                  style={{ transform: `rotate(${entryAngle(pt)}deg) translate(46px, 0) translate(-50%, -50%)`, transformOrigin: "0 0" }}
+                >
+                  <ArrowRight className="h-8 w-8" strokeWidth={3.5} />
+                </span>
               </div>
             ))}
           </div>

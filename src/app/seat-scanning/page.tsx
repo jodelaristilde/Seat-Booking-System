@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { entryAngle } from "@/lib/entryArrow";
 import { applyBrand, useBrand } from "@/lib/useBrand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
+import { ArrowRight, Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1208,6 +1209,18 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
             className="way-pulse absolute h-5 w-5 rounded-full bg-green-600 shadow-[0_0_0_5px_rgba(255,255,255,.9)]"
             style={{ left: `${door.x}%`, top: `${door.y}%` }}
           />
+          {/* the way in: an arrow pointing into the room */}
+          <div
+            className="absolute text-green-600 drop-shadow-[0_0_3px_white]"
+            style={{
+              left: `${door.x}%`,
+              top: `${door.y}%`,
+              transform: `rotate(${entryAngle(door)}deg) translate(30px, 0) translate(-50%, -50%)`,
+              transformOrigin: "0 0",
+            }}
+          >
+            <ArrowRight className="h-9 w-9" strokeWidth={3.5} />
+          </div>
           <div
             className="absolute -translate-x-1/2 whitespace-nowrap rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
             style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1rem)` }}

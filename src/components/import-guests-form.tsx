@@ -411,7 +411,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
               </button>
             ))}
           </div>
-          {!check && (mode === "update" ? (
+          {!check && !importStats && !isLoading && (mode === "update" ? (
             <p className="text-sm text-zinc-600">
               For guests <b>already on your list</b>. Upload an Excel file with <b>First Name</b>, <b>Last Name</b> and
               any of <b>Meal</b>, <b>Allergy</b>, <b>VIP</b>, <b>Note</b>. Each guest is found by name (accents don&apos;t matter)
@@ -440,7 +440,7 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
             </p>
           </div>
           ))}
-          {!check && (
+          {!check && !importStats && !isLoading && (
           <>
           <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
             <FileUpload onChange={handleFileUpload} />
@@ -552,9 +552,25 @@ export function ImportGuestsforWeb({ noButton = false }: { noButton?: boolean } 
           {importStats && (
             <div className="p-4 bg-gray-50 rounded-lg space-y-2">
               <p className="font-medium">
-                Imported {importStats.imported} out of {importStats.total}{" "}
+                ✓ Imported {importStats.imported} out of {importStats.total}{" "}
                 guests
               </p>
+              {/* what to do next */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  onClick={() => {
+                    setOpen(false);
+                    setImportStats(null);
+                    window.dispatchEvent(new CustomEvent("seating4u:wizard-go", { detail: 5 }));
+                  }}
+                  className="h-12 bg-lime-600 px-6 text-lg font-bold text-white hover:bg-lime-700"
+                >
+                  Next: seat your guests →
+                </Button>
+                <Button variant="outline" className="h-12" onClick={() => setImportStats(null)}>
+                  Import another file
+                </Button>
+              </div>
               {importStats.failedGuests.length > 0 && (
                 <div className="mt-2">
                   <p className="text-sm text-red-600 font-medium">
