@@ -4,13 +4,18 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type Pt = { x: number; y: number };
+type Pt = { x: number; y: number; dir?: number };
+// one entrance only (the newest one), with the way in (dir: 0 right, 90 down, 180 left, 270 up)
 const clean = (v: unknown): Pt[] =>
   Array.isArray(v)
     ? v
         .filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y))
-        .slice(0, 6)
-        .map((p) => ({ x: Math.min(100, Math.max(0, Number(p.x))), y: Math.min(100, Math.max(0, Number(p.y))) }))
+        .slice(-1)
+        .map((p) => ({
+          x: Math.min(100, Math.max(0, Number(p.x))),
+          y: Math.min(100, Math.max(0, Number(p.y))),
+          ...([0, 90, 180, 270].includes(Number(p.dir)) ? { dir: Number(p.dir) } : {}),
+        }))
     : [];
 
 // Entrances of the event open on this computer (login required)

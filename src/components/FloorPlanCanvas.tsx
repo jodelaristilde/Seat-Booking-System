@@ -438,7 +438,7 @@ export function FloorPlanCanvas({
   // rest of the dashboard back when finished
   // ---- Entrance(s): where guests come in (the phone draws the way from here) ----
   const [settingEntrance, setSettingEntrance] = useState(false);
-  const [entrances, setEntrances] = useState<{ x: number; y: number }[]>([]);
+  const [entrances, setEntrances] = useState<{ x: number; y: number; dir?: number }[]>([]);
   const [entrancesLoaded, setEntrancesLoaded] = useState(false);
   useEffect(() => {
     fetch("/api/event-entrance")
@@ -449,7 +449,7 @@ export function FloorPlanCanvas({
       })
       .catch(() => undefined);
   }, []);
-  const saveEntrances = async (next: { x: number; y: number }[]) => {
+  const saveEntrances = async (next: { x: number; y: number; dir?: number }[]) => {
     setEntrances(next);
     try {
       const res = await fetch("/api/event-entrance", {
@@ -2468,13 +2468,25 @@ export function FloorPlanCanvas({
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-green-50 px-3 py-2 text-sm text-green-900">
           <DoorOpen className="h-4 w-4" />
           <span className="flex-1">
-            Click the <b>door</b> on the floor plan where guests come in (up to 6 doors). Click a green pin to remove
-            it. Guests&apos; phones will show a line from the nearest door to their table.
+            Click the <b>door</b> where guests come in (one entrance). Click somewhere else to move it. The green arrow shows
+            the way in: click <b>Turn arrow</b> to change it. Guests&apos; phones draw a line from the door to their table.
           </span>
           {entrances.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => saveEntrances([])}>
-              Clear all
-            </Button>
+            <>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const e0 = entrances[0];
+                  saveEntrances([{ ...e0, dir: (entryAngle(e0) + 90) % 360 }]);
+                }}
+                className="bg-green-600 text-white hover:bg-green-700"
+              >
+                ↻ Turn arrow
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => saveEntrances([])}>
+                Delete entrance
+              </Button>
+            </>
           )}
           {entrances.length === 0 && (
             <Button size="sm" variant="ghost" onClick={() => setSettingEntrance(false)} title="The reminder stays until it is set">
@@ -2878,9 +2890,9 @@ export function FloorPlanCanvas({
           <div
             className="absolute inset-0 z-50 cursor-crosshair"
             onClick={(e) => {
-              if (entrances.length >= 6) return toast.message("Up to 6 entrances.");
+              // one entrance: a new click moves it there (the arrow is worked out again)
               const p = pointToPercent(e.clientX, e.clientY);
-              saveEntrances([...entrances, { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }]);
+              saveEntrances([{ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }]);
             }}
           >
             {entrances.map((pt, i) => (
@@ -2891,10 +2903,11 @@ export function FloorPlanCanvas({
                 <button
                   type="button"
                   className="entrance-pin absolute left-0 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg ring-4 ring-green-200 hover:bg-red-600"
-                  title="Remove this entrance"
+                  title="Click to turn the arrow"
                   onClick={(e) => {
                     e.stopPropagation();
-                    saveEntrances(entrances.filter((_, j) => j !== i));
+                    // clicking the pin turns the arrow a quarter turn
+                    saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)));
                   }}
                 >
                   <DoorOpen className="h-3.5 w-3.5" /> Entrance

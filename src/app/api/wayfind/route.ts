@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   const ev = t.eventId
     ? await db.event.findUnique({ where: { id: t.eventId }, select: { entrances: true } })
     : null;
-  const entrances = Array.isArray(ev?.entrances) ? (ev!.entrances as { x: number; y: number }[]) : [];
+  const entrances = Array.isArray(ev?.entrances) ? (ev!.entrances as { x: number; y: number; dir?: number }[]) : [];
   return NextResponse.json({
     success: true,
     eventId: t.eventId,
