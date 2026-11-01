@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       const hold = held.has(`${g.eventId}:${g.id}`) && !g.seat?.some((s) => s.isReceived);
       return {
         ...g,
-        ...(hold ? { seat: [] } : {}),
+        ...(hold ? { seat: [], held: true } : {}),
         eventName: g.eventId ? nameOf.get(g.eventId) ?? null : null,
       };
     });
