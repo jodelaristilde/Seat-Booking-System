@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowRight, ArrowUp, Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
+import { bestWay, type Box } from "@/lib/wayPath";
+import { ArrowDown, ArrowRight, ArrowUp, Check, DoorOpen, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -257,7 +258,7 @@ export default function SeatScanning() {
       if (searchResult?.seatId) {
         try {
           const w = await fetch(`/api/wayfind?seatId=${encodeURIComponent(searchResult.seatId)}`).then((r) => r.json());
-          if (w.success && w.table?.x != null && w.table?.y != null) setWay({ table: w.table, entrances: w.entrances ?? [] });
+          if (w.success && w.table?.x != null && w.table?.y != null) setWay({ table: w.table, entrances: w.entrances ?? [], obstacles: w.obstacles ?? [] });
         } catch {
           /* the map still opens, just without the line */
         }
@@ -1162,19 +1163,47 @@ function ArrivedList({ items, title = "Arrived" }: { items: { seatId: string; na
 // ---- The way from the door to the guest's table, drawn over the floor plan ----
 type Way = {
   table: { name: string; x: number; y: number; w: number | null; h: number | null; shape: string | null };
-  entrances: { x: number; y: number }[];
+  entrances: { x: number; y: number; dir?: number }[];
+  obstacles?: { x: number; y: number; w: number | null; h: number | null; round: boolean; fixed?: boolean }[];
 };
 
 function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: string; yourTable: string }) {
   const t = way.table;
-  // the door closest to the table
-  const door = way.entrances.length
-    ? [...way.entrances].sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))[0]
-    : null;
   const ringW = Math.max(5, (t.w ?? 7) * 1.45);
   const round = (t.shape ?? "round") === "round";
+  // the plan's shape (width / height), to turn sizes into a real distance
+  const box = useRef<HTMLDivElement>(null);
+  const [aspect, setAspect] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const read = () => el.offsetHeight && setAspect(el.offsetWidth / el.offsetHeight);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // the walking way: from the door that is closest ON FOOT, around the other tables
+  const route = useMemo(() => {
+    if (!aspect || !way.entrances.length) return null;
+    // the usual table size (tables only, not the stage or bar)
+    const sizes = (way.obstacles ?? []).filter((o) => !o.fixed).map((o) => o.w).filter((w): w is number => !!w && w > 0).sort((a, b) => a - b);
+    const usual = t.w && t.w > 0 ? t.w : sizes.length ? sizes[Math.floor(sizes.length / 2)] : 6;
+    const toBox = (o: { x: number; y: number; w: number | null; h: number | null; round: boolean }): Box => {
+      const w = o.w && o.w > 0 ? o.w : usual;
+      return { x: o.x, y: o.y, w, h: o.h && o.h > 0 ? o.h : w * aspect, round: o.round };
+    };
+    const target = toBox({ x: t.x, y: t.y, w: t.w, h: round ? null : t.h, round });
+    return bestWay(way.entrances, target, (way.obstacles ?? []).map(toBox), { aspect });
+  }, [aspect, way, t, round]);
+  // no way found (or not measured yet): the door closest to the table
+  const door =
+    route?.door ??
+    (way.entrances.length
+      ? [...way.entrances].sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))[0]
+      : null);
   return (
-    <div className="pointer-events-none absolute inset-0">
+    <div ref={box} className="pointer-events-none absolute inset-0">
       <style>{`
         @keyframes wayDash { to { stroke-dashoffset: -36 } }
         .way-dash { animation: wayDash 0.9s linear infinite }
@@ -1189,7 +1218,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         .way-num { animation: wayNum .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
         .way-bounce { animation: wayBounce .7s ease-in-out infinite }
       `}</style>
-      {door && <WayLine door={door} table={t} halfW={ringW / 2} />}
+      {door && aspect > 0 && <WayLine door={door} table={t} halfW={ringW / 2} path={route?.path ?? null} />}
       {/* the guest's table: it flashes, with a big arrow pointing at it (no label) */}
       <div
         className="absolute"
@@ -1217,17 +1246,20 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
       {/* the door: you are here */}
       {door && (
         <>
+          {/* the door symbol */}
           <div
-            className="way-pulse absolute h-5 w-5 rounded-full bg-green-600 shadow-[0_0_0_5px_rgba(255,255,255,.9)]"
+            className="way-pulse absolute flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white shadow-[0_0_0_4px_rgba(255,255,255,.9)]"
             style={{ left: `${door.x}%`, top: `${door.y}%` }}
-          />
+          >
+            <DoorOpen className="h-5 w-5" strokeWidth={2.5} />
+          </div>
           {/* the way in: an arrow pointing into the room */}
           <div
             className="absolute text-green-600 drop-shadow-[0_0_3px_white]"
             style={{
               left: `${door.x}%`,
               top: `${door.y}%`,
-              transform: `rotate(${entryAngle(door)}deg) translate(30px, 0) translate(-50%, -50%)`,
+              transform: `rotate(${entryAngle(door)}deg) translate(38px, 0) translate(-50%, -50%)`,
               transformOrigin: "0 0",
             }}
           >
@@ -1235,7 +1267,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           </div>
           <div
             className="absolute -translate-x-1/2 whitespace-nowrap rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
-            style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1rem)` }}
+            style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1.4rem)` }}
           >
             {youAreHere}
           </div>
@@ -1251,16 +1283,19 @@ function WayLine({
   door,
   table,
   halfW,
+  path,
 }: {
   door: { x: number; y: number };
   table: { x: number; y: number };
   halfW: number;
+  path: { x: number; y: number }[] | null; // the way around the tables, when found
 }) {
   // which wall is the door on? Walk straight in from that wall first.
   const dist = [door.x, 100 - door.x, door.y, 100 - door.y];
   const sideWall = Math.min(dist[0], dist[1]) < Math.min(dist[2], dist[3]); // left/right wall
   const pts: [number, number][] = [[door.x, door.y]];
-  if (sideWall) {
+  if (path && path.length > 1) pts.splice(0, 1, ...path.map((q) => [q.x, q.y] as [number, number]));
+  else if (sideWall) {
     // across first, then up/down to the table
     const dy = table.y - door.y;
     if (Math.abs(dy) < halfW) pts.push([table.x - Math.sign(table.x - door.x) * halfW, door.y]);
