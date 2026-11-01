@@ -259,6 +259,7 @@ const SeatBooking = () => {
   };
   const [isDeleteAllTablesDialogOpen, setIsDeleteAllTablesDialogOpen] =
     useState(false);
+  const [isDeleteAllGuestsOpen, setIsDeleteAllGuestsOpen] = useState(false);
   const { data: session } = useSession();
   // check-in only account: hide everything that deletes or changes tables
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "staff";
@@ -1450,6 +1451,16 @@ const handleTableClick = () => {
     }
   };
 
+  const handleDeleteAllGuests = async () => {
+    const toastId = toast.loading("Deleting all guests...");
+    const r = await fetch("/api/delete-all-guests", { method: "DELETE" }).then((x) => x.json()).catch(() => null);
+    setIsDeleteAllGuestsOpen(false);
+    if (r?.success) {
+      toast.success(`${r.count} guest${r.count === 1 ? "" : "s"} deleted. Tables are still here. Now import your list again.`, { id: toastId });
+      setTimeout(() => window.location.reload(), 1200);
+    } else toast.error(r?.message ?? "Could not delete the guests", { id: toastId });
+  };
+
   const handleDeleteAllTables = async () => {
     try {
       const toastId = toast.loading("Deleting all tables...");
@@ -1657,6 +1668,15 @@ const handleTableClick = () => {
                               <UndoItem />
                               {prow(GraduationCap, "Practice with sample guests", "A pretend event to learn. Delete it after.", startPractice)}
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllGuestsOpen(true)}>
+                                <span className="flex items-start gap-2.5">
+                                  <Trash className="mt-0.5 h-4 w-4 shrink-0" />
+                                  <span>
+                                    <span className="block font-semibold">Delete all guests</span>
+                                    <span className="block text-xs text-red-500">Start the guest list over (tables stay). You can undo it.</span>
+                                  </span>
+                                </span>
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => setIsDeleteAllTablesDialogOpen(true)}>
                                 <span className="flex items-start gap-2.5">
                                   <Trash className="mt-0.5 h-4 w-4 shrink-0" />
@@ -2358,6 +2378,16 @@ const handleTableClick = () => {
         action="delete all bookings"
         confirmText="Delete All Bookings"
         confirmTextDisplay="Delete All Bookings"
+      />
+
+      {/* Delete All Guests Dialog */}
+      <PasswordVerificationDialog
+        open={isDeleteAllGuestsOpen}
+        onOpenChange={setIsDeleteAllGuestsOpen}
+        onVerified={handleDeleteAllGuests}
+        action="delete all guests"
+        confirmText="Delete All Guests"
+        confirmTextDisplay="Delete All Guests"
       />
 
       {/* Delete All Tables Dialog */}
