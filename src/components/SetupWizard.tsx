@@ -327,17 +327,17 @@ export function SetupWizard({
             onClick={() =>
               onPlan(
                 "number-tables",
-                "Click each table on your floor plan and type its number. When all your tables are on, click Done drawing, then Next.",
+                "Click inside each table on your plan: it fills in and its number is copied. No number on it? Type one. When all your tables are on, click Done drawing, then Next.",
               )
             }
           >
             <Hash className="h-9 w-9 shrink-0 text-lime-600" />
             <span>
               <b className="block text-lg">
-                I&apos;ll click each table and type its number
+                I&apos;ll click each table myself
               </b>
               <span className="text-zinc-600">
-                You choose every number. Best when the plan has no numbers.
+                The number on the plan is copied. No number? You type it.
               </span>
             </span>
           </button>

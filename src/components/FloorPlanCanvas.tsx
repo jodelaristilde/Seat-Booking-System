@@ -1178,8 +1178,8 @@ export function FloorPlanCanvas({
     }
   };
 
-  // The number for a new table: the one read from the plan, or the next free
-  // one; when "Ask me the number" is on, the person types it (cancel = no table)
+  // A table whose number could not be read from the plan: the next free
+  // number, or, when "Ask me…" is on, the person types it (cancel = no table)
   const confirmName = (suggested: string): string | null => {
     if (!askNumber) return suggested;
     const v = window.prompt("Number or name for this table:", suggested.replace(/^table\s*/i, ""));
@@ -1317,11 +1317,7 @@ export function FloorPlanCanvas({
         // read (or that number is already used) ask for it
         let name = num?.name ?? "";
         const taken = (n: string) => tables.some((t) => tableNameOf(t).trim().toLowerCase() === n.toLowerCase());
-        if (askNumber) {
-          const chosen = confirmName(name || `Table ${nextFreeNumber(tables.map(tableNameOf))}`);
-          if (!chosen) return;
-          name = chosen;
-        } else if (!name || taken(name)) {
+        if (!name || taken(name)) {
           const typed = window.prompt(
             name ? `${name} is already on the plan. Number or name for this table:` : "Couldn't read the number here. Number or name for this table:",
             name ? "" : String(nextFreeNumber(tables.map(tableNameOf)))
@@ -1360,11 +1356,11 @@ export function FloorPlanCanvas({
         name = "";
       }
       if (!name || taken.has(name.toLowerCase())) {
-        name = `Table ${nextFreeNumber(tables.map(tableNameOf))}`;
+        // no number printed in this table (or already used): ask, when asking is on
+        const chosen = confirmName(`Table ${nextFreeNumber(tables.map(tableNameOf))}`);
+        if (!chosen) return;
+        name = chosen;
       }
-      const chosen = confirmName(name);
-      if (!chosen) return;
-      name = chosen;
       // every new table gets the preset number of seats (Seats per table)
       const seats = drawSeats;
       const res = await fetch("/api/floor-plan-apply", {
@@ -2173,7 +2169,7 @@ export function FloorPlanCanvas({
             </Button>
             <label className="ml-1 flex cursor-pointer items-center gap-1.5 rounded-md border border-lime-400 bg-lime-50 px-2 py-1 text-sm font-semibold text-lime-900">
               <input type="checkbox" checked={askNumber} onChange={(e) => setAskNumber(e.target.checked)} className="h-4 w-4" />
-              Ask me each table&apos;s number
+              Ask me the number when the plan has none
             </label>
             <span className="text-sm text-zinc-600 ml-1">1. Shape:</span>
             {SHAPES.map((s) => (
