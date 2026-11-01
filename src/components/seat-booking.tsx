@@ -1961,7 +1961,7 @@ const handleTableClick = () => {
         <motion.div
           layout
           className={`w-full ${
-            isFullScreen ? (viewMode === "plan" ? "xl:flex-1 xl:min-w-0" : "") : "lg:w-full xl:w-3/4"
+            isFullScreen ? (viewMode === "plan" ? "lg:flex-1 lg:min-w-0" : "") : "lg:w-[70%] xl:w-3/4"
           } page-bg bg-zinc-50 overflow-hidden`}
           transition={{ duration: 0.5 }}
         >
@@ -2112,7 +2112,7 @@ const handleTableClick = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
               transition={{ duration: 0.3 }}
-              className={`hidden xl:block ${isFullScreen ? "w-fit min-w-[13rem] max-w-xs shrink-0" : "w-1/4 xl:rounded-xl xl:border xl:border-zinc-200 xl:mr-2 xl:shadow-sm"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
+              className={`hidden lg:block ${isFullScreen ? "w-fit min-w-[13rem] max-w-xs shrink-0" : "lg:w-[30%] xl:w-1/4 lg:rounded-xl lg:border lg:border-zinc-200 lg:mr-2 lg:shadow-sm"} bg-white overflow-hidden my-2 lg:my-0 lg:ml-2`}
             >
               <BookingSidebar
                 bookedSeats={bookedSeats}
@@ -2132,7 +2132,7 @@ const handleTableClick = () => {
       </div>
 
       {!isFullScreen && (
-        <div className="xl:hidden">
+        <div className="lg:hidden">
           <BookingSidebar
             bookedSeats={bookedSeats}
             onDeleteBooking={handleDeleteBooking}

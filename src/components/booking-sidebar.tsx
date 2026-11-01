@@ -53,7 +53,7 @@ export function BookingSidebar({
     seat: "",
   });
   const [isExporting, setIsExporting] = useState(false);
-  const isTablet = useMediaQuery("(min-width: 200px) and (max-width: 1279px)");
+  const isTablet = useMediaQuery("(min-width: 200px) and (max-width: 1023px)");
 
   // Delete booking dialog states
   const [isDeleteBookingDialogOpen, setIsDeleteBookingDialogOpen] =
@@ -602,15 +602,12 @@ export function BookingSidebar({
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button
-            variant="outline"
             size="sm"
-            className="fixed right-0 top-1/2 -translate-y-1/2 z-50"
+            className="fixed right-0 top-1/2 z-50 h-auto -translate-y-1/2 flex-col gap-1 rounded-l-xl rounded-r-none bg-lime-600 px-2 py-3 text-white shadow-lg hover:bg-lime-700"
+            aria-label="Guest names"
           >
-            {isOpen ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+            {isOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            <span className="text-xs font-bold [writing-mode:vertical-rl]">Guest names</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
