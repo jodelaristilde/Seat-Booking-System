@@ -1121,7 +1121,7 @@ export default function SeatScanning() {
       {isFloorMapOpen && (
         <MapViewer
           src={floorMapImage?.data ?? null}
-          title={way ? way.table.name : t.floorPlan}
+          title={way ? "" : t.floorPlan}
           hint={way ? (way.entrances.length ? t.followLine : t.circled) : ""}
           onClose={() => {
             setIsFloorMapOpen(false);
@@ -1185,6 +1185,8 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         @keyframes wayFlash { 0%,45% { background: rgba(239,68,68,.75); border-color: #dc2626 } 50%,95% { background: rgba(250,204,21,.6); border-color: #facc15 } 100% { background: rgba(239,68,68,.75) } }
         .way-flash { animation: wayFlash .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
         @keyframes wayBounce { 0%,100% { transform: translate(-50%, 0) } 50% { transform: translate(-50%, -14px) } }
+        @keyframes wayNum { 0%,45% { opacity: 1 } 50%,95% { opacity: .25 } 100% { opacity: 1 } }
+        .way-num { animation: wayNum .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
         .way-bounce { animation: wayBounce .7s ease-in-out infinite }
       `}</style>
       {door && <WayLine door={door} table={t} halfW={ringW / 2} />}
@@ -1203,6 +1205,10 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           className={`way-flash absolute inset-0 border-[5px] shadow-[0_0_0_4px_white] ${round ? "rounded-full" : "rounded-lg"}`}
           aria-label={`${yourTable} ${t.name}`}
         />
+        {/* just the number, flashing with the table ("Table 4" -> "4") */}
+        <span className="way-num absolute inset-0 flex items-center justify-center text-[clamp(1.25rem,5vw,2.5rem)] font-black leading-none text-white [text-shadow:0_0_4px_#000,0_0_2px_#000]">
+          {t.name.match(/\d+/)?.[0] ?? t.name}
+        </span>
         {/* the arrow comes from above, or from below when the table is at the top of the room */}
         <div className={`way-bounce absolute left-1/2 text-red-600 drop-shadow-[0_0_4px_white] ${t.y < 20 ? "top-full" : "bottom-full"}`}>
           {t.y < 20 ? <ArrowUp className="h-12 w-12" strokeWidth={4} /> : <ArrowDown className="h-12 w-12" strokeWidth={4} />}
