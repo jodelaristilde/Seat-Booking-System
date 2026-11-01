@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, HelpCircle, QrCode, Search, MapPin, Mic, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1182,9 +1182,13 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         .way-ring { animation: wayRing 1.2s ease-in-out infinite }
         @keyframes wayPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 50% { transform: translate(-50%,-50%) scale(1.25); opacity: .6 } }
         .way-pulse { animation: wayPulse 1.2s ease-in-out infinite }
+        @keyframes wayFlash { 0%,45% { background: rgba(239,68,68,.75); border-color: #dc2626 } 50%,95% { background: rgba(250,204,21,.6); border-color: #facc15 } 100% { background: rgba(239,68,68,.75) } }
+        .way-flash { animation: wayFlash .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
+        @keyframes wayBounce { 0%,100% { transform: translate(-50%, 0) } 50% { transform: translate(-50%, -14px) } }
+        .way-bounce { animation: wayBounce .7s ease-in-out infinite }
       `}</style>
       {door && <WayLine door={door} table={t} halfW={ringW / 2} />}
-      {/* the guest's table: a pulsing ring with a label above it */}
+      {/* the guest's table: it flashes, with a big arrow pointing at it (no label) */}
       <div
         className="absolute"
         style={{
@@ -1196,10 +1200,12 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         }}
       >
         <div
-          className={`way-ring absolute inset-0 border-[5px] border-red-500 bg-red-500/15 shadow-[0_0_0_4px_white] ${round ? "rounded-full" : "rounded-lg"}`}
+          className={`way-flash absolute inset-0 border-[5px] shadow-[0_0_0_4px_white] ${round ? "rounded-full" : "rounded-lg"}`}
+          aria-label={`${yourTable} ${t.name}`}
         />
-        <div className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white shadow-lg">
-          {yourTable} · {t.name}
+        {/* the arrow comes from above, or from below when the table is at the top of the room */}
+        <div className={`way-bounce absolute left-1/2 text-red-600 drop-shadow-[0_0_4px_white] ${t.y < 20 ? "top-full" : "bottom-full"}`}>
+          {t.y < 20 ? <ArrowUp className="h-12 w-12" strokeWidth={4} /> : <ArrowDown className="h-12 w-12" strokeWidth={4} />}
         </div>
       </div>
       {/* the door: you are here */}
