@@ -21,7 +21,6 @@ import {
   Armchair,
   Undo2,
   Type,
-  ArrowRight,
   Circle,
   Square,
   RectangleHorizontal,
@@ -58,7 +57,6 @@ import {
 } from "@/lib/detectTables";
 import { stampNames } from "@/lib/stampNames";
 import { onSetup, openSetup } from "@/lib/setupEvents";
-import { entryAngle } from "@/lib/entryArrow";
 
 type Pos = { x: number; y: number };
 
@@ -2470,21 +2468,14 @@ export function FloorPlanCanvas({
           <DoorOpen className="h-4 w-4" />
           <span className="flex-1">
             Click the <b>door</b> where guests come in (up to <b>2 entrances</b>). Click a pin to pick it, then click somewhere
-            else to move it. The green arrow shows the way in: <b>Turn arrow</b> changes it. Guests&apos; phones draw the line from
-            whichever entrance is the shortest walk to their table, around the tables.
+            else to move it. Guests&apos; phones draw the line from whichever entrance is the shortest walk to their table, around
+            the tables.
           </span>
           {entrances.length > 0 && (() => {
             const i = Math.min(selEnt, entrances.length - 1);
             const which = entrances.length > 1 ? ` ${i + 1}` : "";
             return (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)))}
-                  className="bg-green-600 text-white hover:bg-green-700"
-                >
-                  ↻ Turn arrow{which}
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -2923,23 +2914,14 @@ export function FloorPlanCanvas({
                   className={`entrance-pin absolute left-0 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-green-600 px-2 py-1 text-xs font-bold text-white shadow-lg hover:bg-green-700 ${
                     entrances.length > 1 && i === Math.min(selEnt, entrances.length - 1) ? "ring-4 ring-amber-400" : "ring-4 ring-green-200"
                   }`}
-                  title="Click to pick this entrance; click again to turn its arrow"
+                  title="Click to pick this entrance (then click the plan to move it)"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // first click picks it; clicking the picked one turns its arrow a quarter turn
-                    if (entrances.length > 1 && i !== Math.min(selEnt, entrances.length - 1)) return setSelEnt(i);
-                    saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)));
+                    setSelEnt(i);
                   }}
                 >
                   <DoorOpen className="h-3.5 w-3.5" /> Entrance{entrances.length > 1 ? ` ${i + 1}` : ""}
                 </button>
-                {/* which way guests walk in */}
-                <span
-                  className="pointer-events-none absolute left-0 top-0 text-green-600 drop-shadow-[0_0_2px_white]"
-                  style={{ transform: `rotate(${entryAngle(pt)}deg) translate(46px, 0) translate(-50%, -50%)`, transformOrigin: "0 0" }}
-                >
-                  <ArrowRight className="h-8 w-8" strokeWidth={3.5} />
-                </span>
               </div>
             ))}
           </div>
