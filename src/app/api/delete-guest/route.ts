@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { activeEventId } from "@/lib/event"
 import { NextResponse } from "next/server"
 
 export async function DELETE(req: Request) {
@@ -15,6 +16,10 @@ export async function DELETE(req: Request) {
       include: { seat: true },
     })
 
+    // only a guest of the event you have open
+    if (guest && guest.eventId !== (await activeEventId())) {
+      return NextResponse.json({ success: false, message: "Guest not found" }, { status: 404 })
+    }
     if (!guest) {
       return NextResponse.json({ success: false, message: "Guest not found" }, { status: 404 })
     }

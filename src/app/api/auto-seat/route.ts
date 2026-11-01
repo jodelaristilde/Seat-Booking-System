@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 import { activeEventId } from "@/lib/event";
 import { saveSnapshot } from "@/lib/snapshot";

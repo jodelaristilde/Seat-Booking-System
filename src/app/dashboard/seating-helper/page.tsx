@@ -163,6 +163,29 @@ export default function SeatingHelper() {
       load();
     } else toast.error(r?.message ?? "Could not delete");
   };
+  const [cleaning, setCleaning] = useState(false);
+  const deleteAllCopies = async () => {
+    const n = dupGroups.reduce((k, l) => k + l.length - 1, 0);
+    if (!window.confirm(`Delete ${n} extra cop${n === 1 ? "y" : "ies"}? One of each name stays (the one with a seat). You can undo it.`)) return;
+    setCleaning(true);
+    const r = await fetch("/api/delete-copies", { method: "POST" }).then((x) => x.json()).catch(() => null);
+    setCleaning(false);
+    if (r?.success) {
+      toast.success(`${r.count} extra cop${r.count === 1 ? "y" : "ies"} deleted`, {
+        duration: 15000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await fetch("/api/snapshot", { method: "PUT" }).catch(() => null);
+            setPreview(null);
+            load();
+          },
+        },
+      });
+      setPreview(null);
+      load();
+    } else toast.error(r?.message ?? "Could not delete the copies");
+  };
   const tableOf = useCallback((id: string) => guestById.get(id)?.seat[0]?.table.id ?? null, [guestById]);
   const tableName = useMemo(() => new Map(seats.map((s) => [s.table.id, s.table.name])), [seats]);
   const sorted = useMemo(
@@ -317,8 +340,20 @@ export default function SeatingHelper() {
             <h2 className="mb-1 font-bold text-red-800">
               {dupGroups.length} name{dupGroups.length === 1 ? " is" : "s are"} on the guest list more than once
             </h2>
-            <p className="mb-2 text-sm text-red-900">Delete the extra copy before seating, so nobody gets two seats.</p>
-            <ul className="space-y-2">
+            <p className="mb-3 text-sm text-red-900">
+              Your list was probably imported twice. Delete the extra copies first, so nobody gets two seats.
+            </p>
+            <button
+              onClick={deleteAllCopies}
+              disabled={cleaning}
+              className="mb-2 inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-base font-bold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {cleaning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete the {dupGroups.reduce((k, l) => k + l.length - 1, 0)} extra copies
+            </button>
+            <details>
+              <summary className="cursor-pointer text-sm text-red-800 underline">See the names</summary>
+            <ul className="mt-2 space-y-2">
               {dupGroups.map((l) => (
                 <li key={l[0].id} className="rounded-lg bg-white p-2">
                   <b className="text-sm">{nm(l[0])}</b>
@@ -339,6 +374,7 @@ export default function SeatingHelper() {
                 </li>
               ))}
             </ul>
+            </details>
           </div>
         )}
 
