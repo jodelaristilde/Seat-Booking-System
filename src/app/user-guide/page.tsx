@@ -319,7 +319,7 @@ export default function UserGuide() {
             <Steps
               items={[
                 "<b>Move tables</b>: drag a table to its spot. Drag the blue dot at its corner to make it bigger or smaller. The <b>Shape</b> button switches round / square / rectangle. Then click <b>Save layout</b>.",
-                "<b>Set entrance</b>: click it, then click the door(s) on the floor plan. On their phone, guests see a green line from the door to their table.",
+                "<b>Set entrance</b>: click it, then click the door(s) on the floor plan (up to 2). On their phone, guests see a green line from the closest door to their table, going around the tables.",
                 "<b>Rename a table or add a note</b>: point at the table and click the ⚙️ gear.",
                 "<b>Delete one table</b>: point at it and click the 🗑️ bin.",
                 "<b>New venue?</b> Click <b>New → Delete All Tables</b>, upload the new floor plan, and draw again. Your guests stay in your list.",
@@ -437,7 +437,8 @@ export default function UserGuide() {
               items={[
                 "Print the Seating4U QR code and place it at the entrance. It opens <b>www.seating4u.com/seat-scanning</b>.",
                 "The guest types their name, taps it, then taps <b>Arrived</b>. Their table is shown.",
-                { text: "They are asked <b>“Arrived with more guests?”</b>. <b>Yes</b>: they search and tick each person with them, then tap <b>Done</b> to see everyone’s table. <b>No</b>: they just see their own table.", tip: "Works on any phone, no app or login needed." },
+                { text: "They are asked <b>“Arrived with more guests?”</b>. <b>Yes</b>: they search and tick each person with them, then tap <b>Done</b> to see everyone’s table. <b>No</b>: they see <b>You are on Table 1</b>.", tip: "Works on any phone, no app or login needed." },
+                "<b>Show me my table</b>: their table flashes with its number, and a green line goes <b>around the other tables</b> from the closest entrance (you can set up to 2). <b>OK</b> goes back to their table number; <b>Done</b> clears the screen for the next guest.",
               ]}
             />
           </Card>
