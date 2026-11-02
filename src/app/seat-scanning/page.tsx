@@ -83,6 +83,7 @@ export default function SeatScanning() {
   type Arrived = { seatId: string; name: string; table: string };
   const [askMore, setAskMore] = useState(false);
   const [tablePop, setTablePop] = useState(false); // "Your table" pop-up after arriving
+  const [mapFrom, setMapFrom] = useState<"table" | "group" | null>(null); // OK on the map goes back there
   const [groupMode, setGroupMode] = useState<null | "adding" | "done">(null);
   const [group, setGroup] = useState<Arrived[]>([]);
   const [groupQuery, setGroupQuery] = useState("");
@@ -994,7 +995,7 @@ export default function SeatScanning() {
               <button
                 type="button"
                 onClick={() => {
-                  setTablePop(false);
+                  setMapFrom("table");
                   fetchFloorMap();
                 }}
                 disabled={loadingFloorMap}
@@ -1033,7 +1034,7 @@ export default function SeatScanning() {
               <button
                 type="button"
                 onClick={() => {
-                  setGroupMode(null);
+                  setMapFrom("group");
                   fetchFloorMap();
                 }}
                 disabled={loadingFloorMap}
@@ -1125,7 +1126,11 @@ export default function SeatScanning() {
           hint={way ? (way.entrances.length ? t.followLine : t.circled) : ""}
           onClose={() => {
             setIsFloorMapOpen(false);
-            if (seatIsReceived) startOver();
+            const from = mapFrom;
+            setMapFrom(null);
+            // OK: back to "You are on Table 1" (or the group's list); Done there starts over
+            // (that card stayed under the map)
+            if (!from && seatIsReceived) startOver();
           }}
         >
           {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
@@ -1415,10 +1420,10 @@ function MapViewer({
           <button
             type="button"
             onClick={close}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-white text-2xl leading-none shadow"
-            aria-label="Close"
+            className="h-12 shrink-0 rounded-xl bg-green-600 px-7 text-2xl font-extrabold text-white shadow hover:bg-green-700"
+            aria-label="OK"
           >
-            ×
+            OK
           </button>
         </div>
         {/* the map, as big as it fits */}
