@@ -103,16 +103,23 @@ export default function UserGuide() {
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm">
             <video
               className="block aspect-video w-full"
-              src="/videos/seating4u-how-to-use-2026-10-31.mp4"
-              poster="/videos/seating4u-how-to-use-2026-10-31.jpg"
+              src="/videos/seating4u-how-to-use-2026-11-02.mp4"
+              poster="/videos/seating4u-how-to-use-2026-11-02.jpg"
               controls
               preload="metadata"
               playsInline
             >
               Your browser can&apos;t play this video.{" "}
-              <a href="/videos/seating4u-how-to-use-2026-10-31.mp4">Download it here</a>.
+              <a href="/videos/seating4u-how-to-use-2026-11-02.mp4" download="Seating4U-how-to-use.mp4">Download it here</a>.
             </video>
           </div>
+          <a
+            href="/videos/seating4u-how-to-use-2026-11-02.mp4"
+            download="Seating4U-how-to-use.mp4"
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-50"
+          >
+            ⬇ Download the video (MP4)
+          </a>
         </section>
 
         {/* What's new: the latest features, short */}
