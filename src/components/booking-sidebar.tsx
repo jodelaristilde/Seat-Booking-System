@@ -178,11 +178,30 @@ export function BookingSidebar({
   // The same name on the list more than once (same first + last name,
   // ignoring capitals and accents): shown in light red until one is removed
   const dupKey = (seat: Seat) => fold(`${seat.user?.firstname ?? ""} ${seat.user?.lastname ?? ""}`).replace(/\s+/g, " ").trim();
-  const dupes = useMemo(() => {
+  // counted over everyone: seated guests and those with no seat yet
+  const dupCount = useMemo(() => {
     const n = new Map<string, number>();
     for (const s of bookedSeats) if (s.user) n.set(dupKey(s), (n.get(dupKey(s)) ?? 0) + 1);
-    return new Set([...n].filter(([k, c]) => k && c > 1).map(([k]) => k));
-  }, [bookedSeats]);
+    for (const g of unseated) {
+      const k = fold(g.name).replace(/\s+/g, " ").trim();
+      n.set(k, (n.get(k) ?? 0) + 1);
+    }
+    return new Map([...n].filter(([k, c]) => k && c > 1));
+  }, [bookedSeats, unseated]);
+  const dupes = useMemo(() => new Set(dupCount.keys()), [dupCount]);
+  const extraCopies = [...dupCount.values()].reduce((a, c) => a + c - 1, 0);
+  const [cleaning, setCleaning] = useState(false);
+  // Delete every extra copy at once (one of each name stays: the one with a seat)
+  const deleteAllCopies = async () => {
+    if (!window.confirm(`Delete all ${extraCopies} extra cop${extraCopies === 1 ? "y" : "ies"} at once? One of each name stays (the one with a seat, or who already arrived). You can undo it.`)) return;
+    setCleaning(true);
+    const r = await fetch("/api/delete-copies", { method: "POST" }).then((x) => x.json()).catch(() => null);
+    setCleaning(false);
+    if (r?.success) {
+      toast.success(`${r.count} extra cop${r.count === 1 ? "y" : "ies"} deleted`);
+      setTimeout(() => window.location.reload(), 900);
+    } else toast.error(r?.message ?? "Could not delete the copies");
+  };
   const [onlyDupes, setOnlyDupes] = useState(false);
   const [overTrash, setOverTrash] = useState(false);
   const [guestToDelete, setGuestToDelete] = useState<string | null>(null);
@@ -295,11 +314,24 @@ export function BookingSidebar({
             <div className="keep-ink flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-2 py-1.5 text-xs text-red-900">
               <span className="flex-1">
                 <b>{dupes.size} name{dupes.size === 1 ? " is" : "s are"} on the list more than once</b> (light red).{" "}
-                {readOnly ? "Ask the guest which table is theirs before checking them in." : "Drag the extra one onto the red bin to delete it."}
+                {readOnly ? "Ask the guest which table is theirs before checking them in." : "Drag one onto the red bin, or delete all the extra copies at once."}
               </span>
-              <button type="button" onClick={() => setOnlyDupes((v) => !v)} className="shrink-0 rounded border border-red-400 bg-white px-2 py-0.5 font-semibold hover:bg-red-50">
-                {showOnlyDupes ? "Show all" : "Show them"}
-              </button>
+              <span className="flex shrink-0 flex-col gap-1">
+                <button type="button" onClick={() => setOnlyDupes((v) => !v)} className="rounded border border-red-400 bg-white px-2 py-0.5 font-semibold hover:bg-red-50">
+                  {showOnlyDupes ? "Show all" : "Show them"}
+                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={deleteAllCopies}
+                    disabled={cleaning}
+                    className="rounded bg-red-600 px-2 py-1 font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                    data-testid="delete-all-copies"
+                  >
+                    {cleaning ? "Deleting…" : `Delete all ${extraCopies} copies`}
+                  </button>
+                )}
+              </span>
             </div>
           )}
           <div className="flex gap-2">
