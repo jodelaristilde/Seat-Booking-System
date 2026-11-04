@@ -84,16 +84,25 @@ export async function generalQrEventIds(): Promise<Set<string>> {
     db.setting.findUnique({ where: { key: "activeEvent" } }),
   ]);
   const recent = Date.now() - 60 * 24 * 3600 * 1000;
-  return new Set(
-    (events as { id: string; date: string | null; createdAt: Date }[])
-      .filter(
-        (e) =>
-          !closed.has(e.id) &&
-          (forced.has(e.id) ||
-            (!isPast(e.date) &&
-              // a date, the main event, or an event made in the last 60 days
-              (parseDate(e.date) || e.id === main?.value || new Date(e.createdAt).getTime() > recent)))
-      )
-      .map((e) => e.id)
+  const list = (events as { id: string; date: string | null; createdAt: Date }[]).filter(
+    (e) =>
+      !closed.has(e.id) &&
+      (forced.has(e.id) ||
+        (!isPast(e.date) &&
+          // a date, the main event, or an event made in the last 60 days
+          (parseDate(e.date) || e.id === main?.value || new Date(e.createdAt).getTime() > recent)))
   );
+  // On the day of an event (from the day before to the day after), the general
+  // QR code only searches the events dated then: an old practice event or a
+  // copy of the list in another event can never show a guest the wrong table.
+  const today = eventDayIds(list);
+  return new Set((today.length ? today : list).map((e) => e.id));
+}
+
+// the events dated yesterday, today or tomorrow (any time zone)
+function eventDayIds<T extends { date: string | null }>(list: T[], now = Date.now()): T[] {
+  return list.filter((e) => {
+    const d = parseDate(e.date);
+    return !!d && Math.abs(d.getTime() + 12 * 3600 * 1000 - now) <= 36 * 3600 * 1000;
+  });
 }

@@ -205,6 +205,8 @@ export function SetupWizard({
 
   const saveEvent = async () => {
     if (!name.trim()) return toast.error("Type the name of your event");
+    // the date matters: on the day, the banner's QR code finds the guests by it
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return toast.error("Pick the date of your event", { description: "On the day, guests' phones find your list by this date." });
     const r = await fetch("/api/events", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

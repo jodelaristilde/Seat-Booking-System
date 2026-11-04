@@ -108,6 +108,7 @@ export default function SeatScanning() {
       } catch (error) {
         console.error("Error searching guests:", error);
       }
+      if (!cancelled) setSearching(false);
     }, 250);
     return () => {
       cancelled = true;
@@ -210,13 +211,17 @@ export default function SeatScanning() {
       .catch(() => undefined)
       .finally(() => setIsLoading(false));
   }, []);
+  // looking the name up right now: say so, instead of "No matching names"
+  const [searching, setSearching] = useState(false);
   useEffect(() => {
     const q = searchValue.trim();
     if (q.length < 2) {
       setAllUsers([]);
+      setSearching(false);
       return;
     }
     let cancelled = false;
+    setSearching(true);
     const timer = setTimeout(async () => {
       try {
         const response = await fetch(`/api/find-guest?q=${encodeURIComponent(q)}${eventId ? `&event=${encodeURIComponent(eventId)}` : "&all=1"}`);
@@ -236,6 +241,29 @@ export default function SeatScanning() {
   }, [searchValue, eventId]);
 
   // Fetch floor map
+  // The map and the way to the table are loaded as soon as the guest has
+  // arrived, so "Show me my table" opens at once (slow phone data at venues)
+  const mapPre = useRef<{ key: string; p: Promise<[{ image?: FloorMapImage }, unknown]> } | null>(null);
+  const loadMapData = () => {
+    const ev = eventId || selectedUser?.eventId || "";
+    const seatId = searchResult?.seatId ?? "";
+    const key = `${ev}|${seatId}`;
+    if (mapPre.current?.key === key) return mapPre.current.p;
+    const p = Promise.all([
+      fetch(`/api/floor-map${ev ? `?event=${encodeURIComponent(ev)}` : ""}`).then((r) => r.json()),
+      seatId ? fetch(`/api/wayfind?seatId=${encodeURIComponent(seatId)}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
+    ]) as Promise<[{ image?: FloorMapImage }, unknown]>;
+    p.catch(() => {
+      if (mapPre.current?.key === key) mapPre.current = null; // try again next time
+    });
+    mapPre.current = { key, p };
+    return p;
+  };
+  useEffect(() => {
+    if (seatIsReceived && searchResult?.seatId) loadMapData().catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatIsReceived, searchResult?.seatId]);
+
   const fetchFloorMap = async () => {
     // Phones: open the map full screen so it's as big as it can be (upright)
     try {
@@ -247,21 +275,12 @@ export default function SeatScanning() {
     }
     setLoadingFloorMap(true);
     try {
-      const response = await fetch(
-        `/api/floor-map${eventId || selectedUser?.eventId ? `?event=${encodeURIComponent(eventId || selectedUser?.eventId || "")}` : ""}`
-      );
-      const data = await response.json();
-
+      const [data, wf] = await loadMapData();
       // where the guest's table is, and the doors (to draw the way)
       setWay(null);
-      if (searchResult?.seatId) {
-        try {
-          const w = await fetch(`/api/wayfind?seatId=${encodeURIComponent(searchResult.seatId)}`).then((r) => r.json());
-          if (w.success && w.table?.x != null && w.table?.y != null) setWay({ table: w.table, entrances: w.entrances ?? [], obstacles: w.obstacles ?? [] });
-        } catch {
-          /* the map still opens, just without the line */
-        }
-      }
+      const w = wf as { success?: boolean; table?: Way["table"]; entrances?: Way["entrances"]; obstacles?: Way["obstacles"] } | null;
+      if (w?.success && w.table?.x != null && w.table?.y != null)
+        setWay({ table: w.table, entrances: w.entrances ?? [], obstacles: w.obstacles ?? [] });
 
       if (data.image) {
         setFloorMapImage(data.image);
@@ -676,6 +695,8 @@ export default function SeatScanning() {
                                 </button>
                               ))}
                             </div>
+                          ) : searching ? (
+                            <div className="p-4 text-center text-base text-zinc-500">{t.searching}</div>
                           ) : (
                             <div
                               className={`p-4 text-center text-base ${
