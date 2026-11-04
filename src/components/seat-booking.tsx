@@ -175,6 +175,12 @@ const SeatBooking = () => {
       refreshSeats();
     }
   }, [refreshSeats]);
+  // the setup's "Seat everyone": show the new seats right away
+  useEffect(() => {
+    const h = () => refreshSeats();
+    window.addEventListener("seating4u:seats-changed", h);
+    return () => window.removeEventListener("seating4u:seats-changed", h);
+  }, [refreshSeats]);
   useEffect(() => {
     flushPending();
     const t = window.setInterval(flushPending, 8000);

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { toast } from "sonner";
+import { undoLastChange } from "@/components/UndoItem";
 import {
   ArrowLeft,
   ArrowRight,
@@ -80,6 +81,9 @@ export function SetupWizard({
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [top, setTop] = useState(0);
+  // "Yes, seat everyone for me": ask "Are you sure?" first, then seat right here
+  const [seatAsk, setSeatAsk] = useState(false);
+  const [seating, setSeating] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
   const evId = useRef<string | null>(null);
 
@@ -203,6 +207,31 @@ export function SetupWizard({
   if (!on || !p) return <div ref={anchor} />;
   const c = p.counts;
 
+  const seatsPerTable = p && p.counts.tables ? Math.max(1, Math.round((p.counts.seats ?? p.counts.tables * 10) / p.counts.tables)) : 10;
+  const seatEveryone = async () => {
+    if (!p) return;
+    setSeating(true);
+    const cc = p.counts;
+    const short = cc.freeSeats !== undefined && cc.unseated > cc.freeSeats;
+    const r = await fetch("/api/auto-seat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ families: true, apply: true, ...(short ? { addTables: { seats: seatsPerTable } } : {}) }),
+    })
+      .then((x) => x.json())
+      .catch(() => null);
+    setSeating(false);
+    setSeatAsk(false);
+    if (!r?.success) return toast.error(r?.message ?? "Could not seat the guests. Nothing was changed.");
+    toast.success(`${r.seated} guest${r.seated === 1 ? "" : "s"} seated`, {
+      description: r.addedTables?.length ? `${r.addedTables.length} table${r.addedTables.length === 1 ? "" : "s"} added.` : undefined,
+      duration: 15000,
+      action: { label: "Undo", onClick: () => undoLastChange() },
+    });
+    window.dispatchEvent(new Event("seating4u:seats-changed"));
+    await load();
+    if (!r.notSeated?.length) go(6);
+  };
   const saveEvent = async () => {
     if (!name.trim()) return toast.error("Type the name of your event");
     // the date matters: on the day, the banner's QR code finds the guests by it
@@ -451,17 +480,49 @@ export function SetupWizard({
               {c.unseated} guest{c.unseated === 1 ? "" : "s"} still without a
               table.
             </p>
-            <Link href="/dashboard/seating-helper?from=setup" className={big}>
-              <Sparkles className="h-9 w-9 shrink-0 text-lime-600" />
-              <span>
-                <b className="block text-lg">Yes, seat everyone for me</b>
-                <span className="text-zinc-600">
-                  One click. Families and parties stay together. You can still
-                  move anyone after.
+            {seatAsk ? (
+              <div className="rounded-2xl border-2 border-lime-500 bg-lime-50 p-5" data-testid="seat-sure">
+                <p className="text-xl font-extrabold text-zinc-900">Are you sure?</p>
+                <p className="mt-1 text-zinc-700">
+                  All {c.unseated} guest{c.unseated === 1 ? "" : "s"} get a table now. Families and parties stay together.
+                  Nobody already seated is moved. You can undo it.
+                </p>
+                {c.freeSeats !== undefined && c.unseated > c.freeSeats && (
+                  <p className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+                    Only {c.freeSeats} empty seat{c.freeSeats === 1 ? "" : "s"}: the missing tables are added for you
+                    ({seatsPerTable} seats each). Move them into place on the plan after.
+                  </p>
+                )}
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={seatEveryone}
+                    disabled={seating}
+                    className="h-14 rounded-xl bg-green-600 text-lg font-extrabold text-white hover:bg-green-700 disabled:opacity-60"
+                  >
+                    {seating ? "Seating…" : "Yes, seat everyone"}
+                  </button>
+                  <button
+                    onClick={() => setSeatAsk(false)}
+                    disabled={seating}
+                    className="h-14 rounded-xl border-2 bg-white text-lg font-bold text-zinc-800 hover:bg-zinc-50"
+                  >
+                    No, go back
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className={big} onClick={() => setSeatAsk(true)}>
+                <Sparkles className="h-9 w-9 shrink-0 text-lime-600" />
+                <span>
+                  <b className="block text-lg">Yes, seat everyone for me</b>
+                  <span className="text-zinc-600">
+                    One click. Families and parties stay together. You can still
+                    move anyone after.
+                  </span>
                 </span>
-              </span>
-            </Link>
-            <button
+              </button>
+            )}
+            {!seatAsk && <button
               className={big}
               onClick={() =>
                 onPlan(
@@ -479,7 +540,12 @@ export function SetupWizard({
                   Click a seat, pick the guest. You choose every seat.
                 </span>
               </span>
-            </button>
+            </button>}
+            {!seatAsk && (
+              <Link href="/dashboard/seating-helper?from=setup" className="block text-sm text-zinc-500 underline">
+                Need some guests kept apart or together? Set that first
+              </Link>
+            )}
           </>
         )}
       </div>
