@@ -237,8 +237,7 @@ export default function SeatScanning() {
 
   // Fetch floor map
   const fetchFloorMap = async () => {
-    // Phones: open the map full screen and turn it sideways so it's big.
-    // (Android allows locking to landscape; iPhone gets the map turned for it.)
+    // Phones: open the map full screen so it's as big as it can be (upright)
     try {
       if (window.matchMedia("(max-width: 900px)").matches && !document.fullscreenElement) {
         await document.documentElement.requestFullscreen?.();
@@ -1118,7 +1117,7 @@ export default function SeatScanning() {
         </div>
       )}
 
-      {/* Floor map: full screen, turned sideways on a phone held upright */}
+      {/* Floor map: full screen, the right way up */}
       {isFloorMapOpen && (
         <MapViewer
           src={floorMapImage?.data ?? null}
@@ -1345,9 +1344,8 @@ function WayLine({
   );
 }
 
-// Full-screen floor map for the guest's phone. A wide plan on a phone held
-// upright is shown turned sideways so it fills the screen (Android also locks
-// the screen to landscape); turn the phone and it reads normally.
+// Full-screen floor map for the guest's phone. The plan is always shown the
+// right way up (never turned sideways), as big as it fits, in the middle.
 function MapViewer({
   src,
   title,
@@ -1376,27 +1374,12 @@ function MapViewer({
       window.removeEventListener("orientationchange", on);
     };
   }, []);
-  // Android: lock to landscape while the map is open (only works full screen)
-  useEffect(() => {
-    if (ratio <= 1.1) return;
-    const o = (screen as Screen & { orientation?: { lock?: (x: string) => Promise<void>; unlock?: () => void } }).orientation;
-    o?.lock?.("landscape").catch(() => undefined);
-    return () => {
-      try {
-        o?.unlock?.();
-      } catch {
-        /* nothing to undo */
-      }
-    };
-  }, [ratio]);
   const close = () => {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => undefined);
     onClose();
   };
-  // turn the map when the phone is upright and the plan is wide
-  const turned = vh > vw && ratio > 1.1;
-  const boxW = turned ? vh : vw; // the space the map has, once turned
-  const boxH = turned ? vw : vh;
+  const boxW = vw;
+  const boxH = vh;
   const top = 64; // title bar
   const fitW = Math.min(boxW - 16, (boxH - top - 12) * ratio);
   const fitH = fitW / ratio;
@@ -1408,7 +1391,7 @@ function MapViewer({
         style={{
           width: boxW,
           height: boxH,
-          transform: `translate(-50%, -50%)${turned ? " rotate(90deg)" : ""}`,
+          transform: "translate(-50%, -50%)",
         }}
       >
         {/* title + close */}
@@ -1428,7 +1411,7 @@ function MapViewer({
         </div>
         {/* the map, as big as it fits */}
         {src ? (
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: top + 6, width: fitW, height: fitH }}>
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: top + Math.max(6, (boxH - top - fitH) / 2), width: fitW, height: fitH }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
