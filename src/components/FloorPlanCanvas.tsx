@@ -2922,6 +2922,22 @@ export function FloorPlanCanvas({
                 >
                   <DoorOpen className="h-3.5 w-3.5" /> Entrance{entrances.length > 1 ? ` ${i + 1}` : ""}
                 </button>
+                {/* delete this entrance, right on the pin */}
+                <button
+                  type="button"
+                  className="absolute left-0 top-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-base font-bold leading-none text-white shadow-lg ring-2 ring-white hover:bg-red-700"
+                  style={{ transform: "translate(calc(-50% + 4.6rem), calc(-50% - 0.9rem))" }}
+                  title={`Delete entrance${entrances.length > 1 ? ` ${i + 1}` : ""}`}
+                  aria-label={`Delete entrance${entrances.length > 1 ? ` ${i + 1}` : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveEntrances(entrances.filter((_, j) => j !== i));
+                    setSelEnt(0);
+                    toast.success(`Entrance${entrances.length > 1 ? ` ${i + 1}` : ""} deleted`);
+                  }}
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
