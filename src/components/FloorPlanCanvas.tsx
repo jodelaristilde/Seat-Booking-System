@@ -1,5 +1,6 @@
 "use client";
 
+import { entryAngle } from "@/lib/entryArrow";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { matches as nameMatches } from "@/lib/fold";
@@ -15,6 +16,7 @@ import {
   ImageIcon,
   LayoutGrid,
   PenLine,
+  ArrowRight,
   PanelLeftClose,
   PanelRightOpen,
   Users,
@@ -2468,8 +2470,7 @@ export function FloorPlanCanvas({
           <DoorOpen className="h-4 w-4" />
           <span className="flex-1">
             Click the <b>door</b> where guests come in (up to <b>2 entrances</b>). Click a pin to pick it, then click somewhere
-            else to move it. Guests&apos; phones draw the line from whichever entrance is the shortest walk to their table, around
-            the tables.
+            else to move it. The <b>arrow</b> shows which way guests walk in: click it to turn it. The red × deletes an entrance.
           </span>
           {entrances.length > 0 && (() => {
             const i = Math.min(selEnt, entrances.length - 1);
@@ -2922,11 +2923,25 @@ export function FloorPlanCanvas({
                 >
                   <DoorOpen className="h-3.5 w-3.5" /> Entrance{entrances.length > 1 ? ` ${i + 1}` : ""}
                 </button>
+                {/* which way guests walk in: click the arrow to turn it */}
+                <button
+                  type="button"
+                  className="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-green-700 shadow-md ring-2 ring-green-500 hover:bg-green-50"
+                  style={{ transform: `rotate(${entryAngle(pt)}deg) translate(58px, 0) translate(-50%, -50%)`, transformOrigin: "0 0" }}
+                  title="The way guests walk in. Click to turn it."
+                  aria-label="Turn the entrance arrow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveEntrances(entrances.map((q, j) => (j === i ? { ...q, dir: (entryAngle(q) + 90) % 360 } : q)));
+                  }}
+                >
+                  <ArrowRight className="h-6 w-6" strokeWidth={3.5} />
+                </button>
                 {/* delete this entrance, right on the pin */}
                 <button
                   type="button"
                   className="absolute left-0 top-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-base font-bold leading-none text-white shadow-lg ring-2 ring-white hover:bg-red-700"
-                  style={{ transform: "translate(calc(-50% + 4.6rem), calc(-50% - 0.9rem))" }}
+                  style={{ transform: "translate(calc(-50% - 4.3rem), calc(-50% - 1rem))" }}
                   title={`Delete entrance${entrances.length > 1 ? ` ${i + 1}` : ""}`}
                   aria-label={`Delete entrance${entrances.length > 1 ? ` ${i + 1}` : ""}`}
                   onClick={(e) => {
