@@ -1375,7 +1375,7 @@ function WayLine({
     let raf = 0;
     const t0 = performance.now();
     const step = (now: number) => {
-      setWalk(((now - t0) / 4200) % 1);
+      setWalk(((now - t0) / 9000) % 1); // one walk from the door to the table: 9 seconds
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -1420,13 +1420,13 @@ function WayLine({
             <circle cx="15" cy="5" r="4.2" fill="#14532d" />
             <path d="M15 10 L15 22" stroke="#14532d" strokeWidth="6" strokeLinecap="round" />
             <path
-              d={Math.floor(walk * 24) % 2 ? "M12 12 L8 20 M18 12 L23 18" : "M12 12 L7 18 M18 12 L22 20"}
+              d={Math.floor(walk * 26) % 2 ? "M12 12 L8 20 M18 12 L23 18" : "M12 12 L7 18 M18 12 L22 20"}
               stroke="#14532d"
               strokeWidth="3.2"
               strokeLinecap="round"
             />
             <path
-              d={Math.floor(walk * 24) % 2 ? "M13 22 L11 35 M17 22 L19 31" : "M13 22 L11 31 M17 22 L19 35"}
+              d={Math.floor(walk * 26) % 2 ? "M13 22 L11 35 M17 22 L19 31" : "M13 22 L11 31 M17 22 L19 35"}
               stroke="#14532d"
               strokeWidth="3.8"
               strokeLinecap="round"
@@ -1437,13 +1437,13 @@ function WayLine({
           <circle cx="16" cy="5" r="4" fill="#14532d" />
           <path d="M15 10 L13 22" stroke="#14532d" strokeWidth="4.5" strokeLinecap="round" />
           <path
-            d={Math.floor(walk * 24) % 2 ? "M15 12 L21 17 M14 12 L9 18" : "M15 12 L9 16 M14 12 L20 18"}
+            d={Math.floor(walk * 26) % 2 ? "M15 12 L21 17 M14 12 L9 18" : "M15 12 L9 16 M14 12 L20 18"}
             stroke="#14532d"
             strokeWidth="3.2"
             strokeLinecap="round"
           />
           <path
-            d={Math.floor(walk * 24) % 2 ? "M13 22 L19 29 L20 36 M13 22 L9 30 L5 34" : "M13 22 L10 30 L8 36 M13 22 L18 29 L23 32"}
+            d={Math.floor(walk * 26) % 2 ? "M13 22 L19 29 L20 36 M13 22 L9 30 L5 34" : "M13 22 L10 30 L8 36 M13 22 L18 29 L23 32"}
             stroke="#14532d"
             strokeWidth="3.6"
             strokeLinecap="round"
