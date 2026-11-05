@@ -677,19 +677,31 @@ export function SetupWizard({
           <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-6 sm:py-10">
             {/* where you are */}
             <ol
-              className="mb-6 flex items-center justify-center gap-1.5"
-              aria-label="Setup steps"
+              className="mb-5 flex flex-wrap items-center justify-center gap-1.5"
+              aria-label="Setup steps: click one to go straight to it"
             >
-              {TITLES.map((t, i) => (
-                <li key={t}>
-                  <button
-                    onClick={() => go(i)}
-                    title={t}
-                    aria-current={i === step ? "step" : undefined}
-                    className={`block h-2.5 rounded-full transition-all ${i === step ? "w-8 bg-lime-600" : i < step ? "w-2.5 bg-lime-400" : "w-2.5 bg-zinc-300"}`}
-                  />
-                </li>
-              ))}
+              {TITLES.map((t, i) => {
+                // a tick on the steps already done, so you can jump to the one you need
+                const ok = [!!p.event.date, c.pictures > 0, c.tables > 0, c.entrances > 0, c.guests > 0, c.guests > 0 && !c.unseated, false][i];
+                return (
+                  <li key={t}>
+                    <button
+                      onClick={() => go(i)}
+                      aria-current={i === step ? "step" : undefined}
+                      className={`flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-semibold transition ${
+                        i === step
+                          ? "border-lime-600 bg-lime-600 text-white"
+                          : ok
+                          ? "border-lime-300 bg-white text-lime-800 hover:bg-lime-50"
+                          : "border-zinc-300 bg-white text-zinc-600 hover:bg-zinc-50"
+                      }`}
+                    >
+                      {ok && i !== step ? <Check className="h-3.5 w-3.5" /> : <span className="tabular-nums">{i + 1}</span>}
+                      {t}
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
             <div className="rounded-3xl bg-white p-6 shadow-xl sm:p-8">
               <p className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-lime-700">
