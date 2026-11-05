@@ -221,7 +221,21 @@ export function BookingSidebar({
   const searchRef = useRef<HTMLInputElement>(null);
   // Ticking a guest marks them arrived: their name pops out on the floor
   // plan and moves to the Arrived list on the left (and leaves this list)
-  const markArrived = (seat: Seat) => onToggleReceived(seat.id, true);
+  // After a guest is found and checked in, the search box empties itself
+  // (after a moment, so you see the ✓), ready for the next name
+  const clearTimer = useRef<number | null>(null);
+  const resetSearchSoon = () => {
+    if (!searchQueries.name.trim()) return;
+    if (clearTimer.current) window.clearTimeout(clearTimer.current);
+    clearTimer.current = window.setTimeout(() => {
+      setSearchQueries((p) => ({ ...p, name: "" }));
+      searchRef.current?.focus();
+    }, 1200);
+  };
+  const markArrived = (seat: Seat) => {
+    onToggleReceived(seat.id, true);
+    resetSearchSoon();
+  };
 
   // Memoized search input handlers
   const handleSearchChange =
@@ -541,7 +555,11 @@ export function BookingSidebar({
                               <button
                                 type="button"
                                 className="flex-1 rounded-md bg-green-600 px-2 py-1 text-sm font-semibold text-white hover:bg-green-700"
-                                onClick={() => (onCheckInNow ? onCheckInNow(seat.id) : onToggleReceived(seat.id, true))}
+                                onClick={() => {
+                                  if (onCheckInNow) onCheckInNow(seat.id);
+                                  else onToggleReceived(seat.id, true);
+                                  resetSearchSoon();
+                                }}
                               >
                                 Yes…
                               </button>
