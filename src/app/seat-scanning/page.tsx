@@ -1280,15 +1280,16 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           >
             <DoorOpen className="h-5 w-5" strokeWidth={2.5} />
           </div>
-          {/* kept inside the map (a door at the edge would cut it off), and it may wrap */}
+          {/* "You are / here" in a round badge, next to the door, kept inside the map */}
           <div
-            className="absolute max-w-[34%] -translate-x-1/2 rounded-2xl bg-green-600 px-3 py-1 text-center text-sm font-bold leading-tight text-white shadow-lg"
+            className="absolute flex h-[68px] w-[68px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-green-600 text-center font-extrabold leading-tight text-white shadow-lg ring-[3px] ring-white"
             style={{
-              left: `${Math.min(83, Math.max(17, door.x))}%`,
-              ...(door.y > 82 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(${door.y}% + 1.4rem)` }),
+              left: `min(max(36px, ${door.x}%), calc(100% - 36px))`,
+              ...(door.y > 75 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(min(max(20px, ${door.y}%), calc(100% - 20px)) + 1.5rem)` }),
             }}
           >
-            {youAreHere}
+            <span className="text-[13px]">{youAreHere.split(" ").slice(0, -1).join(" ") || youAreHere}</span>
+            {youAreHere.includes(" ") && <span className="text-[15px]">{youAreHere.split(" ").slice(-1)[0]}</span>}
           </div>
         </>
       )}
