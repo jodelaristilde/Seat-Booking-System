@@ -289,6 +289,12 @@ export function SetupWizard({
             className="h-12 w-full rounded-xl border-2 px-4 text-lg focus:border-lime-500 focus:outline-none"
           />
         </label>
+        {/^\d{4}-\d{2}-\d{2}$/.test(date) && new Date(date + "T23:59:59") < new Date(Date.now() - 24 * 3600 * 1000) && (
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <b>This date has passed.</b> You can still change everything. To make it live for guests again, pick the new
+            date, or keep this one and click <b>Reopen for guests</b> on the dashboard.
+          </p>
+        )}
       </div>
     );
     next = { label: "Next", fn: saveEvent };

@@ -26,6 +26,7 @@ export function EventSwitcher() {
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
+  const [renameDate, setRenameDate] = useState("");
   const [qrFor, setQrFor] = useState<Ev | null>(null);
   const qrLink = (e: Ev) => `${window.location.origin}/seat-scanning?event=${e.id}`;
   const downloadQr = (e: Ev) => {
@@ -135,8 +136,17 @@ export function EventSwitcher() {
   };
 
   // Switching or creating an event reloads the page so everything shows the new event
+  // (it opens on the step-by-step setup, so you can go over its floor plan,
+  // tables, entrance and guests again, even for an event that has passed)
   const openEvent = async (id: string) => {
-    if (await call("PUT", { id }, "Event opened")) window.location.reload();
+    if (await call("PUT", { id }, "Event opened")) {
+      try {
+        localStorage.removeItem(`seating4u-wizard:${id}`);
+      } catch {
+        /* private window */
+      }
+      window.location.reload();
+    }
   };
   const createEvent = async () => {
     if (!newName.trim()) return toast.error("Please give the event a name");
@@ -144,7 +154,7 @@ export function EventSwitcher() {
   };
   const rename = async (id: string) => {
     if (!renameText.trim()) return;
-    if (await call("PUT", { id, name: renameText }, "Renamed")) {
+    if (await call("PUT", { id, name: renameText, date: renameDate }, "Saved")) {
       setRenaming(null);
       load();
     }
@@ -198,13 +208,22 @@ export function EventSwitcher() {
                 >
                   <div className="min-w-0 flex-1">
                     {renaming === e.id ? (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         <input
                           autoFocus
                           value={renameText}
                           onChange={(x) => setRenameText(x.target.value)}
                           onKeyDown={(x) => x.key === "Enter" && rename(e.id)}
-                          className="w-full rounded border px-2 py-1 text-sm"
+                          className="min-w-0 flex-1 rounded border px-2 py-1 text-sm"
+                          aria-label="Event name"
+                        />
+                        <input
+                          type="date"
+                          value={renameDate}
+                          onChange={(x) => setRenameDate(x.target.value)}
+                          className="w-36 rounded border px-2 py-1 text-sm"
+                          aria-label="Event date"
+                          title="A new date (today or later) makes the event live again for guests"
                         />
                         <Button size="sm" onClick={() => rename(e.id)} disabled={busy}>
                           <Check className="h-4 w-4" />
@@ -261,15 +280,14 @@ export function EventSwitcher() {
                           <button
                             type="button"
                             onClick={() => toggleGuests(e.id, access[e.id].open)}
-                            disabled={access[e.id].past && !access[e.id].closed}
                             className={`mt-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
                               access[e.id].open
                                 ? "border-green-300 bg-green-50 text-green-800 hover:bg-green-100"
                                 : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                             }`}
                             title={
-                              access[e.id].past
-                                ? "This event's date has passed: guests can no longer look up seats"
+                              access[e.id].past && !access[e.id].open
+                                ? "The date has passed. Click to make it live again: guests can find their seat on their phone."
                                 : access[e.id].open
                                 ? "Guests can find their seat on their phone. Click to close."
                                 : "Guests can't look up seats. Click to reopen."
@@ -278,7 +296,7 @@ export function EventSwitcher() {
                             {access[e.id].open
                               ? "Guest check-in: Open"
                               : access[e.id].past
-                              ? "Guest check-in: Closed (date passed)"
+                              ? "Guest check-in: Closed (date passed) · Reopen"
                               : "Guest check-in: Closed"}
                           </button>
                         )}{" "}
@@ -298,10 +316,11 @@ export function EventSwitcher() {
                       <button
                         type="button"
                         className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-                        title="Rename"
+                        title="Change the name or date"
                         onClick={() => {
                           setRenaming(e.id);
                           setRenameText(e.name);
+                          setRenameDate(/^\d{4}-\d{2}-\d{2}$/.test(e.date ?? "") ? (e.date as string) : "");
                         }}
                       >
                         <Pencil className="h-4 w-4" />
