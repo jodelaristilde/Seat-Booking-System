@@ -1,3 +1,5 @@
+import { entryAngle } from "@/lib/entryArrow";
+
 // The walking way from a door to a table on the floor plan, going AROUND the
 // other tables (and the stage, bar...) instead of through them.
 // Everything is in % of the plan (x of its width, y of its height).
@@ -19,11 +21,19 @@ export function findWay(door: Pt, target: Box, obstacles: Box[], { aspect, cols 
   return null;
 }
 
-// The door whose way is the shortest, and that way
-export function bestWay(doors: Pt[], target: Box, obstacles: Box[], opts: Opts): { door: Pt; path: Pt[] } | null {
+// The door whose way is the shortest, and that way. The way first goes a few
+// steps the way the door's arrow points (into the room), then on to the table.
+export function bestWay(doors: (Pt & { dir?: number })[], target: Box, obstacles: Box[], opts: Opts): { door: Pt; path: Pt[] } | null {
   let best: { door: Pt; path: Pt[]; len: number } | null = null;
   for (const d of doors) {
-    const path = findWay(d, target, obstacles, opts);
+    const ang = (entryAngle(d) * Math.PI) / 180;
+    const L = 6; // % of the plan's width
+    const step = {
+      x: Math.min(99, Math.max(1, d.x + Math.cos(ang) * L)),
+      y: Math.min(99, Math.max(1, d.y + Math.sin(ang) * L * opts.aspect)),
+    };
+    const fromStep = findWay(step, target, obstacles, opts);
+    const path = fromStep ? [{ x: d.x, y: d.y }, ...fromStep] : findWay(d, target, obstacles, opts);
     if (!path) continue;
     const len = length(path, opts.aspect);
     if (!best || len < best.len) best = { door: d, path, len };
