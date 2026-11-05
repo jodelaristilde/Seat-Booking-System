@@ -445,7 +445,10 @@ export function BookingSidebar({
                             <button
                               type="button"
                               className="ml-auto text-[11px] text-green-800 underline hover:text-red-600"
-                              onClick={() => onToggleReceived(seat.id, false)}
+                              onClick={() => {
+                                onToggleReceived(seat.id, false);
+                                resetSearchSoon();
+                              }}
                               title="Marked by mistake? Put them back on the guest list"
                             >
                               undo
