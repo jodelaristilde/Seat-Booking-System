@@ -2887,6 +2887,19 @@ export function FloorPlanCanvas({
             </div>
           ))}
 
+        {/* The entrance(s), always marked on the plan (the desk sees where guests come in) */}
+        {!settingEntrance && entrances.map((pt, i) => (
+          <div
+            key={`door-${i}`}
+            className="pointer-events-none absolute z-40 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full bg-lime-300/60 text-green-900 shadow-sm ring-2 ring-white/80"
+            style={{ left: `min(max(22px, ${pt.x}%), calc(100% - 22px))`, top: `min(max(22px, ${pt.y}%), calc(100% - 22px))` }}
+            title="Entrance"
+          >
+            <DoorOpen className="h-4 w-4" strokeWidth={2.4} />
+            <span className="text-[9px] font-bold leading-none">Enter</span>
+          </div>
+        ))}
+
         {/* Entrance pins (shown while setting them); click the room to add one */}
         {settingEntrance && (
           <div

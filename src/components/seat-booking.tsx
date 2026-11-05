@@ -131,6 +131,7 @@ import { FloorMapUploader } from "./FloorMapUploader";
 import TableNotes from "./TableNotes";
 import { EventSwitcher } from "./EventSwitcher";
 import { FloorPlanCanvas } from "./FloorPlanCanvas";
+import { ShowWayDialog } from "./ShowWayDialog";
 
 const SeatBooking = () => {
   const {
@@ -1971,6 +1972,8 @@ const handleTableClick = () => {
       </AnimatePresence>
       <div ref={setupBarRef}>{!isFullScreen && isAdmin && !wizardOn && <SetupSteps />}</div>
       {!isStaff && <SetupWizard onActiveChange={setWizardOn} />}
+      {/* "Show the way" at the desk: the guest's map, with the walking person */}
+      <ShowWayDialog />
       {!isStaff && <ImportGuestsforWeb noButton />}
       {!isStaff && <LiveLinkDialog />}
       {isUser && <WelcomeDialog />}

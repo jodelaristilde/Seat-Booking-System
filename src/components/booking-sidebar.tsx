@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Seat } from "@/types/booking";
-import { ChevronLeft, ChevronRight, Download, Search, Trash2, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, MapPin, Search, Trash2, User } from "lucide-react";
+import { showWay } from "@/components/ShowWayDialog";
 import { Fragment, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -444,6 +445,14 @@ export function BookingSidebar({
                             </span>
                             <button
                               type="button"
+                              onClick={() => showWay(seat.id)}
+                              className="inline-flex items-center gap-0.5 rounded bg-green-600 px-1.5 py-0.5 text-[11px] font-semibold text-white hover:bg-green-700"
+                              title="Show the way to the table"
+                            >
+                              <MapPin className="h-3 w-3" /> Show the way
+                            </button>
+                            <button
+                              type="button"
                               className="ml-auto text-[11px] text-green-800 underline hover:text-red-600"
                               onClick={() => {
                                 onToggleReceived(seat.id, false);
@@ -528,6 +537,15 @@ export function BookingSidebar({
                       </td>
                       <td className="py-0.5 pr-2 align-middle text-xs text-gray-500 whitespace-nowrap">
                         {seat.table.name}
+                        <button
+                          type="button"
+                          onClick={() => showWay(seat.id)}
+                          className="ml-1 inline-flex items-center rounded p-0.5 align-middle text-green-700 hover:bg-green-50"
+                          title={`Show ${seat.user?.firstname ?? "the guest"} the way to ${seat.table.name}`}
+                          aria-label={`Show the way to ${seat.table.name}`}
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </button>
                       </td>
                       <td className="py-0.5 align-middle">
                         {!readOnly && <button

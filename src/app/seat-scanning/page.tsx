@@ -192,6 +192,16 @@ export default function SeatScanning() {
       })
       .catch(() => undefined);
   };
+  // ?show=<seatId>: opened from the dashboard ("Show the way") to show one
+  // guest's way to their table right away (nothing is checked in)
+  const [showOnly, setShowOnly] = useState<string | null>(null);
+  const showDone = useRef(false);
+  useEffect(() => {
+    const seatId = new URLSearchParams(window.location.search).get("show");
+    if (!seatId) return;
+    setShowOnly(seatId);
+    setSearchResult({ table: "", seat: 0, name: "", seatId });
+  }, []);
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("event");
     applyBrand(null); // the normal look until this event's look is known
@@ -263,6 +273,13 @@ export default function SeatScanning() {
     if (seatIsReceived && searchResult?.seatId) loadMapData().catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seatIsReceived, searchResult?.seatId]);
+
+  useEffect(() => {
+    if (!showOnly || showDone.current || searchResult?.seatId !== showOnly || !eventId) return;
+    showDone.current = true;
+    fetchFloorMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showOnly, searchResult?.seatId, eventId]);
 
   const fetchFloorMap = async () => {
     // Phones: open the map full screen so it's as big as it can be (upright)
@@ -1150,6 +1167,13 @@ export default function SeatScanning() {
             setMapFrom(null);
             // OK: back to "You are on Table 1" (or the group's list); Done there starts over
             // (that card stayed under the map)
+            if (showOnly) {
+              // shown from the dashboard: tell it, so its window closes
+              window.parent?.postMessage("seating4u:way-closed", "*");
+              setShowOnly(null);
+              setSearchResult(null);
+              return;
+            }
             if (!from && seatIsReceived) startOver();
           }}
         >
@@ -1233,7 +1257,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         .way-dash { animation: wayDash 0.9s linear infinite }
         @keyframes wayRing { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.2); opacity: .55 } }
         .way-ring { animation: wayRing 1.2s ease-in-out infinite }
-        @keyframes wayPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 50% { transform: translate(-50%,-50%) scale(1.25); opacity: .6 } }
+        @keyframes wayPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 50% { transform: translate(-50%,-50%) scale(1.08); opacity: .85 } }
         .way-pulse { animation: wayPulse 1.2s ease-in-out infinite }
         @keyframes wayFlash { 0%,45% { background: rgba(239,68,68,.75); border-color: #dc2626 } 50%,95% { background: rgba(250,204,21,.6); border-color: #facc15 } 100% { background: rgba(239,68,68,.75) } }
         .way-flash { animation: wayFlash .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
@@ -1272,24 +1296,14 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
       {/* the door: you are here */}
       {door && (
         <>
-          {/* the door symbol */}
+          {/* the door: one light, see-through lime circle with the door and "Enter"
+              in small letters under it, kept fully on the map even at its edge */}
           <div
-            className="way-pulse absolute flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white shadow-[0_0_0_4px_rgba(255,255,255,.9)]"
-            // kept fully on the map even when the door is right at its edge
-            style={{ left: `min(max(20px, ${door.x}%), calc(100% - 20px))`, top: `min(max(20px, ${door.y}%), calc(100% - 20px))` }}
+            className="way-pulse absolute flex h-[50px] w-[50px] flex-col items-center justify-center rounded-full bg-lime-300/60 text-green-900 shadow-sm ring-2 ring-white/80 backdrop-blur-[1px]"
+            style={{ left: `min(max(26px, ${door.x}%), calc(100% - 26px))`, top: `min(max(26px, ${door.y}%), calc(100% - 26px))` }}
           >
-            <DoorOpen className="h-5 w-5" strokeWidth={2.5} />
-          </div>
-          {/* "Enter" in a round badge, next to the door, kept inside the map */}
-          <div
-            className="absolute flex h-[58px] w-[58px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-lime-300/60 text-center font-bold leading-tight text-green-900 shadow-sm ring-2 ring-white/80 backdrop-blur-[1px]"
-            style={{
-              left: `min(max(36px, ${door.x}%), calc(100% - 36px))`,
-              ...(door.y > 75 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(min(max(20px, ${door.y}%), calc(100% - 20px)) + 1.5rem)` }),
-            }}
-          >
-            <span className={youAreHere.includes(" ") ? "text-[11px]" : "text-[15px]"}>{youAreHere.split(" ").slice(0, -1).join(" ") || youAreHere}</span>
-            {youAreHere.includes(" ") && <span className="text-[13px]">{youAreHere.split(" ").slice(-1)[0]}</span>}
+            <DoorOpen className="h-5 w-5" strokeWidth={2.4} />
+            <span className="mt-0.5 text-[10px] font-bold leading-none">{youAreHere}</span>
           </div>
         </>
       )}
