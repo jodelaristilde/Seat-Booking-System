@@ -1361,11 +1361,12 @@ function WayLine({
     for (const g of segs) {
       if (at <= g.len || g === segs[segs.length - 1]) {
         const f = g.len ? Math.min(1, at / g.len) : 0;
-        return { x: g.a[0] + g.dx * f, y: g.a[1] + g.dy * f, left: g.dx < 0 };
+        // up or down the screen: seen from the back (walking to the table) or the front
+        return { x: g.a[0] + g.dx * f, y: g.a[1] + g.dy * f, left: g.dx < 0, upDown: Math.abs(g.dy) > Math.abs(g.dx * aspect) };
       }
       at -= g.len;
     }
-    return { x: pts[0][0], y: pts[0][1], left: false };
+    return { x: pts[0][0], y: pts[0][1], left: false, upDown: false };
   };
   // a small person walking the way, from the door to the table, again and again
   const [walk, setWalk] = useState(0);
@@ -1406,13 +1407,32 @@ function WayLine({
         style={{
           left: `${walker.x}%`,
           top: `${walker.y}%`,
-          transform: `translate(-50%, -100%) scaleX(${walker.left ? -1 : 1})`,
+          transform: `translate(-50%, -100%) scaleX(${walker.left && !walker.upDown ? -1 : 1})`,
           zIndex: 2,
           opacity: walk > 0.92 ? (1 - walk) / 0.08 : walk < 0.05 ? walk / 0.05 : 1,
         }}
         aria-hidden="true"
       >
-        {/* a walking person (simple pictogram), legs swinging as it goes */}
+        {walker.upDown ? (
+          // walking up or down the plan: the person faces the way they go
+          // (from the back when walking up to the table), legs stepping in turn
+          <svg width="30" height="38" viewBox="0 0 30 38" style={{ filter: "drop-shadow(0 0 1.5px white) drop-shadow(0 0 1.5px white)" }}>
+            <circle cx="15" cy="5" r="4.2" fill="#14532d" />
+            <path d="M15 10 L15 22" stroke="#14532d" strokeWidth="6" strokeLinecap="round" />
+            <path
+              d={Math.floor(walk * 24) % 2 ? "M12 12 L8 20 M18 12 L23 18" : "M12 12 L7 18 M18 12 L22 20"}
+              stroke="#14532d"
+              strokeWidth="3.2"
+              strokeLinecap="round"
+            />
+            <path
+              d={Math.floor(walk * 24) % 2 ? "M13 22 L11 35 M17 22 L19 31" : "M13 22 L11 31 M17 22 L19 35"}
+              stroke="#14532d"
+              strokeWidth="3.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
         <svg width="30" height="38" viewBox="0 0 30 38" style={{ filter: "drop-shadow(0 0 1.5px white) drop-shadow(0 0 1.5px white)" }}>
           <circle cx="16" cy="5" r="4" fill="#14532d" />
           <path d="M15 10 L13 22" stroke="#14532d" strokeWidth="4.5" strokeLinecap="round" />
@@ -1431,6 +1451,7 @@ function WayLine({
             fill="none"
           />
         </svg>
+        )}
       </div>
     )}
     {arrows.map((a, i) => (
