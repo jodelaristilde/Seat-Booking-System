@@ -1351,13 +1351,39 @@ function WayLine({
     left -= lens[i];
   }
   const d = shown.map((q) => q.join(",")).join(" ");
+  // the line in screen terms: each piece, its length and its direction
+  const segs = pts.slice(1).map((q, i) => {
+    const dx = q[0] - pts[i][0], dy = q[1] - pts[i][1];
+    return { a: pts[i], dx, dy, len: Math.hypot(dx * aspect, dy), deg: (Math.atan2(dy, dx * aspect) * 180) / Math.PI };
+  });
+  const pointAt = (frac: number) => {
+    let at = segs.reduce((n, g) => n + g.len, 0) * frac;
+    for (const g of segs) {
+      if (at <= g.len || g === segs[segs.length - 1]) {
+        const f = g.len ? Math.min(1, at / g.len) : 0;
+        return { x: g.a[0] + g.dx * f, y: g.a[1] + g.dy * f, left: g.dx < 0 };
+      }
+      at -= g.len;
+    }
+    return { x: pts[0][0], y: pts[0][1], left: false };
+  };
+  // a small person walking the way, from the door to the table, again and again
+  const [walk, setWalk] = useState(0);
+  useEffect(() => {
+    if (p < 1) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      setWalk(((now - t0) / 4200) % 1);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [p]);
+  const walker = p >= 1 && segs.length ? pointAt(walk) : null;
   // arrows along the line, pointing the way to walk (toward the table)
   const arrows: { x: number; y: number; deg: number }[] = [];
   if (p >= 1) {
-    const segs = pts.slice(1).map((q, i) => {
-      const dx = q[0] - pts[i][0], dy = q[1] - pts[i][1];
-      return { a: pts[i], dx, dy, len: Math.hypot(dx * aspect, dy), deg: (Math.atan2(dy, dx * aspect) * 180) / Math.PI };
-    });
     const L = segs.reduce((n, g) => n + g.len, 0);
     const count = Math.max(2, Math.min(6, Math.round(L / 22)));
     for (let k = 1; k <= count; k++) {
@@ -1374,6 +1400,39 @@ function WayLine({
   }
   return (
     <>
+    {walker && (
+      <div
+        className="pointer-events-none absolute"
+        style={{
+          left: `${walker.x}%`,
+          top: `${walker.y}%`,
+          transform: `translate(-50%, -100%) scaleX(${walker.left ? -1 : 1})`,
+          zIndex: 2,
+          opacity: walk > 0.92 ? (1 - walk) / 0.08 : walk < 0.05 ? walk / 0.05 : 1,
+        }}
+        aria-hidden="true"
+      >
+        {/* a walking person (simple pictogram), legs swinging as it goes */}
+        <svg width="30" height="38" viewBox="0 0 30 38" style={{ filter: "drop-shadow(0 0 1.5px white) drop-shadow(0 0 1.5px white)" }}>
+          <circle cx="16" cy="5" r="4" fill="#14532d" />
+          <path d="M15 10 L13 22" stroke="#14532d" strokeWidth="4.5" strokeLinecap="round" />
+          <path
+            d={Math.floor(walk * 24) % 2 ? "M15 12 L21 17 M14 12 L9 18" : "M15 12 L9 16 M14 12 L20 18"}
+            stroke="#14532d"
+            strokeWidth="3.2"
+            strokeLinecap="round"
+          />
+          <path
+            d={Math.floor(walk * 24) % 2 ? "M13 22 L19 29 L20 36 M13 22 L9 30 L5 34" : "M13 22 L10 30 L8 36 M13 22 L18 29 L23 32"}
+            stroke="#14532d"
+            strokeWidth="3.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+      </div>
+    )}
     {arrows.map((a, i) => (
       <div
         key={i}
