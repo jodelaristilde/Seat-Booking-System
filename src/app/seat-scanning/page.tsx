@@ -1261,12 +1261,12 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           aria-label={`${yourTable} ${t.name}`}
         />
         {/* just the number, flashing with the table ("Table 4" -> "4") */}
-        <span className="way-num absolute inset-0 flex items-center justify-center text-[clamp(1.25rem,5vw,2.5rem)] font-black leading-none text-white [text-shadow:0_0_4px_#000,0_0_2px_#000]">
+        <span className="way-num absolute inset-0 flex items-center justify-center text-[clamp(1.25rem,5vw,2.5rem)] font-bold leading-none text-white [text-shadow:0_0_4px_#000,0_0_2px_#000]">
           {t.name.match(/\d+/)?.[0] ?? t.name}
         </span>
         {/* the arrow comes from above, or from below when the table is at the top of the room */}
         <div className={`way-bounce absolute left-1/2 text-red-600 drop-shadow-[0_0_4px_white] ${t.y < 20 ? "top-full" : "bottom-full"}`}>
-          {t.y < 20 ? <ArrowUp className="h-12 w-12" strokeWidth={4} /> : <ArrowDown className="h-12 w-12" strokeWidth={4} />}
+          {t.y < 20 ? <ArrowUp className="h-10 w-10" strokeWidth={3} /> : <ArrowDown className="h-10 w-10" strokeWidth={3} />}
         </div>
       </div>
       {/* the door: you are here */}
@@ -1282,14 +1282,14 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           </div>
           {/* "You are / here" in a round badge, next to the door, kept inside the map */}
           <div
-            className="absolute flex h-[68px] w-[68px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-green-600 text-center font-extrabold leading-tight text-white shadow-lg ring-[3px] ring-white"
+            className="absolute flex h-[58px] w-[58px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-green-500/90 text-center font-semibold leading-tight text-white shadow ring-2 ring-white"
             style={{
               left: `min(max(36px, ${door.x}%), calc(100% - 36px))`,
               ...(door.y > 75 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(min(max(20px, ${door.y}%), calc(100% - 20px)) + 1.5rem)` }),
             }}
           >
-            <span className="text-[13px]">{youAreHere.split(" ").slice(0, -1).join(" ") || youAreHere}</span>
-            {youAreHere.includes(" ") && <span className="text-[15px]">{youAreHere.split(" ").slice(-1)[0]}</span>}
+            <span className="text-[11px]">{youAreHere.split(" ").slice(0, -1).join(" ") || youAreHere}</span>
+            {youAreHere.includes(" ") && <span className="text-[13px]">{youAreHere.split(" ").slice(-1)[0]}</span>}
           </div>
         </>
       )}
@@ -1467,18 +1467,18 @@ function WayLine({
         style={{ left: `${a.x}%`, top: `${a.y}%`, transform: `translate(-50%, -50%) rotate(${a.deg}deg)`, animationDelay: `${i * 0.18}s` }}
       >
         {/* a solid arrow head: easy to read at any angle */}
-        <svg viewBox="0 0 24 24" width="40" height="40" style={{ width: 40, height: 40 }} className="drop-shadow-[0_0_2px_rgba(255,255,255,1)]" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="32" height="32" style={{ width: 32, height: 32 }} className="drop-shadow-[0_0_2px_rgba(255,255,255,1)]" aria-hidden="true">
           <path d="M4 3 L22 12 L4 21 L9 12 Z" fill="#16a34a" stroke="white" strokeWidth="2" strokeLinejoin="round" />
         </svg>
       </div>
     ))}
     <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <polyline points={d} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polyline points={d} fill="none" stroke="white" strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       <polyline
         points={d}
         fill="none"
-        stroke="#16a34a"
-        strokeWidth={6}
+        stroke="#22c55e"
+        strokeWidth={4.5}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeDasharray={p < 1 ? undefined : "14 10"}
@@ -1549,12 +1549,12 @@ function MapViewer({
         >
           <div className="min-w-0 flex-1">
             <div className="truncate text-xl font-bold text-zinc-800">{title}</div>
-            {hint && <div className="truncate text-sm font-medium text-green-700">{hint}</div>}
+            {hint && <div className="truncate text-sm font-normal text-green-700">{hint}</div>}
           </div>
           <button
             type="button"
             onClick={close}
-            className="h-12 shrink-0 rounded-xl bg-green-600 px-7 text-2xl font-extrabold text-white shadow hover:bg-green-700"
+            className="h-10 shrink-0 rounded-lg bg-green-500 px-6 text-lg font-semibold text-white shadow-sm hover:bg-green-600"
             aria-label="OK"
           >
             OK
