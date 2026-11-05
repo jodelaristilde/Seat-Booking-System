@@ -1240,9 +1240,11 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
         @keyframes wayBounce { 0%,100% { transform: translate(-50%, 0) } 50% { transform: translate(-50%, -14px) } }
         @keyframes wayNum { 0%,45% { opacity: 1 } 50%,95% { opacity: .25 } 100% { opacity: 1 } }
         .way-num { animation: wayNum .8s steps(1, end) infinite, wayRing .8s ease-in-out infinite }
+        @keyframes wayArrow { 0%,100% { opacity: 1 } 50% { opacity: .7 } }
+        .way-arrow { animation: wayArrow 1.1s ease-in-out infinite; z-index: 1 }
         .way-bounce { animation: wayBounce .7s ease-in-out infinite }
       `}</style>
-      {door && aspect > 0 && <WayLine door={door} table={t} halfW={ringW / 2} path={route?.path ?? null} />}
+      {door && aspect > 0 && <WayLine door={door} table={t} halfW={ringW / 2} path={route?.path ?? null} aspect={aspect} />}
       {/* the guest's table: it flashes, with a big arrow pointing at it (no label) */}
       <div
         className="absolute"
@@ -1296,11 +1298,13 @@ function WayLine({
   table,
   halfW,
   path,
+  aspect = 1,
 }: {
   door: { x: number; y: number };
   table: { x: number; y: number };
   halfW: number;
   path: { x: number; y: number }[] | null; // the way around the tables, when found
+  aspect?: number; // the plan's width / height, so the arrows point the right way
 }) {
   // which wall is the door on? Walk straight in from that wall first.
   const dist = [door.x, 100 - door.x, door.y, 100 - door.y];
@@ -1347,7 +1351,41 @@ function WayLine({
     left -= lens[i];
   }
   const d = shown.map((q) => q.join(",")).join(" ");
+  // arrows along the line, pointing the way to walk (toward the table)
+  const arrows: { x: number; y: number; deg: number }[] = [];
+  if (p >= 1) {
+    const segs = pts.slice(1).map((q, i) => {
+      const dx = q[0] - pts[i][0], dy = q[1] - pts[i][1];
+      return { a: pts[i], dx, dy, len: Math.hypot(dx * aspect, dy), deg: (Math.atan2(dy, dx * aspect) * 180) / Math.PI };
+    });
+    const L = segs.reduce((n, g) => n + g.len, 0);
+    const count = Math.max(2, Math.min(6, Math.round(L / 22)));
+    for (let k = 1; k <= count; k++) {
+      let at = (L * k) / (count + 1);
+      for (const g of segs) {
+        if (at <= g.len || g === segs[segs.length - 1]) {
+          const f = g.len ? Math.min(1, at / g.len) : 0;
+          arrows.push({ x: g.a[0] + g.dx * f, y: g.a[1] + g.dy * f, deg: g.deg });
+          break;
+        }
+        at -= g.len;
+      }
+    }
+  }
   return (
+    <>
+    {arrows.map((a, i) => (
+      <div
+        key={i}
+        className="way-arrow pointer-events-none absolute text-white"
+        style={{ left: `${a.x}%`, top: `${a.y}%`, transform: `translate(-50%, -50%) rotate(${a.deg}deg)`, animationDelay: `${i * 0.18}s` }}
+      >
+        {/* a solid arrow head: easy to read at any angle */}
+        <svg viewBox="0 0 24 24" width="40" height="40" style={{ width: 40, height: 40 }} className="drop-shadow-[0_0_2px_rgba(255,255,255,1)]" aria-hidden="true">
+          <path d="M4 3 L22 12 L4 21 L9 12 Z" fill="#16a34a" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      </div>
+    ))}
     <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
       <polyline points={d} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       <polyline
@@ -1362,6 +1400,7 @@ function WayLine({
         className={p < 1 ? undefined : "way-dash"}
       />
     </svg>
+    </>
   );
 }
 
