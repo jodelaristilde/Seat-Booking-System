@@ -1275,13 +1275,18 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           {/* the door symbol */}
           <div
             className="way-pulse absolute flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white shadow-[0_0_0_4px_rgba(255,255,255,.9)]"
-            style={{ left: `${door.x}%`, top: `${door.y}%` }}
+            // kept fully on the map even when the door is right at its edge
+            style={{ left: `min(max(20px, ${door.x}%), calc(100% - 20px))`, top: `min(max(20px, ${door.y}%), calc(100% - 20px))` }}
           >
             <DoorOpen className="h-5 w-5" strokeWidth={2.5} />
           </div>
+          {/* kept inside the map (a door at the edge would cut it off), and it may wrap */}
           <div
-            className="absolute -translate-x-1/2 whitespace-nowrap rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white shadow-lg"
-            style={{ left: `${door.x}%`, top: `calc(${door.y}% + 1.4rem)` }}
+            className="absolute max-w-[34%] -translate-x-1/2 rounded-2xl bg-green-600 px-3 py-1 text-center text-sm font-bold leading-tight text-white shadow-lg"
+            style={{
+              left: `${Math.min(83, Math.max(17, door.x))}%`,
+              ...(door.y > 82 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(${door.y}% + 1.4rem)` }),
+            }}
           >
             {youAreHere}
           </div>
@@ -1523,6 +1528,8 @@ function MapViewer({
   const top = 64; // title bar
   const fitW = Math.min(boxW - 16, (boxH - top - 12) * ratio);
   const fitH = fitW / ratio;
+  // the bar (hint + OK) sits right on top of the map, and the two are centred together
+  const startY = Math.max(0, (boxH - (top + 6 + fitH)) / 2);
 
   return (
     <div className="fixed inset-0 z-[100] bg-zinc-100">
@@ -1535,7 +1542,10 @@ function MapViewer({
         }}
       >
         {/* title + close */}
-        <div className="absolute inset-x-0 top-0 z-10 flex h-16 items-center gap-3 bg-white/95 px-4 shadow">
+        <div
+          className="absolute left-1/2 z-10 flex h-16 -translate-x-1/2 items-center gap-3 rounded-t-xl bg-white/95 px-4 shadow"
+          style={{ top: startY, width: src ? fitW : boxW }}
+        >
           <div className="min-w-0 flex-1">
             <div className="truncate text-xl font-bold text-zinc-800">{title}</div>
             {hint && <div className="truncate text-sm font-medium text-green-700">{hint}</div>}
@@ -1551,7 +1561,7 @@ function MapViewer({
         </div>
         {/* the map, as big as it fits */}
         {src ? (
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: top + Math.max(6, (boxH - top - fitH) / 2), width: fitW, height: fitH }}>
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: startY + top + 6, width: fitW, height: fitH }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
