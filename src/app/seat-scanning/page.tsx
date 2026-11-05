@@ -1282,7 +1282,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           </div>
           {/* "Enter" in a round badge, next to the door, kept inside the map */}
           <div
-            className="absolute flex h-[58px] w-[58px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-green-500/90 text-center font-semibold leading-tight text-white shadow ring-2 ring-white"
+            className="absolute flex h-[58px] w-[58px] -translate-x-1/2 flex-col items-center justify-center rounded-full bg-lime-300/60 text-center font-bold leading-tight text-green-900 shadow-sm ring-2 ring-white/80 backdrop-blur-[1px]"
             style={{
               left: `min(max(36px, ${door.x}%), calc(100% - 36px))`,
               ...(door.y > 75 ? { bottom: `calc(${100 - door.y}% + 1.6rem)` } : { top: `calc(min(max(20px, ${door.y}%), calc(100% - 20px)) + 1.5rem)` }),
