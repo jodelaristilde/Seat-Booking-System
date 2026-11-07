@@ -9,6 +9,8 @@ export async function GET() {
     const eventId = await activeEventId();
     const guests = await db.users.findMany({
       where: { eventId },
+      // in the order they were added: the same order as the Excel file
+      orderBy: { id: "asc" },
       include: {
         seat: {
           include: {

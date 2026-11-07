@@ -415,8 +415,9 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
   // guests on the list who have no seat yet (shown at the top of Guest Names)
   const unseatedGuests = (allGuests || [])
     .filter((g) => !g.seat || g.seat.length === 0)
+    // in the order of the Excel file (the order they were added), not A–Z
     .map((g) => ({ id: g.id, name: `${g.firstname} ${g.lastname}`.trim() }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const seatTables = getTableInfo()
     .map((t) => ({ id: String(t.id), name: t.name, free: t.seats.filter((x) => !x.isBooked).length }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
@@ -1682,6 +1683,7 @@ const handleTableClick = () => {
                               {prow(Plus, "Add one table", "One more table in the room.", () => setIsAddTableOpen(true))}
                               {prow(FileUp, "Import more guests (Excel)", "Add or update guests from a file.", () => openSetup("import-guests"))}
                               {prow(Download, "Download the sample Excel", "The template with the right columns.", downloadTemplate)}
+                              {prow(UserCheck2, "Assign multiple guests", "Tick guests (in your Excel order), pick a table.", () => setIsAssignGuestsDialogOpen(true))}
                               {prow(Sparkles, "Seat everyone", "One click. Families stay together.", "/dashboard/seating-helper")}
                               {prow(ImageIcon, "Change the floor plan", "Upload a new picture of the room.", () => openSetup("floor-map"))}
                               {prow(LayoutGrid, "Draw my room", "No plan from the venue? Draw the stage, bar, doors and tables.", "/dashboard/room-builder")}
@@ -1916,6 +1918,9 @@ const handleTableClick = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer" onClick={downloadTemplate}>
                             <Download className="mr-2 h-4 w-4" /> Download the sample Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer font-semibold" onClick={() => setIsAssignGuestsDialogOpen(true)}>
+                            <UserCheck2 className="mr-2 h-4 w-4" /> Assign multiple guests
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new Event("seating4u:open-events"))}>
                             <CalendarDays className="mr-2 h-4 w-4" /> New event

@@ -56,12 +56,10 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
       .catch(() => undefined)
   }, [isOpen])
 
-  // guests without a seat, A–Z by last name
+  // guests without a seat, in the order of the Excel file (the order they were added)
   const availableGuests = guests
     .filter((guest) => guest.seat.length === 0 && !justAssigned.includes(guest.id))
-    .sort((a, b) =>
-      `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`, undefined, { sensitivity: "base" }),
-    )
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   const availableTables = tables.filter((table) => table.seats.some((seat) => !seat.isBooked))
 
   // Filter guests by search
