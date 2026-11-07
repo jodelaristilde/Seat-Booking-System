@@ -1899,8 +1899,8 @@ const handleTableClick = () => {
                     )}
                   </DropdownMenu>
 
-                  {/* Create New Dropdown (regular users have these in the ☰ menu) */}
-                  {!isUser && (
+                  {/* Create New Dropdown (planners too: the Excel import is easy to find here) */}
+                  {(
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="h-8 sm:h-9 px-2 sm:px-3 text-sm font-semibold">
@@ -1908,7 +1908,21 @@ const handleTableClick = () => {
                         <ChevronDown className="h-4 w-4 ml-1 sm:ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuContent align="end" className="w-56">
+                      {isUser && (
+                        <>
+                          <DropdownMenuItem className="cursor-pointer font-semibold" onClick={() => openSetup("import-guests")}>
+                            <FileUp className="mr-2 h-4 w-4" /> Import guests (Excel)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer" onClick={downloadTemplate}>
+                            <Download className="mr-2 h-4 w-4" /> Download the sample Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new Event("seating4u:open-events"))}>
+                            <CalendarDays className="mr-2 h-4 w-4" /> New event
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
                       {!isStaff && (
                         <>
                           <DropdownMenuItem
@@ -1931,7 +1945,12 @@ const handleTableClick = () => {
                       >
                         New Guest
                       </DropdownMenuItem>
-                      {!isStaff && <ImportGuestsforWeb />}
+                      {!isStaff && !isUser && <ImportGuestsforWeb />}
+                      {!isStaff && !isUser && (
+                        <DropdownMenuItem className="cursor-pointer" onClick={downloadTemplate}>
+                          Download the sample Excel
+                        </DropdownMenuItem>
+                      )}
                       {isAdmin && (
                         <DropdownMenuItem
                           className="cursor-pointer text-red-600"
