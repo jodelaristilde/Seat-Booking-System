@@ -2183,6 +2183,7 @@ const handleTableClick = () => {
                 unseated={unseatedGuests}
                 seatTables={seatTables}
                 onSeatGuest={(gid, tid) => handleAssignGuests([gid], tid)}
+                onSeatGuests={(ids, tid) => handleAssignGuests(ids, tid)}
                 onDeleteAll={isAdmin ? () => setIsDeleteAllDialogOpen(true) : undefined}
                 compact={isFullScreen || isStaff}
                 readOnly={isStaff}
@@ -2202,6 +2203,7 @@ const handleTableClick = () => {
             unseated={unseatedGuests}
             seatTables={seatTables}
             onSeatGuest={(gid, tid) => handleAssignGuests([gid], tid)}
+                onSeatGuests={(ids, tid) => handleAssignGuests(ids, tid)}
             onDeleteAll={() => setIsDeleteAllDialogOpen(true)}
             compact={isStaff}
             readOnly={isStaff}

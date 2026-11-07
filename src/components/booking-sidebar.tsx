@@ -30,6 +30,7 @@ interface BookingSidebarProps {
   unseated?: { id: string; name: string }[];
   seatTables?: { id: string; name: string; free: number }[];
   onSeatGuest?: (guestId: string, tableId: string) => Promise<void>;
+  onSeatGuests?: (guestIds: string[], tableId: string) => Promise<void>; // several at once
 }
 
 export function BookingSidebar({
@@ -43,8 +44,32 @@ export function BookingSidebar({
   unseated = [],
   seatTables = [],
   onSeatGuest,
+  onSeatGuests,
 }: BookingSidebarProps) {
   const [seating, setSeating] = useState<string | null>(null);
+  // guests ticked in "No seat yet", to seat them together at one table
+  const [picked, setPicked] = useState<string[]>([]);
+  const togglePick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const seatPicked = async (tableId: string) => {
+    const ids = picked.filter((id) => unseated.some((g) => g.id === id));
+    if (!ids.length) return;
+    const table = seatTables.find((x) => x.id === tableId);
+    if (table && table.free < ids.length)
+      return toast.error(`${table.name} has only ${table.free} empty seat${table.free === 1 ? "" : "s"} for ${ids.length} guests.`, {
+        description: "Pick a bigger table, or tick fewer guests.",
+      });
+    setSeating("many");
+    try {
+      if (onSeatGuests) await onSeatGuests(ids, tableId);
+      else for (const id of ids) await onSeatGuest?.(id, tableId);
+      toast.success(`${ids.length} guest${ids.length === 1 ? "" : "s"} seated at ${table?.name ?? "the table"}`);
+      setPicked([]);
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : "Could not seat these guests. Try another table.");
+    } finally {
+      setSeating(null);
+    }
+  };
   // guests with a note (seat hidden from their phone until the desk says yes)
   const { notes } = useGuestNotes();
   const [isOpen, setIsOpen] = useState(false);
@@ -376,9 +401,66 @@ export function BookingSidebar({
                   <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-800">
                     No seat yet ({list.length})
                   </p>
+                  {!readOnly && (onSeatGuests || onSeatGuest) && (
+                    <div className="mb-2 rounded-md bg-white/70 p-1.5">
+                      {/* pick several (or the first 10) and seat them at one table */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setPicked(list.slice(0, 10).map((g) => g.id))}
+                          className="rounded border border-amber-400 bg-white px-2 py-1 font-semibold text-amber-900 hover:bg-amber-100"
+                        >
+                          Tick the first {Math.min(10, list.length)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPicked(list.map((g) => g.id))}
+                          className="rounded border border-amber-400 bg-white px-2 py-1 font-semibold text-amber-900 hover:bg-amber-100"
+                        >
+                          Tick all
+                        </button>
+                        {picked.length > 0 && (
+                          <button type="button" onClick={() => setPicked([])} className="px-1 text-amber-800 underline">
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      {picked.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm">
+                          <b className="text-amber-900">Seat {picked.length} ticked at</b>
+                          <select
+                            value=""
+                            disabled={seating === "many"}
+                            onChange={(e) => e.target.value && seatPicked(e.target.value)}
+                            className="h-8 rounded-md border-2 border-green-600 bg-white px-1 text-xs font-bold"
+                            aria-label="Pick a table for the ticked guests"
+                            data-testid="seat-picked"
+                          >
+                            <option value="">{seating === "many" ? "Seating…" : "Pick a table…"}</option>
+                            {seatTables
+                              .filter((t) => t.free > 0)
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name} ({t.free} free)
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <ul className="space-y-1">
-                    {list.slice(0, 30).map((g) => (
+                    {list.slice(0, Math.max(30, picked.length)).map((g) => (
                       <li key={g.id} className="flex items-center gap-2 text-sm">
+                        {!readOnly && (onSeatGuests || onSeatGuest) && (
+                          <input
+                            type="checkbox"
+                            checked={picked.includes(g.id)}
+                            onChange={() => togglePick(g.id)}
+                            className="h-5 w-5 shrink-0 accent-green-600"
+                            aria-label={`Tick ${g.name}`}
+                          />
+                        )}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium text-gray-900">
                             {g.name}
@@ -665,6 +747,10 @@ export function BookingSidebar({
       showOnlyDupes,
       overTrash,
       guestToDelete,
+      unseated,
+      seating,
+      seatTables,
+      picked,
     ]
   );
 
