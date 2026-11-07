@@ -236,6 +236,15 @@ const SeatBooking = () => {
   const [viewMode, setViewMode] = useState<"plan" | "grid">("plan");
   // the step-by-step setup is on: keep the top bar simple
   const [wizardOn, setWizardOn] = useState(false);
+  // the sample Excel (first name, last name, table, meal, allergy, VIP, note, party size)
+  const downloadTemplate = () => {
+    const a = document.createElement("a");
+    a.href = "/api/guest-template";
+    a.download = "Seating4U-guest-template.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
   useEffect(() => {
     try {
       if (window.localStorage.getItem("dashboardView") === "grid") setViewMode("grid");
@@ -1609,8 +1618,10 @@ const handleTableClick = () => {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="outline" className="w-8 h-8 sm:w-9 sm:h-9">
+                      {/* "Menu" written next to ☰, so nobody misses it */}
+                      <Button variant="outline" className="h-8 sm:h-9 gap-1.5 px-2.5 sm:px-3 text-sm font-semibold" aria-label="Menu">
                         <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span>Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     {isUser ? (
@@ -1619,6 +1630,7 @@ const handleTableClick = () => {
                       {prow(CalendarDays, "My events", "Start a new event, or open another one.", () => window.dispatchEvent(new Event("seating4u:open-events")))}
                       {prow(ListOrdered, "Set up my event, step by step", "One question at a time, with Next.", () => window.dispatchEvent(new Event("seating4u:show-setup")))}
                       {prow(Maximize, "Check-in screen", "On the event day: search a name, tick, done.", () => handleFullScreenToggle(true))}
+                      {prow(Download, "Download the sample Excel", "Fill in your guests, then import it.", downloadTemplate)}
                       <DropdownMenuSeparator />
                       {[
                         {
@@ -1669,6 +1681,7 @@ const handleTableClick = () => {
                               {prow(UserPlus, "Add one guest", "A last-minute guest.", () => setIsAddGuestOpen(true))}
                               {prow(Plus, "Add one table", "One more table in the room.", () => setIsAddTableOpen(true))}
                               {prow(FileUp, "Import more guests (Excel)", "Add or update guests from a file.", () => openSetup("import-guests"))}
+                              {prow(Download, "Download the sample Excel", "The template with the right columns.", downloadTemplate)}
                               {prow(Sparkles, "Seat everyone", "One click. Families stay together.", "/dashboard/seating-helper")}
                               {prow(ImageIcon, "Change the floor plan", "Upload a new picture of the room.", () => openSetup("floor-map"))}
                               {prow(LayoutGrid, "Draw my room", "No plan from the venue? Draw the stage, bar, doors and tables.", "/dashboard/room-builder")}

@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Check,
   DoorOpen,
+  Download,
   FileSpreadsheet,
   Hash,
   ImageIcon,
@@ -462,10 +463,10 @@ export function SetupWizard({
         </button>
         <a
           href="/api/guest-template"
-          download
-          className="inline-block text-sm text-zinc-600 underline hover:text-zinc-900"
+          download="Seating4U-guest-template.xlsx"
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-lime-400 bg-lime-50 px-4 py-3 font-semibold text-lime-900 hover:bg-lime-100"
         >
-          No list yet? Download our Excel template
+          <Download className="h-5 w-5" /> No list yet? Download the sample Excel
         </a>
       </div>
     );
