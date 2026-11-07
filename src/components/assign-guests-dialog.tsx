@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import type { Rule } from "@/lib/seatPlan"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -113,10 +113,22 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
     return out
   })()
 
-  const handleGuestToggle = (guestId: string) => {
-    setSelectedGuests((prev) =>
-      prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId],
-    )
+  // Tick a guest. Hold Shift and tick another one to tick everyone in between
+  // (tick the 1st, Shift + tick the 10th: the first 10 are ticked).
+  const lastTicked = useRef<string | null>(null)
+  const handleGuestToggle = (guestId: string, shift = false) => {
+    const ids = filteredGuests.map((g) => g.id)
+    const from = lastTicked.current ? ids.indexOf(lastTicked.current) : -1
+    const to = ids.indexOf(guestId)
+    if (shift && from >= 0 && to >= 0) {
+      const range = ids.slice(Math.min(from, to), Math.max(from, to) + 1)
+      setSelectedGuests((prev) => [...prev, ...range.filter((id) => !prev.includes(id))])
+    } else {
+      setSelectedGuests((prev) =>
+        prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId],
+      )
+    }
+    lastTicked.current = guestId
   }
 
   const handleAssign = async () => {
@@ -213,17 +225,22 @@ export function AssignGuestsDialog({ isOpen, onClose, guests, tables, onAssignGu
             <ScrollArea className="h-[min(360px,45vh)] border rounded-lg p-4">
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest) => (
+                  // the whole line ticks the box (the name too)
                   <div
                     key={guest.id}
-                    className="flex items-center space-x-3 py-2 px-2 hover:bg-muted rounded-lg"
+                    role="checkbox"
+                    aria-checked={selectedGuests.includes(guest.id)}
+                    tabIndex={0}
+                    onClick={(e) => handleGuestToggle(guest.id, e.shiftKey)}
+                    onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), handleGuestToggle(guest.id, e.shiftKey))}
+                    className={`flex cursor-pointer select-none items-center space-x-3 py-2 px-2 rounded-lg ${
+                      selectedGuests.includes(guest.id) ? "bg-lime-50" : "hover:bg-muted"
+                    }`}
                   >
-                    <Checkbox
-                      checked={selectedGuests.includes(guest.id)}
-                      onCheckedChange={() => handleGuestToggle(guest.id)}
-                    />
-                    <Label className="cursor-pointer flex-1">
+                    <Checkbox checked={selectedGuests.includes(guest.id)} className="pointer-events-none h-5 w-5" tabIndex={-1} />
+                    <span className="flex-1">
                       {guest.firstname} {guest.lastname}
-                    </Label>
+                    </span>
                   </div>
                 ))
               ) : (
