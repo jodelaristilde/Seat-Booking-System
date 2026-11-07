@@ -44,15 +44,12 @@ export async function GET() {
     cell.alignment = { horizontal: "center", vertical: "middle" };
     cell.border = { bottom: { style: "medium", color: { argb: "FF3F3F46" } } };
     cell.note = (c.req ? "" : "Optional. ") + c.tip;
-    // only First Name and Last Name headers are locked
-    cell.protection = { locked: c.key === "first" || c.key === "last" };
   });
   // everything else stays editable; drop-downs where useful
   for (let r = 2; r <= 501; r++) {
     const row = ws.getRow(r);
     cols.forEach((c, i) => {
       const cell = row.getCell(i + 1);
-      cell.protection = { locked: false };
       cell.font = { name: "Arial", size: 11 };
       if (c.key === "meal")
         cell.dataValidation = { type: "list", allowBlank: true, showErrorMessage: false, formulae: ['"Chicken,Fish,Beef,Veg,Kids"'], showInputMessage: true, promptTitle: "Meal", prompt: "Pick a meal or type your own. Optional." };
@@ -60,22 +57,7 @@ export async function GET() {
         cell.dataValidation = { type: "list", allowBlank: true, showErrorMessage: false, formulae: ['"yes"'], showInputMessage: true, promptTitle: "VIP", prompt: "yes = VIP. Leave empty otherwise." };
     });
   }
-  // unlock the rest of row 1 and all other columns too
-  for (let i = cols.length + 1; i <= 30; i++) ws.getColumn(i).protection = { locked: false };
-  await ws.protect("", {
-    selectLockedCells: true,
-    selectUnlockedCells: true,
-    formatCells: true,
-    formatColumns: true,
-    formatRows: true,
-    insertColumns: true,
-    insertRows: true,
-    deleteColumns: true,
-    deleteRows: true,
-    sort: true,
-    autoFilter: true,
-  });
-
+  // no sheet protection: the whole file can be changed freely
   // instructions
   const hs = wb.addWorksheet("How to fill it in");
   hs.getColumn(1).width = 18;
@@ -86,8 +68,8 @@ export async function GET() {
     cell.font = { name: "Arial", size, bold, color: { argb: color } };
   };
   put(1, "Seating4U guest list template", 16, true);
-  put(2, "Fill in the Guests sheet (first tab), one guest per row, starting on row 2 under the column names. Then upload it: New → Import Guests.");
-  put(3, "First Name and Last Name are locked so they can't be deleted by accident.", 11, false, "FF3F6212");
+  put(2, "Fill in the Guests sheet (first tab), one guest per row, starting on row 2 under the column names. Then upload it: New → Import guests (Excel).");
+  put(3, "Keep the column names in row 1 (First Name and Last Name are needed); everything else can be changed.", 11, false, "FF3F6212");
   put(4, "Columns", 12, true);
   let r = 5;
   for (const c of cols) {
