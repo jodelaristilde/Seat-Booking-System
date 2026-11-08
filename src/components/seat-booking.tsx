@@ -94,6 +94,7 @@ import { LiveLinkDialog } from "@/components/LiveLinkDialog";
 import { UndoItem, undoLastChange } from "@/components/UndoItem";
 import { PracticeBanner, startPractice } from "@/components/PracticeBanner";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
+import { openClientReport } from "@/lib/openClientReport";
 import { ReportProblem, openReportProblem } from "@/components/ReportProblem";
 import { NetworkWatch } from "@/components/NetworkWatch";
 import { ReviewDialog, openReview } from "@/components/ReviewForm";
@@ -1668,7 +1669,7 @@ const handleTableClick = () => {
                           items: (
                             <>
                               {prow(BarChart3, "After-event PDF & summary", "Who came, no-shows in red with their table. Download the PDF.", "/dashboard/summary")}
-                              {prow(FileText, "Report for your client", "A thank-you report they can print.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
+                              {prow(FileText, "Client report (PDF)", "Opens the thank-you report for your client, with Download PDF.", () => openClientReport())}
                               {prow(Star, "Leave us a review", "How is Seating4U working for you?", openReview)}
                             </>
                           ),
@@ -1779,6 +1780,11 @@ const handleTableClick = () => {
                           <BarChart3 className="mr-2 w-4 h-4" /> After-event PDF &amp; summary
                         </Link>
                       </DropdownMenuItem>
+                      {!isStaff && (
+                        <DropdownMenuItem onClick={() => openClientReport()}>
+                          <FileText className="mr-2 w-4 h-4" /> Client report (PDF)
+                        </DropdownMenuItem>
+                      )}
                       {!isStaff && <UndoItem />}
 
                       <DropdownMenuSeparator />

@@ -4,7 +4,8 @@
 // /dashboard/summary (login required)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileDown, Lock, Printer } from "lucide-react";
+import { ArrowLeft, FileDown, FileText, Lock, Printer } from "lucide-react";
+import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -235,6 +236,12 @@ export default function Summary() {
           className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
         >
           <Printer className="h-4 w-4" /> Print
+        </button>
+        <button
+          onClick={() => openClientReport()}
+          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
+        >
+          <FileText className="h-4 w-4" /> Client report
         </button>
         <button
           onClick={closeOut}
