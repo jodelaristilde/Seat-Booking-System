@@ -2442,6 +2442,17 @@ export function FloorPlanCanvas({
           </Button>
         )}
 
+        {!reviewing && (
+          <Button
+            size="sm"
+            variant={turned ? "default" : "outline"}
+            onClick={toggleTurned}
+            title="Turn the map around, to match where you are standing in the room"
+          >
+            <RotateCw className="w-4 h-4 mr-1" />
+            {turned ? "Map turned: On" : "Turn map around"}
+          </Button>
+        )}
         {!reviewing && !drawing && !editing && (
           <Button
             size="sm"
