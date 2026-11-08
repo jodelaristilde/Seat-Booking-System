@@ -37,7 +37,9 @@ import {
   DoorOpen,
   ScanSearch,
   UserPlus,
+  MapPin,
 } from "lucide-react";
+import { showWay } from "@/components/ShowWayDialog";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -2020,7 +2022,19 @@ export function FloorPlanCanvas({
                             a.name
                           )}
                         </td>
-                        <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">{a.table}</td>
+                        <td className="pr-2 py-0.5 text-xs font-semibold text-green-800 whitespace-nowrap">
+                          {/* click the table (or the pin) to see the way from the door to it */}
+                          <button
+                            type="button"
+                            onClick={() => showWay(a.seatId)}
+                            className="inline-flex items-center gap-0.5 rounded px-1 hover:bg-green-100 hover:text-green-950"
+                            title={`Show the way from the door to ${a.table}`}
+                            aria-label={`Show the way to ${a.table}`}
+                          >
+                            {a.table}
+                            <MapPin className="h-3.5 w-3.5 text-green-600" />
+                          </button>
+                        </td>
                       </motion.tr>
                     ))}
                 </AnimatePresence>
