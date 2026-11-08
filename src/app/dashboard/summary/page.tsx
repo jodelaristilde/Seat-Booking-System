@@ -4,7 +4,9 @@
 // /dashboard/summary (login required)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileDown, FileText, Lock, Printer } from "lucide-react";
+import { ArrowLeft, FileDown, FileText, Lock, Printer, Send } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { sendThankYou } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
@@ -33,6 +35,10 @@ export default function Summary() {
   const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hover, setHover] = useState<number | null>(null);
+  const [eventDate, setEventDate] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.email === "admin";
 
   useEffect(() => {
     (async () => {
@@ -47,7 +53,9 @@ export default function Summary() {
         if (h?.success) setLog(h.data);
         if (e.success) {
           setEventId(e.activeId);
-          setEventName(e.events.find((x: { id: string }) => x.id === e.activeId)?.name ?? "");
+          const ev = e.events.find((x: { id: string }) => x.id === e.activeId);
+          setEventName(ev?.name ?? "");
+          setEventDate(ev?.date ?? null);
           if (ga?.success) setClosed(!ga.data?.[e.activeId]?.open);
         }
       } finally {
@@ -218,9 +226,23 @@ export default function Summary() {
         <Link href="/dashboard" className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setSending(true);
+              sendThankYou({ eventName, date: eventDate, tables: pdfTables, meals })
+                .catch(() => toast.error("Could not make the thank-you. Try again."))
+                .finally(() => setSending(false));
+            }}
+            disabled={sending}
+            className="inline-flex items-center gap-1.5 rounded bg-lime-600 px-4 py-2 text-base font-bold text-white shadow hover:bg-lime-700 disabled:opacity-60"
+          >
+            <Send className="h-5 w-5" /> {sending ? "Getting it ready…" : "Send thank-you (email or text)"}
+          </button>
+        )}
         <button
           onClick={() => {
-            afterEventPdf({ eventName, tables: pdfTables, meals }).then(
+            afterEventPdf({ eventName, date: eventDate, tables: pdfTables, meals }).then(
               () => toast.success("PDF downloaded", { description: "Look in your Downloads folder." }),
               () => toast.error("Could not make the PDF. Try Print instead."),
             );

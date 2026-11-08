@@ -70,6 +70,7 @@ import {
   GraduationCap,
   Star,
   FileText,
+  Send,
   Maximize,
   QrCode,
   CalendarDays,
@@ -1780,6 +1781,13 @@ const handleTableClick = () => {
                           <BarChart3 className="mr-2 w-4 h-4" /> After-event PDF &amp; summary
                         </Link>
                       </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard/summary">
+                            <Send className="mr-2 w-4 h-4" /> Send thank-you (email or text)
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       {!isStaff && (
                         <DropdownMenuItem onClick={() => openClientReport()}>
                           <FileText className="mr-2 w-4 h-4" /> Client report (PDF)

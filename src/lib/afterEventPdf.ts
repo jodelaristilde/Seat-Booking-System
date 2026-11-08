@@ -10,12 +10,13 @@ async function logo(): Promise<string | null> {
   try {
     const b = await fetch("/seating4u-logo.png").then((r) => (r.ok ? r.blob() : null));
     if (!b) return null;
-    return await new Promise((res) => {
-      const fr = new FileReader();
-      fr.onload = () => res(String(fr.result));
-      fr.onerror = () => res(null);
-      fr.readAsDataURL(b);
-    });
+    // made smaller (700 px wide is plenty for print) so the PDF stays light
+    const bmp = await createImageBitmap(b);
+    const c = document.createElement("canvas");
+    c.width = 700;
+    c.height = Math.round((700 * bmp.height) / bmp.width);
+    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL("image/png");
   } catch {
     return null;
   }
@@ -26,8 +27,10 @@ export async function afterEventPdf(o: {
   date?: string | null;
   tables: PdfTable[];
   meals: [string, number][];
-}) {
-  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  // "blob": give the file back (to share it) instead of downloading it
+  mode?: "save" | "blob";
+}): Promise<{ blob: Blob; name: string } | void> {
+  const doc = new jsPDF({ unit: "pt", format: "letter", compress: true });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const M = 40;
@@ -69,7 +72,7 @@ export async function afterEventPdf(o: {
     let cy = M + 60;
     if (img) {
       const lw = 300;
-      doc.addImage(img, "PNG", (W - lw) / 2, cy, lw, (lw * 491) / 1600);
+      doc.addImage(img, "PNG", (W - lw) / 2, cy, lw, (lw * 491) / 1600, "logo");
       cy += (lw * 491) / 1600 + 70;
     }
     doc.setFont("times", "bolditalic");
@@ -124,7 +127,7 @@ export async function afterEventPdf(o: {
   // the Seating4U logo, top right (1600 x 491)
   if (img) {
     const lw = 150;
-    doc.addImage(img, "PNG", W - M - lw, M - 14, lw, (lw * 491) / 1600);
+    doc.addImage(img, "PNG", W - M - lw, M - 14, lw, (lw * 491) / 1600, "logo");
   }
   // title
   text(o.eventName || "Event", M, 20, true);
@@ -220,5 +223,7 @@ export async function afterEventPdf(o: {
   text("Thank you for choosing Seating4U  ·  www.seating4u.com  ·  417-893-0047", W / 2, 10, true, GREY, "center");
   doc.setFontSize(10);
   const safe = (o.eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
-  doc.save(`${safe} - after-event report.pdf`);
+  const name = `${safe} - Seating4U report.pdf`;
+  if (o.mode === "blob") return { blob: doc.output("blob"), name };
+  doc.save(name);
 }
