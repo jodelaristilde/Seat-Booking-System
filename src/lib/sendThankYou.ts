@@ -93,7 +93,8 @@ export async function prepareGmail(o: { eventName: string; date?: string | null;
   if (!pdf) throw new Error("no pdf");
   const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
   return {
-    url: `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}`,
+    // the note written in; the PDF (card + report) is attached with the paperclip
+    url: `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(thankYouNote(o.eventName, link))}`,
     html: thankYouHtml({ ...o, link, origin: window.location.origin }),
     text: thankYouNote(o.eventName, link),
     pdf,

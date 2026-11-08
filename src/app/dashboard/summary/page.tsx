@@ -2,11 +2,11 @@
 
 // After the event: when guests arrived, no-shows per table, meals actually served.
 // /dashboard/summary (login required)
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileDown, FileText, Lock, Mail, Printer, Send } from "lucide-react";
+import { ArrowLeft, Copy, Download, ExternalLink, FileDown, FileText, Lock, Mail, Printer, Send, X } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { canSharePictures, prepareGmail, preparePhone, sendThankYou, sendThankYouGmail, type GmailReady, type PhoneReady } from "@/lib/sendThankYou";
+import { canSharePictures, prepareGmail, preparePhone, sendThankYou, type GmailReady, type PhoneReady } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
@@ -38,6 +38,8 @@ export default function Summary() {
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [gmail, setGmail] = useState<GmailReady | null>(null);
   const [phone, setPhone] = useState<PhoneReady | null>(null);
+  const [mailOpen, setMailOpen] = useState(false);
+  const mailRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const isAdmin = session?.user?.email === "admin";
 
@@ -243,6 +245,35 @@ export default function Summary() {
     }
   };
 
+  // copy the card and report the same way as selecting them by hand + Ctrl+C
+  const copyMail = () => {
+    const el = mailRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    sel?.removeAllRanges();
+    if (ok) toast.success("Copied the card and report", { description: "Now click Open Gmail, click in the message, press Ctrl+V." });
+    else toast.error("Could not copy. Select the card with the mouse and press Ctrl+C.");
+  };
+  const downloadFile = (blob: Blob, name: string) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  };
+
   if (loading) return <p className="p-8 text-zinc-500">Loading…</p>;
   const noShow = seated.length - arrived.length;
   const pct = seated.length ? Math.round((arrived.length / seated.length) * 100) : 0;
@@ -250,6 +281,43 @@ export default function Summary() {
   return (
     <div className="min-h-screen bg-white text-zinc-900">
       <style>{`@media print { .no-print { display: none !important } }`}</style>
+      {mailOpen && gmail && (
+        <div className="no-print fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3" onClick={() => setMailOpen(false)}>
+          <div className="my-4 w-full max-w-[640px] rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 rounded-t-xl border-b bg-white p-3">
+              <div className="mb-2 flex items-center">
+                <h2 className="mr-auto text-lg font-bold">Send the thank-you with Gmail</h2>
+                <button onClick={() => setMailOpen(false)} className="rounded p-1 hover:bg-zinc-100" aria-label="Close">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => downloadFile(gmail.pdf.blob, gmail.pdf.name)}
+                  className="inline-flex items-center gap-1.5 rounded bg-lime-600 px-3 py-2 text-sm font-bold text-white hover:bg-lime-700"
+                >
+                  <Download className="h-4 w-4" /> 1. Download the PDF (card + report)
+                </button>
+                <a href={gmail.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700">
+                  <ExternalLink className="h-4 w-4" /> 2. Open Gmail (note written in)
+                </a>
+                <button onClick={copyMail} className="inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-medium hover:bg-zinc-50">
+                  <Copy className="h-4 w-4" /> Copy card to paste in the email
+                </button>
+                <button onClick={() => phone?.files.forEach((f) => downloadFile(f, f.name))} className="inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-medium hover:bg-zinc-50">
+                  <Download className="h-4 w-4" /> Pictures
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-zinc-600">
+                In Gmail: click the <b>paperclip</b>, pick <b>{gmail.pdf.name}</b> from Downloads, type the email, <b>Send</b>.
+              </p>
+            </div>
+            <div className="p-3">
+              <div ref={mailRef} dangerouslySetInnerHTML={{ __html: gmail.html }} />
+            </div>
+          </div>
+        </div>
+      )}
       <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-zinc-50 px-6 py-3">
         <Link href="/dashboard" className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm hover:bg-zinc-100">
           <ArrowLeft className="h-4 w-4" /> Back
@@ -268,7 +336,7 @@ export default function Summary() {
         )}
         {isAdmin && (
           <button
-            onClick={() => gmail && sendThankYouGmail(gmail)}
+            onClick={() => gmail && setMailOpen(true)}
             disabled={!gmail}
             className="inline-flex items-center gap-1.5 rounded border-2 border-red-500 bg-white px-4 py-2 text-base font-bold text-red-600 shadow hover:bg-red-50 disabled:opacity-60"
           >
