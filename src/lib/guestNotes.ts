@@ -62,3 +62,4 @@ export async function setDeskAnswer(eventId: string, guestId: string, a: DeskAns
   const value = JSON.stringify(a);
   await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
 }
+

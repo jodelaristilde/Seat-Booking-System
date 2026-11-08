@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { canSharePictures, prepareGmail, preparePhone, sendThankYou, type GmailReady, type PhoneReady } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
+import { reportNote } from "@/lib/reportNote";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ const fmtTime = (d: Date) => d.toLocaleTimeString([], { hour: "numeric", minute:
 export default function Summary() {
   const [seats, setSeats] = useState<SeatRow[]>([]);
   const [log, setLog] = useState<Entry[]>([]);
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [eventName, setEventName] = useState("");
   const [eventId, setEventId] = useState("");
   const [closed, setClosed] = useState(false);
@@ -51,6 +53,16 @@ export default function Summary() {
           fetch("/api/history").then((r) => r.json()).catch(() => ({})),
           fetch("/api/events").then((r) => r.json()),
           fetch("/api/events/guest-access").then((r) => r.json()).catch(() => ({})),
+          fetch("/api/guest-notes")
+            .then((r) => r.json())
+            .then((j) => {
+              if (!j?.success) return;
+              const out: Record<string, string> = {};
+              const ids = new Set([...Object.keys(j.data ?? {}), ...Object.keys(j.answers ?? {})]);
+              for (const id of ids) out[id] = reportNote(j.data?.[id], j.answers?.[id]);
+              setNotes(out);
+            })
+            .catch(() => undefined),
         ]);
         if (s.success) setSeats(s.data);
         if (h?.success) setLog(h.data);
@@ -116,7 +128,7 @@ export default function Summary() {
   }, [log]);
   // table by table, guests in the Excel order (ids follow the upload order)
   const pdfTables = useMemo(() => {
-    const m = new Map<string, { name: string; guests: { id: string; name: string; came: boolean; at: string | null }[] }>();
+    const m = new Map<string, { name: string; guests: { id: string; name: string; came: boolean; at: string | null; note: string }[] }>();
     for (const s of seated) {
       const t = m.get(s.table.id) ?? { name: s.table.name, guests: [] };
       const l = arrivedAt.get(s.id);
@@ -125,13 +137,14 @@ export default function Summary() {
         name: `${s.user!.firstname} ${s.user!.lastname}`.trim(),
         came: s.isReceived,
         at: s.isReceived && l?.action === "arrived" ? l.at : null,
+        note: notes[s.user!.id] ?? "",
       });
       m.set(s.table.id, t);
     }
     return [...m.values()]
       .map((t) => ({ ...t, guests: t.guests.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) }))
       .sort((a, b) => byTable(a.name, b.name));
-  }, [seated, arrivedAt]);
+  }, [seated, arrivedAt, notes]);
   const abc = useMemo(
     () =>
       pdfTables
@@ -416,7 +429,10 @@ export default function Summary() {
             <tbody>
               {abc.map((g) => (
                 <tr key={g.id} className={`border-b border-zinc-100 ${g.came ? "" : "font-semibold text-red-600"}`}>
-                  <td className="py-1">{g.name}</td>
+                  <td className="py-1">
+                    {g.name}
+                    {g.note?.trim() && <div className="pl-2 text-xs font-normal italic text-amber-800">{g.note}</div>}
+                  </td>
                   <td className="py-1">{g.table}</td>
                   <td className={`py-1 text-right tabular-nums ${g.came ? "text-zinc-500" : ""}`}>
                     {g.at ? fmtTime(new Date(g.at)) : g.came ? "" : "did not come"}

@@ -14,7 +14,11 @@ export function thankYouHtml(o: { eventName: string; date?: string | null; table
   const came = all.filter((g) => g.came).length;
   const half = Math.ceil(all.length / 2);
   const cell = (g?: (typeof all)[number]) =>
-    g ? `<div style="font-size:13px;line-height:19px;${g.came ? "color:#141414" : "color:#c81414;font-weight:bold"}">${esc(g.name)}</div>` : "";
+    g
+      ? `<div style="font-size:13px;line-height:19px;${g.came ? "color:#141414" : "color:#c81414;font-weight:bold"}">${esc(g.name)}${
+          g.note?.trim() ? `<div style="font-size:11px;line-height:14px;font-style:italic;font-weight:normal;color:#92400e;padding:0 0 3px 8px">${esc(g.note.trim())}</div>` : ""
+        }</div>`
+      : "";
   const col = (list: typeof all) => list.map((g) => cell(g)).join("");
   // portrait, like a letter page (8.5 x 11): 520 wide, at least 672 tall
   const frame = (inner: string, middle = false) => `

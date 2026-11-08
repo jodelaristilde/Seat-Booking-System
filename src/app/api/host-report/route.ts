@@ -3,6 +3,8 @@ export const dynamic = "force-dynamic";
 import { db } from "@/lib/db";
 import { eventFromLiveToken } from "@/lib/liveLink";
 import { readLog } from "@/lib/history";
+import { deskAnswersFor, notesFor } from "@/lib/guestNotes";
+import { reportNote } from "@/lib/reportNote";
 import { NextResponse } from "next/server";
 
 // GET ?t=<live link token>: the host's after-event report (public, with the
@@ -17,6 +19,10 @@ export async function GET(req: Request) {
       select: { name: true, Seat: { where: { isBooked: true }, select: { id: true, isReceived: true, user: { select: { id: true, firstname: true, lastname: true, vip: true, meal: true } } } } },
     }),
     readLog(eventId).catch(() => []),
+  ]);
+  const [notes, desk] = await Promise.all([
+    notesFor(eventId).catch(() => ({}) as Record<string, string>),
+    deskAnswersFor(eventId).catch(() => ({}) as Record<string, { text?: string }>),
   ]);
   // each guest's arrival time: their latest check-in (if not undone)
   const latest = new Map<string, { at: string; action: string }>();
@@ -34,6 +40,7 @@ export async function GET(req: Request) {
           return {
             name: `${s.user!.firstname} ${s.user!.lastname}`.trim(),
             vip: !!s.user!.vip,
+            note: reportNote(notes[s.user!.id], desk[s.user!.id]),
             meal: s.user!.meal ?? "",
             came: s.isReceived,
             at: s.isReceived && l?.action === "arrived" ? l.at : null,

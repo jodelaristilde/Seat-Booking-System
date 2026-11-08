@@ -3,7 +3,7 @@
 // with their table, in their own list.
 import { jsPDF } from "jspdf";
 
-export type PdfTable = { name: string; guests: { name: string; came: boolean; at?: string | null; vip?: boolean }[] };
+export type PdfTable = { name: string; guests: { name: string; came: boolean; at?: string | null; vip?: boolean; note?: string }[] };
 
 // the logo as a picture the PDF can hold (null if it can't be loaded)
 async function logo(): Promise<string | null> {
@@ -176,21 +176,39 @@ export async function afterEventPdf(o: {
   };
   legend();
   const ROW = 13;
+  const NOTE = 11.5; // a note line under the name
   const colW = (R - L - 24) / 2;
+  const noteLines = (g: (typeof abc)[number]) => {
+    if (!g.note?.trim()) return [] as string[];
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    return (doc.splitTextToSize(g.note.trim(), colW - 8) as string[]).slice(0, 3);
+  };
+  const height = (g: (typeof abc)[number]) => ROW + noteLines(g).length * NOTE;
   let i = 0;
   while (i < abc.length) {
     // fill this page: first column top to bottom, then the second
-    const rows = Math.max(1, Math.floor((BOTTOM - y) / ROW));
-    const chunk = abc.slice(i, i + rows * 2);
-    const perCol = Math.ceil(chunk.length / 2);
+    const room = BOTTOM - y;
     const y0 = y;
-    chunk.forEach((g, k) => {
-      const col = k < perCol ? 0 : 1;
-      y = y0 + (k % perCol) * ROW;
-      text(`${g.name}${g.vip ? " (VIP)" : ""}`, L + col * (colW + 24), 10.5, !g.came, g.came ? BLACK : RED);
-    });
-    y = y0 + perCol * ROW;
-    i += chunk.length;
+    for (let col = 0; col < 2 && i < abc.length; col++) {
+      y = y0;
+      while (i < abc.length && (y - y0 + height(abc[i]) <= room || y === y0)) {
+        const g = abc[i];
+        const x = L + col * (colW + 24);
+        const lines = noteLines(g);
+        text(`${g.name}${g.vip ? " (VIP)" : ""}`, x, 10.5, !g.came, g.came ? BLACK : RED);
+        y += ROW;
+        for (const ln of lines) {
+          y -= 2.5;
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(9.5);
+          doc.setTextColor(146, 64, 14);
+          doc.text(ln, x + 8, y);
+          y += NOTE + 2.5;
+        }
+        i++;
+      }
+    }
     if (i < abc.length) {
       doc.addPage();
       frame();

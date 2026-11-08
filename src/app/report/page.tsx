@@ -9,7 +9,7 @@ import { FileDown, Printer } from "lucide-react";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import { BrandLogo } from "@/components/BrandLogo";
 
-type G = { name: string; vip: boolean; meal: string; came: boolean; at: string | null };
+type G = { name: string; vip: boolean; meal: string; came: boolean; at: string | null; note?: string };
 type Data = { event: { name: string; date: string | null }; tables: { name: string; guests: G[] }[] };
 const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
@@ -114,6 +114,7 @@ function Report() {
                 <div key={i} className={`break-inside-avoid py-0.5 ${g.came ? "" : "font-semibold text-red-600"}`}>
                   {g.vip && "★ "}
                   {g.name}
+                  {g.note?.trim() && <div className="pl-2 text-xs font-normal italic text-amber-800">{g.note}</div>}
                 </div>
               ))}
             </div>
