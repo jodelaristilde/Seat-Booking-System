@@ -153,59 +153,40 @@ export async function afterEventPdf(o: {
   });
   y += 72;
 
-  // did not come, in red, with the table
-  text(`Did not come (${noShow.length})`, M, 14, true, noShow.length ? RED : BLACK);
-  y += 6;
-  doc.setDrawColor(...RED);
-  doc.line(M, y, W - M, y);
-  y += 14;
-  if (!noShow.length) {
-    text("Everyone came.", M, 10);
-    y += 16;
-  } else {
-    // two columns: name · table
-    const colW = (W - 2 * M - 20) / 2;
-    const rows = Math.ceil(noShow.length / 2);
-    for (let r = 0; r < rows; r++) {
-      need(14);
-      for (let c = 0; c < 2; c++) {
-        const g = noShow[c * rows + r];
-        if (!g) continue;
-        const x = M + c * (colW + 20);
-        text(`${g.name}${g.vip ? " (VIP)" : ""}`, x, 10, false, RED);
-        text(g.table, x + colW, 10, true, RED, "right");
-      }
-      y += 14;
-    }
-  }
-  y += 14;
-
-  // table by table: who came (black, with the time) and who did not (red)
-  need(30);
-  text("Table by table", M, 14, true);
-  y += 6;
-  doc.setDrawColor(180);
-  doc.line(M, y, W - M, y);
-  y += 16;
-  for (const t of o.tables) {
-    const here = t.guests.filter((g) => g.came).length;
-    need(30);
-    text(t.name, M, 11, true);
-    text(`${here}/${t.guests.length} came`, W - M, 9, false, GREY, "right");
+  // one list, A to Z: came in black (with the time), did not come in red
+  const abc = [...all].sort((p, q) => p.name.localeCompare(q.name, undefined, { sensitivity: "base", numeric: true }));
+  const head = () => {
+    text("Guest", M, 9, true, GREY);
+    text("Table", M + 330, 9, true, GREY);
+    text("Arrived", W - M, 9, true, GREY, "right");
+    y += 5;
+    doc.setDrawColor(180);
+    doc.line(M, y, W - M, y);
     y += 13;
-    for (const g of t.guests) {
-      need(13);
-      if (g.came) {
-        text(`${g.name}${g.vip ? " (VIP)" : ""}`, M + 10, 9.5);
-        text(time(g.at), W - M, 9, false, GREY, "right");
-      } else {
-        text(`${g.name}${g.vip ? " (VIP)" : ""}`, M + 10, 9.5, true, RED);
-        text("did not come", W - M, 9, true, RED, "right");
-      }
-      y += 12;
+  };
+  text(`All guests (${all.length})`, M, 14, true);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BLACK);
+  doc.text("Black = came", W - M - 90, y, { align: "right" });
+  doc.setTextColor(...RED);
+  doc.setFont("helvetica", "bold");
+  doc.text("Red = did not come", W - M, y, { align: "right" });
+  y += 16;
+  head();
+  for (const g of abc) {
+    if (y + 13 > H - M) {
+      doc.addPage();
+      y = M;
+      head();
     }
-    y += 8;
+    const c = g.came ? BLACK : RED;
+    text(`${g.name}${g.vip ? " (VIP)" : ""}`, M, 10, !g.came, c);
+    text(g.table, M + 330, 10, !g.came, c);
+    text(g.came ? time(g.at) : "did not come", W - M, 9.5, !g.came, g.came ? GREY : RED, "right");
+    y += 13.5;
   }
+  y += 14;
 
   // thank-you and contact at the bottom of the last page
   need(40);

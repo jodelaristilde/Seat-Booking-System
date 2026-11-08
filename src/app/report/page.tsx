@@ -24,7 +24,8 @@ function Report() {
       .catch(() => setErr("Could not load the report."));
   }, [t]);
 
-  const all = useMemo(() => d?.tables.flatMap((x) => x.guests) ?? [], [d]);
+  const all = useMemo(() => d?.tables.flatMap((x) => x.guests.map((g) => ({ ...g, table: x.name }))) ?? [], [d]);
+  const abc = useMemo(() => [...all].sort((p, q) => p.name.localeCompare(q.name, undefined, { sensitivity: "base", numeric: true })), [all]);
   const came = all.filter((g) => g.came);
   const times = came.filter((g) => g.at).map((g) => new Date(g.at!).getTime()).sort((a, b) => a - b);
   // arrivals per half hour
@@ -101,53 +102,35 @@ function Report() {
           </section>
         )}
 
-        <section className="avoid mb-8 rounded-xl border-2 border-red-200 p-4">
-          <h2 className="mb-2 text-xl font-bold text-red-700">Did not come ({all.length - came.length})</h2>
-          {all.length === came.length ? (
-            <p>Everyone came.</p>
-          ) : (
-            <div className="grid gap-x-8 sm:grid-cols-2 print:grid-cols-2">
-              {d.tables.flatMap((tb) =>
-                tb.guests
-                  .filter((g) => !g.came)
-                  .map((g, i) => (
-                    <div key={`${tb.name}-${i}`} className="flex justify-between gap-2 border-b border-red-100 py-0.5 text-sm text-red-700">
-                      <span className="font-medium">{g.name}</span>
-                      <b>{tb.name}</b>
-                    </div>
-                  )),
-              )}
-            </div>
-          )}
-        </section>
-
+        {/* one list, A to Z: came in black, did not come in red */}
         <section>
-          <h2 className="mb-3 text-xl font-bold">Who came, table by table</h2>
-          <div className="grid gap-3 sm:grid-cols-2 print:grid-cols-2">
-            {d.tables.map((tb) => {
-              const here = tb.guests.filter((g) => g.came).length;
-              return (
-                <div key={tb.name} className="avoid rounded-lg border p-3">
-                  <div className="mb-1 flex justify-between border-b pb-1">
-                    <b>{tb.name}</b>
-                    <span className="text-sm tabular-nums text-zinc-600">{here}/{tb.guests.length} came</span>
-                  </div>
-                  <ul className="space-y-0.5 text-sm">
-                    {tb.guests.map((g, i) => (
-                      <li key={i} className={`flex justify-between gap-2 ${g.came ? "" : "font-semibold text-red-600"}`}>
-                        <span>
-                          {g.came ? "✓ " : "– "}
-                          {g.vip && "★ "}
-                          {g.name}
-                        </span>
-                        <span className={`tabular-nums ${g.came ? "text-zinc-500" : "text-red-600"}`}>{g.at ? time(g.at) : g.came ? "" : "didn't come"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-xl font-bold">All guests ({all.length})</h2>
+            <span className="text-sm">
+              Black = came · <b className="text-red-600">Red = did not come</b>
+            </span>
           </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase tracking-wide text-zinc-500">
+                <th className="py-1.5">Guest</th>
+                <th className="py-1.5">Table</th>
+                <th className="py-1.5 text-right">Arrived</th>
+              </tr>
+            </thead>
+            <tbody>
+              {abc.map((g, i) => (
+                <tr key={i} className={`avoid border-b border-zinc-100 ${g.came ? "" : "font-semibold text-red-600"}`}>
+                  <td className="py-1">
+                    {g.vip && "★ "}
+                    {g.name}
+                  </td>
+                  <td className="py-1">{g.table}</td>
+                  <td className={`py-1 text-right tabular-nums ${g.came ? "text-zinc-500" : ""}`}>{g.at ? time(g.at) : g.came ? "" : "did not come"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
 
       </div>

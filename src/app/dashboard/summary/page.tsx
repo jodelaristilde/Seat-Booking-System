@@ -129,6 +129,13 @@ export default function Summary() {
       .map((t) => ({ ...t, guests: t.guests.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) }))
       .sort((a, b) => byTable(a.name, b.name));
   }, [seated, arrivedAt]);
+  const abc = useMemo(
+    () =>
+      pdfTables
+        .flatMap((t) => t.guests.map((g) => ({ ...g, table: t.name })))
+        .sort((p, q) => p.name.localeCompare(q.name, undefined, { sensitivity: "base", numeric: true })),
+    [pdfTables],
+  );
   const noShows = useMemo(() => pdfTables.flatMap((t) => t.guests.filter((g) => !g.came).map((g) => ({ ...g, table: t.name }))), [pdfTables]);
 
   const meals = useMemo(() => {
@@ -294,29 +301,34 @@ export default function Summary() {
           ))}
         </div>
 
-        {/* who did not come, in red, with their table */}
-        <section className="mb-8 rounded-xl border-2 border-red-200 bg-red-50/40 p-4">
-          <h2 className="mb-2 text-lg font-bold text-red-700">Did not come ({noShows.length})</h2>
-          {!noShows.length ? (
-            <p className="text-sm">Everyone came.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-red-200 text-left text-xs uppercase tracking-wide text-red-700">
-                  <th className="py-1.5">Name</th>
-                  <th className="py-1.5 text-right">Table</th>
+        {/* one list, A to Z: came in black, did not come in red */}
+        <section className="mb-8">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-bold">All guests ({abc.length})</h2>
+            <span className="text-sm">
+              Black = came · <b className="text-red-600">Red = did not come ({noShows.length})</b>
+            </span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase tracking-wide text-zinc-500">
+                <th className="py-1.5">Guest</th>
+                <th className="py-1.5">Table</th>
+                <th className="py-1.5 text-right">Arrived</th>
+              </tr>
+            </thead>
+            <tbody>
+              {abc.map((g) => (
+                <tr key={g.id} className={`border-b border-zinc-100 ${g.came ? "" : "font-semibold text-red-600"}`}>
+                  <td className="py-1">{g.name}</td>
+                  <td className="py-1">{g.table}</td>
+                  <td className={`py-1 text-right tabular-nums ${g.came ? "text-zinc-500" : ""}`}>
+                    {g.at ? fmtTime(new Date(g.at)) : g.came ? "" : "did not come"}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {noShows.map((g) => (
-                  <tr key={g.id} className="border-b border-red-100 text-red-700">
-                    <td className="py-1.5 font-medium">{g.name}</td>
-                    <td className="py-1.5 text-right font-semibold">{g.table}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </section>
 
         {/* arrivals over time */}
