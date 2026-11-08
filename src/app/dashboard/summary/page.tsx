@@ -4,9 +4,9 @@
 // /dashboard/summary (login required)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileDown, FileText, Lock, Printer, Send } from "lucide-react";
+import { ArrowLeft, FileDown, FileText, Lock, Mail, Printer, Send } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { sendThankYou } from "@/lib/sendThankYou";
+import { sendThankYou, sendThankYouGmail } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
@@ -245,6 +245,20 @@ export default function Summary() {
             className="inline-flex items-center gap-1.5 rounded bg-lime-600 px-4 py-2 text-base font-bold text-white shadow hover:bg-lime-700 disabled:opacity-60"
           >
             <Send className="h-5 w-5" /> {sending ? "Getting it ready…" : "Send thank-you (email or text)"}
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setSending(true);
+              sendThankYouGmail({ eventName, date: eventDate, tables: pdfTables })
+                .catch(() => toast.error("Could not make the thank-you. Try again."))
+                .finally(() => setSending(false));
+            }}
+            disabled={sending}
+            className="inline-flex items-center gap-1.5 rounded border-2 border-red-500 bg-white px-4 py-2 text-base font-bold text-red-600 shadow hover:bg-red-50 disabled:opacity-60"
+          >
+            <Mail className="h-5 w-5" /> Send with Gmail
           </button>
         )}
         <button

@@ -59,3 +59,35 @@ export async function sendThankYou(o: { eventName: string; date?: string | null;
     duration: 20000,
   });
 }
+
+// Computer: open Gmail (the account signed in in this browser) with the note
+// written in, and download the PDF to attach (Gmail links can't attach files).
+export async function sendThankYouGmail(o: { eventName: string; date?: string | null; tables: PdfTable[] }) {
+  const w = window.open("about:blank", "_blank"); // now, or the browser blocks it
+  try {
+    const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
+    const [pdf, j] = await Promise.all([
+      afterEventPdf({ ...o, mode: "blob" }),
+      fetch("/api/live-link")
+        .then((r) => r.json())
+        .catch(() => null),
+    ]);
+    if (!pdf) throw new Error("no pdf");
+    const link = j?.success && j.link ? String(j.link).replace("/live?", "/report?") : "";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(pdf.blob);
+    a.download = pdf.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(thankYouNote(o.eventName, link))}`;
+    if (w) w.location.href = url;
+    else window.location.href = url;
+    toast.message("Gmail is open with your note", {
+      description: `Click the paperclip, pick "${pdf.name}" from Downloads, add the person's email, Send.`,
+      duration: 30000,
+    });
+  } catch (e) {
+    w?.close();
+    throw e;
+  }
+}
