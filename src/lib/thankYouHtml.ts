@@ -18,7 +18,7 @@ export function thankYouHtml(o: { eventName: string; date?: string | null; table
   const col = (list: typeof all) => list.map((g) => cell(g)).join("");
   // portrait, like a letter page (8.5 x 11): 520 wide, at least 672 tall
   const frame = (inner: string, middle = false) => `
-<table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:100%;margin:0 auto 18px;border-collapse:separate;background:#f7fee7;border:6px solid #84cc16;border-radius:14px">
+<table data-page="1" role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:100%;margin:0 auto 18px;border-collapse:separate;background:#f7fee7;border:6px solid #84cc16;border-radius:14px">
   <tr><td style="padding:6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #84cc16;border-radius:10px"><tr><td height="640" valign="${middle ? "middle" : "top"}" style="height:640px;padding:22px 24px;font-family:Arial,Helvetica,sans-serif;color:#141414;vertical-align:${middle ? "middle" : "top"}">${inner}</td></tr></table></td></tr>
 </table>`;
   const logo = `${o.origin}/seating4u-logo.png`;
@@ -28,11 +28,11 @@ export function thankYouHtml(o: { eventName: string; date?: string | null; table
   const card = frame(`
     <div style="text-align:center">
       <img src="${logo}" alt="Seating4U" width="240" style="width:240px;max-width:80%;height:auto;margin:6px auto 18px;display:block">
-      <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:bold;font-size:48px;line-height:56px;color:#15803d">Thank You</div>
-      <div style="width:110px;height:2px;background:#84cc16;margin:12px auto 22px"></div>
+      <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:bold;font-size:48px;line-height:70px;height:70px;color:#15803d">Thank You</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:14px auto 22px"><tr><td width="110" height="2" style="width:110px;height:2px;font-size:0;line-height:0;background:#84cc16">&nbsp;</td></tr></table>
       <p style="font-size:15px;line-height:22px;margin:0 0 12px">Thank you for the opportunity to be part of <b>${name}</b>${when ? ` on ${when}` : ""}.</p>
       <p style="font-size:15px;line-height:22px;margin:0 0 12px">It was a pleasure working with you and welcoming your guests to their seats.</p>
-      <p style="font-size:15px;line-height:22px;margin:0 0 12px">Your guest list is below. Names in red did not come.</p>
+      <p style="font-size:15px;line-height:22px;margin:0 0 12px">Your guest list is included. Names in red did not come.</p>
       ${o.link ? `<p style="font-size:15px;line-height:22px;margin:0 0 12px">You can also open the live version here:<br><a href="${esc(o.link)}" style="color:#15803d;font-weight:bold">Open your event report</a></p>` : ""}
       <p style="font-size:15px;line-height:22px;margin:0 0 18px">We would love to help with your next event.</p>
       <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:20px;color:#15803d">With gratitude,</div>

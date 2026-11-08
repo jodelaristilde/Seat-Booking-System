@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileDown, FileText, Lock, Mail, Printer, Send } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { prepareGmail, sendThankYou, sendThankYouGmail, type GmailReady } from "@/lib/sendThankYou";
+import { canSharePictures, prepareGmail, preparePhone, sendThankYou, sendThankYouGmail, type GmailReady, type PhoneReady } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
@@ -36,8 +36,8 @@ export default function Summary() {
   const [loading, setLoading] = useState(true);
   const [hover, setHover] = useState<number | null>(null);
   const [eventDate, setEventDate] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
   const [gmail, setGmail] = useState<GmailReady | null>(null);
+  const [phone, setPhone] = useState<PhoneReady | null>(null);
   const { data: session } = useSession();
   const isAdmin = session?.user?.email === "admin";
 
@@ -144,9 +144,13 @@ export default function Summary() {
     if (!isAdmin || loading) return;
     let stop = false;
     setGmail(null);
+    setPhone(null);
     const t = setTimeout(() => {
       prepareGmail({ eventName, date: eventDate, tables: pdfTables })
         .then((r) => !stop && setGmail(r))
+        .catch(() => undefined);
+      preparePhone({ eventName, date: eventDate, tables: pdfTables })
+        .then((r) => !stop && setPhone(r))
         .catch(() => undefined);
     }, 300);
     return () => {
@@ -253,15 +257,13 @@ export default function Summary() {
         {isAdmin && (
           <button
             onClick={() => {
-              setSending(true);
-              sendThankYou({ eventName, date: eventDate, tables: pdfTables })
-                .catch(() => toast.error("Could not make the thank-you. Try again."))
-                .finally(() => setSending(false));
+              if (phone && canSharePictures(phone)) sendThankYou(phone);
+              else toast.message("This browser can't share pictures", { description: "Use Send with Gmail, or open this page on your phone." });
             }}
-            disabled={sending}
+            disabled={!phone}
             className="inline-flex items-center gap-1.5 rounded bg-lime-600 px-4 py-2 text-base font-bold text-white shadow hover:bg-lime-700 disabled:opacity-60"
           >
-            <Send className="h-5 w-5" /> {sending ? "Getting it ready…" : "Send thank-you (email or text)"}
+            <Send className="h-5 w-5" /> {phone ? "Send thank-you (text or email)" : "Getting it ready…"}
           </button>
         )}
         {isAdmin && (

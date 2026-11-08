@@ -24,41 +24,57 @@ export function thankYouNote(_eventName: string, link: string) {
   ].join("\n");
 }
 
-export async function sendThankYou(o: { eventName: string; date?: string | null; tables: PdfTable[] }) {
-  const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
-  // the PDF and the report link, together (keeps the click's "permission" for the Share menu short)
-  const [pdf, j] = await Promise.all([
-    afterEventPdf({ ...o, mode: "blob" }),
-    fetch("/api/live-link")
-      .then((r) => r.json())
-      .catch(() => null),
-  ]);
-  if (!pdf) throw new Error("no pdf");
-  const link = j?.success && j.link ? String(j.link).replace("/live?", "/report?") : "";
-  const text = thankYouNote(o.eventName, link);
-  const file = new File([pdf.blob], pdf.name, { type: "application/pdf" });
-  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  if (nav.share && nav.canShare?.({ files: [file] })) {
-    try {
-      await nav.share({ title: subject, text, files: [file] });
-      toast.success("Thank-you sent", { description: "Sent from your Mail or Messages." });
-      return;
-    } catch (e) {
-      if ((e as Error)?.name === "AbortError") return; // closed the Share menu
-      // the click took too long for the Share menu: fall through
+// Phone: the thank-you as PICTURES (the green card and the guest list), made
+// ready before the click: on iPhone the Share menu only opens if it is called
+// right away in the tap.
+export type PhoneReady = { files: File[]; title: string };
+
+export async function preparePhone(o: { eventName: string; date?: string | null; tables: PdfTable[] }): Promise<PhoneReady> {
+  const link = await fetch("/api/live-link")
+    .then((r) => r.json())
+    .then((j) => (j?.success && j.link ? String(j.link).replace("/live?", "/report?") : ""))
+    .catch(() => "");
+  const html = thankYouHtml({ ...o, link, origin: window.location.origin });
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:-10000px;top:0;width:560px;background:#fff";
+  box.innerHTML = html;
+  document.body.appendChild(box);
+  try {
+    // wait for the logos
+    await Promise.all(
+      [...box.querySelectorAll("img")].map((im) =>
+        im.complete ? Promise.resolve() : new Promise((r) => ((im.onload = r), (im.onerror = r)))),
+    );
+    const html2canvas = (await import("html2canvas")).default;
+    const safe = (o.eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
+    const pages = [...box.querySelectorAll<HTMLElement>("[data-page]")];
+    const files: File[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      const c = await html2canvas(pages[i], { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
+      if (blob) files.push(new File([blob], `${safe} - ${i === 0 ? "Thank you" : "Guest list"}.png`, { type: "image/png" }));
     }
+    return { files, title: `Thank you from Seating4U - ${o.eventName || "your event"}` };
+  } finally {
+    box.remove();
   }
-  // no Share menu with files here: download the PDF, open the email with the note
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(pdf.blob);
-  a.download = pdf.name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
-  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-  toast.message("Your email is open with the note", {
-    description: `The report "${pdf.name}" is in your Downloads: attach it, pick the person, Send.`,
-    duration: 20000,
-  });
+}
+
+// true when this device can share pictures (iPhone, Android, many computers)
+export function canSharePictures(r: PhoneReady | null) {
+  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+  return !!(r && r.files.length && typeof nav.share === "function" && nav.canShare?.({ files: r.files }));
+}
+
+export function sendThankYou(r: PhoneReady) {
+  navigator
+    .share({ files: r.files, title: r.title }) // pictures only, no text
+    .then(
+      () => toast.success("Thank-you sent"),
+      (e) => {
+        if ((e as Error)?.name !== "AbortError") toast.error("Could not open the Share menu. Try again.");
+      },
+    );
 }
 
 // Computer, Gmail. Everything is made ready BEFORE the click (prepareGmail),
