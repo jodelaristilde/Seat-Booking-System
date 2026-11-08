@@ -28,6 +28,7 @@ import {
   RectangleHorizontal,
   Loader2,
   ZoomIn,
+  RotateCw,
   Expand,
   Volume2,
   VolumeX,
@@ -102,6 +103,9 @@ let entranceLater: number | null = null;
 let entranceCheckAfterTables = false;
 const PICTURE_KEY = "floorPlanShowPicture2"; // new name: picture now on by default
 const SEATS_KEY = "floorPlanShowSeats";
+// the map turned around (upside down), to match where you stand in the room.
+// Only on this computer: table places and the guests' phone map don't change.
+const FLIP_KEY = "floorPlanTurned";
 const FS_ARRIVED_KEY = "floorPlanFullScreenArrived";
 const STRETCH_KEY = "floorPlanStretch";
 const ZOOM_KEY = "floorPlanHoverZoom";
@@ -374,6 +378,15 @@ export function FloorPlanCanvas({
   const zoomKeepOpen = () => {
     if (zoomTimer.current) clearTimeout(zoomTimer.current);
   };
+  const [turned, setTurned] = useState(false);
+  useEffect(() => {
+    if (readStored(FLIP_KEY) === "on") setTurned(true);
+  }, []);
+  const toggleTurned = () =>
+    setTurned((v) => {
+      writeStored(FLIP_KEY, v ? "off" : "on");
+      return !v;
+    });
   const toggleHoverZoom = () =>
     setHoverZoom((v) => {
       writeStored(ZOOM_KEY, v ? "off" : "on");
@@ -1490,10 +1503,10 @@ export function FloorPlanCanvas({
   // ---------- dragging (tables and review shapes) ----------
   const pointToPercent = (clientX: number, clientY: number) => {
     const rect = canvasRef.current!.getBoundingClientRect();
-    return {
-      x: ((clientX - rect.left) / rect.width) * 100,
-      y: ((clientY - rect.top) / rect.height) * 100,
-    };
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    // map turned around: the screen's left is the room's right
+    return turned ? { x: 100 - x, y: 100 - y } : { x, y };
   };
 
   const onPointerDown =
@@ -2122,6 +2135,16 @@ export function FloorPlanCanvas({
             aria-pressed={hoverZoom}
           >
             <ZoomIn className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={turned ? "default" : "outline"}
+            onClick={toggleTurned}
+            title={turned ? "Turn the map back the normal way" : "Turn the map around, to match where you are standing"}
+            aria-label="Turn the map around"
+            aria-pressed={turned}
+          >
+            <RotateCw className="w-4 h-4" />
           </Button>
           <Button
             size="icon"
@@ -2777,6 +2800,10 @@ export function FloorPlanCanvas({
           ...(tableNumPx ? ({ "--table-num": `${tableNumPx}px` } as React.CSSProperties) : {}),
           left: `${(-show.x / show.w) * 100}%`,
           top: `${(-show.y / show.h) * 100}%`,
+          // turned around the middle of the part you see
+          ...(turned
+            ? { rotate: "180deg", transformOrigin: `${show.x + show.w / 2}% ${show.y + show.h / 2}%` }
+            : {}),
         }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -3112,6 +3139,8 @@ export function FloorPlanCanvas({
                   if (hoverZoom && !working) zoomCloseSoon();
                 }}
               >
+                {/* turned map: the table itself is turned back, so its number and names read normally */}
+                <div className="relative" style={turned ? { rotate: "180deg", transformOrigin: "45% 45%" } : undefined}>
                 {renderTable(withShape(table), index, !showSeats && !guestNames)}
                 {dropTable === id && (
                   <div className="pointer-events-none absolute inset-0 z-40 rounded-full ring-4 ring-blue-500 bg-blue-400/20" style={{ left: "8%", top: "8%", width: "74%", height: "74%" }} />
@@ -3221,6 +3250,7 @@ export function FloorPlanCanvas({
                     </>)}
                   </>
                 )}
+                </div>
               </div>
             );
           })}
@@ -3233,7 +3263,8 @@ export function FloorPlanCanvas({
         const pos = table && positions[zoomId];
         if (!table || !pos) return null;
         // show the card on the side away from the table, so it stays visible
-        const onLeft = (pos.x - show.x) / show.w > 0.5;
+        const across = (pos.x - show.x) / show.w;
+        const onLeft = (turned ? 1 - across : across) > 0.5;
         const seats = [...table.seats].sort((a, b) => a.seat - b.seat);
         const booked = seats.filter((s) => s.isBooked);
         const arrived = booked.filter((s) => s.isReceived).length;
