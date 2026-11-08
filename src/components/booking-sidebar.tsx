@@ -452,7 +452,7 @@ export function BookingSidebar({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-2 py-0.5">
+        <ScrollArea className="flex-1 px-2 py-0.5 [&_[data-radix-scroll-area-viewport]>div]:!block">
           <div>
             {/* on the guest list but not at a table yet (e.g. added without a table) */}
             {(() => {
@@ -576,7 +576,7 @@ export function BookingSidebar({
             })()}
             {visibleBookings.length > 0 ? (
               // A table so the columns line up: [arrived] Name   Table 1  [delete]
-              <table className="w-auto text-sm border-collapse">
+              <table className="w-full text-sm border-collapse">
                 <tbody>
                   {visibleBookings.map((seat) =>
                     seat.isReceived ? (
@@ -665,7 +665,7 @@ export function BookingSidebar({
                           />
                         </span>
                       </td>
-                      <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
+                      <td className="w-full py-0.5 pr-2 align-middle break-words">
                         {/* only the box marks arrival; clicking the name does nothing */}
                         {seat.user && editing?.id === seat.user.id ? (
                           nameEditor
