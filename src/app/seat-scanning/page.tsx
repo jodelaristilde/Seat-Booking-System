@@ -1271,7 +1271,7 @@ function WayOverlay({ way, youAreHere, yourTable, turned = false }: { way: Way; 
         .way-arrow { animation: wayArrow 1.1s ease-in-out infinite; z-index: 1 }
         .way-bounce { animation: wayBounce .7s ease-in-out infinite }
       `}</style>
-      {door && aspect > 0 && <WayLine door={door} table={t} halfW={ringW / 2} path={route?.path ?? null} aspect={aspect} />}
+      {door && aspect > 0 && <WayLine door={door} table={t} halfW={ringW / 2} path={route?.path ?? null} aspect={aspect} turned={turned} />}
       {/* the guest's table: it flashes, with a big arrow pointing at it (no label) */}
       <div
         className="absolute"
@@ -1324,7 +1324,9 @@ function WayLine({
   halfW,
   path,
   aspect = 1,
+  turned = false,
 }: {
+  turned?: boolean; // map turned around: the person is turned back so they stand upright
   door: { x: number; y: number };
   table: { x: number; y: number };
   halfW: number;
@@ -1432,7 +1434,11 @@ function WayLine({
         style={{
           left: `${walker.x}%`,
           top: `${walker.y}%`,
-          transform: `translate(-50%, -100%) scaleX(${walker.left && !walker.upDown ? -1 : 1})`,
+          // turned map: drawn upside down under the point so on screen they stand
+          // upright with their feet on the line, facing the way they walk
+          transform: turned
+            ? `translate(-50%, 0) rotate(180deg) scaleX(${!walker.left && !walker.upDown ? -1 : 1})`
+            : `translate(-50%, -100%) scaleX(${walker.left && !walker.upDown ? -1 : 1})`,
           zIndex: 2,
           opacity: walk > 0.92 ? (1 - walk) / 0.08 : walk < 0.05 ? walk / 0.05 : 1,
         }}
