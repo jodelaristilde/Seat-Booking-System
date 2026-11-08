@@ -102,35 +102,22 @@ function Report() {
           </section>
         )}
 
-        {/* one list, A to Z: came in black, did not come in red */}
-        <section>
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-bold">All guests ({all.length})</h2>
-            <span className="text-sm">
-              Black = came · <b className="text-red-600">Red = did not come</b>
-            </span>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs uppercase tracking-wide text-zinc-500">
-                <th className="py-1.5">Guest</th>
-                <th className="py-1.5">Table</th>
-                <th className="py-1.5 text-right">Arrived</th>
-              </tr>
-            </thead>
-            <tbody>
+        {/* all guests, A to Z, two columns, names only: red = did not come */}
+        <section className="rounded-2xl border-[6px] border-lime-500 bg-lime-50 p-1.5">
+          <div className="rounded-xl border border-lime-500 p-4">
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-lime-500 pb-1.5">
+              <h2 className="text-xl font-bold">Guests ({all.length})</h2>
+              <b className="text-red-600">Red means did not come</b>
+            </div>
+            <div className="columns-1 gap-8 text-[15px] sm:columns-2 print:columns-2">
               {abc.map((g, i) => (
-                <tr key={i} className={`avoid border-b border-zinc-100 ${g.came ? "" : "font-semibold text-red-600"}`}>
-                  <td className="py-1">
-                    {g.vip && "★ "}
-                    {g.name}
-                  </td>
-                  <td className="py-1">{g.table}</td>
-                  <td className={`py-1 text-right tabular-nums ${g.came ? "text-zinc-500" : ""}`}>{g.at ? time(g.at) : g.came ? "" : "did not come"}</td>
-                </tr>
+                <div key={i} className={`break-inside-avoid py-0.5 ${g.came ? "" : "font-semibold text-red-600"}`}>
+                  {g.vip && "★ "}
+                  {g.name}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </section>
 
       </div>

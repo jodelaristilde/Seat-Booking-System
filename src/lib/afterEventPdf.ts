@@ -37,19 +37,12 @@ export async function afterEventPdf(o: {
   const RED: [number, number, number] = [200, 20, 20];
   const BLACK: [number, number, number] = [20, 20, 20];
   const GREY: [number, number, number] = [110, 110, 110];
-  const need = (h: number) => {
-    if (y + h > H - M) {
-      doc.addPage();
-      y = M;
-    }
-  };
   const text = (s: string, x: number, size = 10, bold = false, color = BLACK, align: "left" | "right" | "center" = "left") => {
     doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.setFontSize(size);
     doc.setTextColor(...color);
     doc.text(s, x, y, { align });
   };
-  const time = (iso?: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
 
   const all = o.tables.flatMap((t) => t.guests.map((g) => ({ ...g, table: t.name })));
   const came = all.filter((g) => g.came);
@@ -91,7 +84,7 @@ export async function afterEventPdf(o: {
       "",
       "It was a pleasure welcoming your guests and helping every one of them find their seat.",
       "",
-      "Your event report is on the next pages: how many guests came, when they arrived, and the guests who did not come, with their table numbers.",
+      "Your guest list is on the next pages. Names in red did not come.",
       "",
       "We look forward to celebrating with you again.",
     ];
@@ -123,76 +116,92 @@ export async function afterEventPdf(o: {
     doc.setLineWidth(1);
   }
 
-  // the Seating4U logo, top right (1600 x 491)
+  // the report pages: same light green background and border as the card
+  const L = M + 22; // inside the border
+  const R = W - M - 22;
+  const TOP = M + 30;
+  const BOTTOM = H - M - 28;
+  const frame = () => {
+    doc.setFillColor(247, 254, 231);
+    doc.rect(0, 0, W, H, "F");
+    doc.setDrawColor(132, 204, 22);
+    doc.setLineWidth(6);
+    doc.roundedRect(M - 10, M - 10, W - 2 * M + 20, H - 2 * M + 20, 14, 14);
+    doc.setLineWidth(1);
+    doc.roundedRect(M, M, W - 2 * M, H - 2 * M, 10, 10);
+    doc.setLineWidth(1);
+  };
+  frame();
+  y = TOP;
+  // logo, top right (1600 x 491)
   if (img) {
-    const lw = 150;
-    doc.addImage(img, "PNG", W - M - lw, M - 14, lw, (lw * 491) / 1600, "logo");
+    const lw = 130;
+    doc.addImage(img, "PNG", R - lw, TOP - 16, lw, (lw * 491) / 1600, "logo");
   }
-  // title
-  text(o.eventName || "Event", M, 20, true);
+  text(o.eventName || "Event", L, 20, true);
   y += 18;
-  text(`${o.date ? o.date + " · " : ""}After-event report · Seating4U`, M, 10, false, GREY);
-  y += 24;
+  text(o.date ? new Date(o.date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Guest list", L, 10, false, GREY);
+  y += 22;
   // headline numbers
   const boxes: [string, string, [number, number, number]][] = [
-    ["Invited (seated)", String(all.length), BLACK],
+    ["Invited", String(all.length), BLACK],
     ["Came", `${came.length} (${all.length ? Math.round((came.length * 100) / all.length) : 0}%)`, BLACK],
     ["Did not come", String(noShow.length), noShow.length ? RED : BLACK],
   ];
-  const bw = (W - 2 * M - 20) / 3;
+  const bw = (R - L - 20) / 3;
   boxes.forEach(([k, v, c], i) => {
-    const x = M + i * (bw + 10);
+    const x = L + i * (bw + 10);
+    doc.setFillColor(255, 255, 255);
     doc.setDrawColor(200);
-    doc.roundedRect(x, y, bw, 50, 6, 6);
+    doc.roundedRect(x, y, bw, 46, 6, 6, "FD");
     const yy = y;
-    y = yy + 18;
+    y = yy + 16;
     text(k.toUpperCase(), x + 10, 8, true, GREY);
-    y = yy + 40;
-    text(v, x + 10, 18, true, c);
+    y = yy + 37;
+    text(v, x + 10, 17, true, c);
     y = yy;
   });
-  y += 72;
+  y += 70;
 
-  // one list, A to Z: came in black (with the time), did not come in red
+  // all guests, A to Z, two columns, names only: red = did not come
   const abc = [...all].sort((p, q) => p.name.localeCompare(q.name, undefined, { sensitivity: "base", numeric: true }));
-  const head = () => {
-    text("Guest", M, 9, true, GREY);
-    text("Table", M + 330, 9, true, GREY);
-    text("Arrived", W - M, 9, true, GREY, "right");
-    y += 5;
-    doc.setDrawColor(180);
-    doc.line(M, y, W - M, y);
-    y += 13;
+  const legend = () => {
+    text(`Guests (${all.length})`, L, 13, true);
+    text("Red means did not come", R, 11, true, RED, "right");
+    y += 7;
+    doc.setDrawColor(132, 204, 22);
+    doc.setLineWidth(1);
+    doc.line(L, y, R, y);
+    y += 16;
   };
-  text(`All guests (${all.length})`, M, 14, true);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...BLACK);
-  doc.text("Black = came", W - M - 90, y, { align: "right" });
-  doc.setTextColor(...RED);
-  doc.setFont("helvetica", "bold");
-  doc.text("Red = did not come", W - M, y, { align: "right" });
-  y += 16;
-  head();
-  for (const g of abc) {
-    if (y + 13 > H - M) {
+  legend();
+  const ROW = 13;
+  const colW = (R - L - 24) / 2;
+  let i = 0;
+  while (i < abc.length) {
+    // fill this page: first column top to bottom, then the second
+    const rows = Math.max(1, Math.floor((BOTTOM - y) / ROW));
+    const chunk = abc.slice(i, i + rows * 2);
+    const perCol = Math.ceil(chunk.length / 2);
+    const y0 = y;
+    chunk.forEach((g, k) => {
+      const col = k < perCol ? 0 : 1;
+      y = y0 + (k % perCol) * ROW;
+      text(`${g.name}${g.vip ? " (VIP)" : ""}`, L + col * (colW + 24), 10.5, !g.came, g.came ? BLACK : RED);
+    });
+    y = y0 + perCol * ROW;
+    i += chunk.length;
+    if (i < abc.length) {
       doc.addPage();
-      y = M;
-      head();
+      frame();
+      y = TOP;
+      legend();
     }
-    const c = g.came ? BLACK : RED;
-    text(`${g.name}${g.vip ? " (VIP)" : ""}`, M, 10, !g.came, c);
-    text(g.table, M + 330, 10, !g.came, c);
-    text(g.came ? time(g.at) : "did not come", W - M, 9.5, !g.came, g.came ? GREY : RED, "right");
-    y += 13.5;
   }
-  y += 14;
 
   // thank-you and contact at the bottom of the last page
-  need(40);
-  y += 10;
-  text("Thank you for choosing Seating4U  ·  www.seating4u.com  ·  417-893-0047", W / 2, 10, true, GREY, "center");
-  doc.setFontSize(10);
+  y = BOTTOM + 10;
+  text("Thank you for choosing Seating4U  ·  www.seating4u.com  ·  417-893-0047", W / 2, 9, true, GREY, "center");
   const safe = (o.eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
   const name = `${safe} - Seating4U report.pdf`;
   if (o.mode === "blob") return { blob: doc.output("blob"), name };
