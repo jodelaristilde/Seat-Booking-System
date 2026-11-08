@@ -26,7 +26,6 @@ export async function afterEventPdf(o: {
   eventName: string;
   date?: string | null;
   tables: PdfTable[];
-  meals: [string, number][];
   // "blob": give the file back (to share it) instead of downloading it
   mode?: "save" | "blob";
 }): Promise<{ blob: Blob; name: string } | void> {
@@ -92,7 +91,7 @@ export async function afterEventPdf(o: {
       "",
       "It was a pleasure welcoming your guests and helping every one of them find their seat.",
       "",
-      "Your event report is on the next pages: who came, when they arrived, the meals served, and the guests who did not come, with their table numbers.",
+      "Your event report is on the next pages: how many guests came, when they arrived, and the guests who did not come, with their table numbers.",
       "",
       "We look forward to celebrating with you again.",
     ];
@@ -180,15 +179,6 @@ export async function afterEventPdf(o: {
     }
   }
   y += 14;
-
-  // meals actually served
-  if (o.meals.length) {
-    need(40);
-    text("Meals served (guests who came)", M, 14, true);
-    y += 16;
-    text(o.meals.map(([m, n]) => `${n} ${m}`).join("  ·  "), M, 10);
-    y += 22;
-  }
 
   // table by table: who came (black, with the time) and who did not (red)
   need(30);

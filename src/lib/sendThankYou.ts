@@ -6,25 +6,24 @@
 import { toast } from "sonner";
 import { afterEventPdf, type PdfTable } from "@/lib/afterEventPdf";
 
-export function thankYouNote(eventName: string, link: string) {
+export function thankYouNote(_eventName: string, link: string) {
+  // Jodel's own wording
   return [
-    "Hi,",
+    "Thank you for the opportunity to be part of your event. It was a pleasure working with you and welcoming your guests to their seats.",
     "",
-    `Thank you for the opportunity to be part of ${eventName || "your event"}. It was a pleasure working with you and welcoming your guests to their seats.`,
-    "",
-    "Attached is your event report: who came, when they arrived, the meals served, and the guests who did not come, with their table numbers.",
-    ...(link ? ["", `You can also open it online here: ${link}`] : []),
+    "Attached is your after-event report. It shows how many guests came, when they arrived, and a list of the guests who did not come, with their table numbers.",
+    ...(link ? ["", "You can also open the live version here:", link] : []),
     "",
     "We would love to help with your next event.",
     "",
     "With gratitude,",
     "Jodel Aristilde",
-    "Seating4U - We've Got Your Seats",
+    "Seating4U — We've Got Your Seats",
     "www.seating4u.com · 417-893-0047",
   ].join("\n");
 }
 
-export async function sendThankYou(o: { eventName: string; date?: string | null; tables: PdfTable[]; meals: [string, number][] }) {
+export async function sendThankYou(o: { eventName: string; date?: string | null; tables: PdfTable[] }) {
   const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
   // the PDF and the report link, together (keeps the click's "permission" for the Share menu short)
   const [pdf, j] = await Promise.all([

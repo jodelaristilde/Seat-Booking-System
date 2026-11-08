@@ -230,7 +230,7 @@ export default function Summary() {
           <button
             onClick={() => {
               setSending(true);
-              sendThankYou({ eventName, date: eventDate, tables: pdfTables, meals })
+              sendThankYou({ eventName, date: eventDate, tables: pdfTables })
                 .catch(() => toast.error("Could not make the thank-you. Try again."))
                 .finally(() => setSending(false));
             }}
@@ -242,7 +242,7 @@ export default function Summary() {
         )}
         <button
           onClick={() => {
-            afterEventPdf({ eventName, date: eventDate, tables: pdfTables, meals }).then(
+            afterEventPdf({ eventName, date: eventDate, tables: pdfTables }).then(
               () => toast.success("PDF downloaded", { description: "Look in your Downloads folder." }),
               () => toast.error("Could not make the PDF. Try Print instead."),
             );

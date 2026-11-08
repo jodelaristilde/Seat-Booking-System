@@ -1,14 +1,13 @@
 "use client";
 
 // The host's report after the event: how many came, when they arrived, who
-// came at each table, and the meals served. Opened from the client's private
+// came at each table, and who did not come. Opened from the client's private
 // link: /report?t=... Print it or save as PDF.
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileDown, Printer } from "lucide-react";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import { BrandLogo } from "@/components/BrandLogo";
-import { ReviewForm } from "@/components/ReviewForm";
 
 type G = { name: string; vip: boolean; meal: string; came: boolean; at: string | null };
 type Data = { event: { name: string; date: string | null }; tables: { name: string; guests: G[] }[] };
@@ -38,11 +37,6 @@ function Report() {
     for (const x of times) out[Math.min(n - 1, Math.floor((x - t0) / step))].n++;
     return out;
   }, [times]);
-  const meals = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const g of came) if (g.meal) m.set(g.meal, (m.get(g.meal) ?? 0) + 1);
-    return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [came]);
 
   if (err) return <p className="mx-auto mt-24 max-w-md rounded-xl border bg-white p-6 text-center text-lg font-semibold">{err}</p>;
   if (!d) return <p className="p-10 text-center text-zinc-500">Loading…</p>;
@@ -52,7 +46,7 @@ function Report() {
       <style>{`@media print { .no-print { display: none !important } @page { margin: 12mm } .avoid { break-inside: avoid } }`}</style>
       <div className="no-print flex justify-end gap-2 border-b bg-zinc-50 px-6 py-3">
         <button
-          onClick={() => afterEventPdf({ eventName: d.event.name, date: d.event.date, tables: d.tables, meals })}
+          onClick={() => afterEventPdf({ eventName: d.event.name, date: d.event.date, tables: d.tables })}
           className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
         >
           <FileDown className="h-4 w-4" /> Download PDF
@@ -107,13 +101,6 @@ function Report() {
           </section>
         )}
 
-        {meals.length > 0 && (
-          <section className="avoid mb-8">
-            <h2 className="mb-1 text-xl font-bold">Meals served</h2>
-            <p className="text-lg">{meals.map(([m, n]) => `${n} ${m}`).join(" · ")}</p>
-          </section>
-        )}
-
         <section className="avoid mb-8 rounded-xl border-2 border-red-200 p-4">
           <h2 className="mb-2 text-xl font-bold text-red-700">Did not come ({all.length - came.length})</h2>
           {all.length === came.length ? (
@@ -163,11 +150,6 @@ function Report() {
           </div>
         </section>
 
-        <section className="no-print mt-10 rounded-xl border bg-zinc-50 p-5">
-          <h2 className="mb-1 text-lg font-bold">How was your event?</h2>
-          <p className="mb-3 text-sm text-zinc-600">A few words help us a lot. With your OK, we may show them on our website.</p>
-          <ReviewForm t={t ?? ""} defaultRole="Host" />
-        </section>
       </div>
     </div>
   );
