@@ -443,6 +443,28 @@ export function FloorPlanCanvas({
     writeStored("floorPlanSeats", String(n));
   };
   const [settingSeats, setSettingSeats] = useState(false);
+  // one table: give it this many seats (seats with a guest are never removed)
+  const [tableSeatsBusy, setTableSeatsBusy] = useState(false);
+  const setTableSeats = async (table: TableData, n: number) => {
+    if (n < 1 || n > 40 || tableSeatsBusy) return;
+    setTableSeatsBusy(true);
+    try {
+      const res = await fetch("/api/set-seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seats: n, tableIds: [tableIdOf(table)] }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      await onTablesChanged();
+      if (json.keptExtra?.length) toast.message(`${tableNameOf(table)}: seats with a guest on them were kept`);
+      else toast.success(`${tableNameOf(table)} now has ${n} seats`);
+    } catch (e) {
+      toast.error("Could not change the seats", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setTableSeatsBusy(false);
+    }
+  };
   const setAllSeats = async () => {
     if (!window.confirm(`Give every table ${drawSeats} seats? Seats with a guest on them are never removed.`)) return;
     setSettingSeats(true);
@@ -3323,6 +3345,40 @@ export function FloorPlanCanvas({
               <span className="text-xs text-zinc-500 tabular-nums">
                 {booked.length}/{seats.length} seated · {arrived} arrived
               </span>
+              {/* change this table's number of seats */}
+              {!staff && (
+                <span className="flex items-center gap-1 rounded-full border border-zinc-300 px-1 py-0.5 text-xs">
+                  <button
+                    type="button"
+                    disabled={tableSeatsBusy || seats.length <= Math.max(1, booked.length)}
+                    onClick={() => {
+                      zoomPinned.current = true;
+                      setTableSeats(table, seats.length - 1);
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full font-bold hover:bg-zinc-100 disabled:opacity-30"
+                    title="One seat less (a seat with a guest is never removed)"
+                    aria-label="One seat less"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[4.5rem] text-center font-semibold tabular-nums">
+                    {tableSeatsBusy ? "Saving…" : `${seats.length} seats`}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={tableSeatsBusy || seats.length >= 40}
+                    onClick={() => {
+                      zoomPinned.current = true;
+                      setTableSeats(table, seats.length + 1);
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full font-bold hover:bg-zinc-100 disabled:opacity-30"
+                    title="One more seat"
+                    aria-label="One more seat"
+                  >
+                    +
+                  </button>
+                </span>
+              )}
               {/* guest names around the table in this card: on / off (remembered) */}
               <button
                 type="button"
