@@ -68,7 +68,7 @@ export function canSharePictures(r: PhoneReady | null) {
 
 export function sendThankYou(r: PhoneReady) {
   navigator
-    .share({ files: r.files, title: r.title }) // pictures only, no text
+    .share({ files: r.files }) // pictures only: with a title, iPhone Messages drops the pictures
     .then(
       () => toast.success("Thank-you sent"),
       (e) => {
