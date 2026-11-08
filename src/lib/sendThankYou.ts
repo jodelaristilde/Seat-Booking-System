@@ -61,57 +61,63 @@ export async function sendThankYou(o: { eventName: string; date?: string | null;
   });
 }
 
-// Computer: open Gmail (the account signed in in this browser) with the
-// subject filled in, and put the styled thank-you (the card and the guest list,
-// like the PDF) on the clipboard: click in the message, Ctrl+V. The PDF also
-// downloads, to attach if wanted (Gmail links can't attach files).
-export async function sendThankYouGmail(o: { eventName: string; date?: string | null; tables: PdfTable[] }) {
-  const w = window.open("about:blank", "_blank"); // now, or the browser blocks it
-  const linkP: Promise<string> = fetch("/api/live-link")
-    .then((r) => r.json())
-    .then((j) => (j?.success && j.link ? String(j.link).replace("/live?", "/report?") : ""))
-    .catch(() => "");
-  const htmlP = linkP.then((link) => thankYouHtml({ ...o, link, origin: window.location.origin }));
-  // start the copy inside the click (browsers only allow it then); it finishes when ready
-  let copied: Promise<boolean>;
+// Computer, Gmail. Everything is made ready BEFORE the click (prepareGmail),
+// so the click itself does it all at once: copies the styled email, downloads
+// the PDF and opens Gmail. (Waiting inside the click left the Gmail tab blank.)
+export type GmailReady = { url: string; html: string; text: string; pdf: { blob: Blob; name: string } };
+
+export async function prepareGmail(o: { eventName: string; date?: string | null; tables: PdfTable[] }): Promise<GmailReady> {
+  const [pdf, link] = await Promise.all([
+    afterEventPdf({ ...o, mode: "blob" }),
+    fetch("/api/live-link")
+      .then((r) => r.json())
+      .then((j) => (j?.success && j.link ? String(j.link).replace("/live?", "/report?") : ""))
+      .catch(() => ""),
+  ]);
+  if (!pdf) throw new Error("no pdf");
+  const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
+  return {
+    url: `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}`,
+    html: thankYouHtml({ ...o, link, origin: window.location.origin }),
+    text: thankYouNote(o.eventName, link),
+    pdf,
+  };
+}
+
+export function sendThankYouGmail(r: GmailReady) {
+  // 1. copy the styled email (all ready, so this is instant)
+  let copy: Promise<unknown>;
   try {
-    copied = navigator.clipboard
-      .write([
-        new ClipboardItem({
-          "text/html": htmlP.then((h) => new Blob([h], { type: "text/html" })),
-          "text/plain": linkP.then((l) => new Blob([thankYouNote(o.eventName, l)], { type: "text/plain" })),
-        }),
-      ])
-      .then(() => true, () => false);
+    copy = navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": new Blob([r.html], { type: "text/html" }),
+        "text/plain": new Blob([r.text], { type: "text/plain" }),
+      }),
+    ]);
   } catch {
-    copied = Promise.resolve(false);
+    copy = Promise.reject();
   }
-  try {
-    const subject = `Thank you from Seating4U - ${o.eventName || "your event"}`;
-    const [pdf, link, ok] = await Promise.all([afterEventPdf({ ...o, mode: "blob" }), linkP, copied]);
-    if (!pdf) throw new Error("no pdf");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(pdf.blob);
-    a.download = pdf.name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
-    // copied: the body stays empty for the paste; not copied: the plain note
-    const body = ok ? "" : thankYouNote(o.eventName, link);
-    const url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}${body ? `&body=${encodeURIComponent(body)}` : ""}`;
-    if (w) w.location.href = url;
-    else window.location.href = url;
-    if (ok)
+  // 2. the PDF to Downloads
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(r.pdf.blob);
+  a.download = r.pdf.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  // 3. Gmail, straight away in a new tab
+  const w = window.open(r.url, "_blank");
+  if (!w) window.location.href = r.url;
+  copy.then(
+    () =>
       toast.success("Gmail is open. Click in the message and press Ctrl+V (Mac: Cmd+V)", {
-        description: `The thank-you card and guest list appear. Add the person's email, Send. (The PDF "${pdf.name}" is in Downloads if you also want to attach it.)`,
+        description: `The thank-you card and guest list appear. Add the person's email, Send. (The PDF "${r.pdf.name}" is in Downloads if you also want to attach it.)`,
         duration: 45000,
-      });
-    else
-      toast.message("Gmail is open with your note", {
-        description: `Click the paperclip, pick "${pdf.name}" from Downloads, add the person's email, Send.`,
+      }),
+    () =>
+      toast.message("Gmail is open", {
+        description: `Copy didn't work in this browser: click the paperclip, pick "${r.pdf.name}" from Downloads, add the person's email, Send.`,
         duration: 30000,
-      });
-  } catch (e) {
-    w?.close();
-    throw e;
-  }
+      }),
+  );
 }

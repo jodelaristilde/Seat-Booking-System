@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileDown, FileText, Lock, Mail, Printer, Send } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { sendThankYou, sendThankYouGmail } from "@/lib/sendThankYou";
+import { prepareGmail, sendThankYou, sendThankYouGmail, type GmailReady } from "@/lib/sendThankYou";
 import { openClientReport } from "@/lib/openClientReport";
 import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
@@ -37,6 +37,7 @@ export default function Summary() {
   const [hover, setHover] = useState<number | null>(null);
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [gmail, setGmail] = useState<GmailReady | null>(null);
   const { data: session } = useSession();
   const isAdmin = session?.user?.email === "admin";
 
@@ -137,6 +138,22 @@ export default function Summary() {
     [pdfTables],
   );
   const noShows = useMemo(() => pdfTables.flatMap((t) => t.guests.filter((g) => !g.came).map((g) => ({ ...g, table: t.name }))), [pdfTables]);
+
+  // Gmail: get the email and PDF ready before the click (admin only)
+  useEffect(() => {
+    if (!isAdmin || loading) return;
+    let stop = false;
+    setGmail(null);
+    const t = setTimeout(() => {
+      prepareGmail({ eventName, date: eventDate, tables: pdfTables })
+        .then((r) => !stop && setGmail(r))
+        .catch(() => undefined);
+    }, 300);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+    };
+  }, [isAdmin, loading, eventName, eventDate, pdfTables]);
 
   const meals = useMemo(() => {
     const m = new Map<string, number>();
@@ -249,16 +266,11 @@ export default function Summary() {
         )}
         {isAdmin && (
           <button
-            onClick={() => {
-              setSending(true);
-              sendThankYouGmail({ eventName, date: eventDate, tables: pdfTables })
-                .catch(() => toast.error("Could not make the thank-you. Try again."))
-                .finally(() => setSending(false));
-            }}
-            disabled={sending}
+            onClick={() => gmail && sendThankYouGmail(gmail)}
+            disabled={!gmail}
             className="inline-flex items-center gap-1.5 rounded border-2 border-red-500 bg-white px-4 py-2 text-base font-bold text-red-600 shadow hover:bg-red-50 disabled:opacity-60"
           >
-            <Mail className="h-5 w-5" /> Send with Gmail
+            <Mail className="h-5 w-5" /> {gmail ? "Send with Gmail" : "Getting Gmail ready…"}
           </button>
         )}
         <button
