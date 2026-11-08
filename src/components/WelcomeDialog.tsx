@@ -14,10 +14,29 @@ export function WelcomeDialog() {
   useEffect(() => {
     if (!id) return;
     try {
-      if (!localStorage.getItem(key)) setOpen(true);
+      if (localStorage.getItem(key)) return;
     } catch {
-      /* private window: don't show */
+      return; /* private window: don't show */
     }
+    // a planner whose event already has guests is working (on a new computer
+    // at the door, say): straight to the floor map, no welcome window
+    let stop = false;
+    fetch("/api/setup-progress")
+      .then((r) => r.json())
+      .catch(() => null)
+      .then((j) => {
+        if (stop) return;
+        if (j?.counts?.guests > 0) {
+          try {
+            localStorage.setItem(key, "1");
+          } catch {
+            /* ignore */
+          }
+        } else setOpen(true);
+      });
+    return () => {
+      stop = true;
+    };
   }, [id, key]);
   if (!open) return null;
   const done = () => {

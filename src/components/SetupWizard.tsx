@@ -60,6 +60,23 @@ const write = (k: string, v: string) => {
   }
 };
 
+// the steps were opened in this browser tab (gone when the tab is closed)
+const TAB = (id: string) => `seating4u-wizard-tab:${id}`;
+const tabOpened = (id: string) => {
+  try {
+    return sessionStorage.getItem(TAB(id)) === "1";
+  } catch {
+    return false;
+  }
+};
+const markTab = (id: string | null) => {
+  try {
+    if (id) sessionStorage.setItem(TAB(id), "1");
+  } catch {
+    /* private window */
+  }
+};
+
 const TITLES = [
   "Your event",
   "Floor plan",
@@ -112,8 +129,14 @@ export function SetupWizard({
         }
       }
       const saved = read(KEY(j.event.id));
-      // open after every log-in (log-in clears "off"), unless closed since
-      if (saved === "off") setOn(false);
+      // an event already set up (it has tables and guests) opens straight on
+      // the floor map: no Next, Next, Next on the day. The steps are still in
+      // the menu (☰ "Show me step by step").
+      const ready = j.counts.tables > 0 && j.counts.guests > 0;
+      // a step left open in this tab (a reload, back from the seating helper)
+      // carries on; one left from an earlier visit does not
+      const thisTab = !!jump || tabOpened(j.event.id);
+      if (saved === "off" || (ready && !(saved && /^\d$/.test(saved) && thisTab))) setOn(false);
       else {
         setOn(true);
         // after log-in: always from the start (event, then the floor plan…);
@@ -135,6 +158,7 @@ export function SetupWizard({
       setOn(true);
       setAside(null);
       if (evId.current) write(KEY(evId.current), String(0));
+      markTab(evId.current);
       setStep(0);
       load();
     };
@@ -146,6 +170,7 @@ export function SetupWizard({
       setStep(n);
       setAside(null);
       if (evId.current) write(KEY(evId.current), String(n));
+      markTab(evId.current);
       load();
     };
     window.addEventListener("seating4u:wizard-go", goTo);
@@ -180,6 +205,7 @@ export function SetupWizard({
     setStep(s);
     setAside(null);
     if (evId.current) write(KEY(evId.current), String(s));
+    markTab(evId.current);
   };
   const exit = (msg = true) => {
     setOn(false);
