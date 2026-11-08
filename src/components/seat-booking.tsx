@@ -1667,7 +1667,7 @@ const handleTableClick = () => {
                           hint: "Summary, report for your client, review",
                           items: (
                             <>
-                              {prow(BarChart3, "Arrival summary & close out", "Who came, no-shows, meals served. Closes guest check-in.", "/dashboard/summary")}
+                              {prow(BarChart3, "After-event PDF & summary", "Who came, no-shows in red with their table. Download the PDF.", "/dashboard/summary")}
                               {prow(FileText, "Report for your client", "A thank-you report they can print.", () => window.dispatchEvent(new Event("seating4u:live-link")))}
                               {prow(Star, "Leave us a review", "How is Seating4U working for you?", openReview)}
                             </>
@@ -1776,7 +1776,7 @@ const handleTableClick = () => {
                       )}
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/summary">
-                          <BarChart3 className="mr-2 w-4 h-4" /> Arrival summary &amp; close out
+                          <BarChart3 className="mr-2 w-4 h-4" /> After-event PDF &amp; summary
                         </Link>
                       </DropdownMenuItem>
                       {!isStaff && <UndoItem />}

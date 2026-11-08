@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     db.event.findUnique({ where: { id: eventId }, select: { name: true, date: true } }),
     db.table.findMany({
       where: { eventId },
-      select: { name: true, Seat: { where: { isBooked: true }, select: { id: true, isReceived: true, user: { select: { firstname: true, lastname: true, vip: true, meal: true } } } } },
+      select: { name: true, Seat: { where: { isBooked: true }, select: { id: true, isReceived: true, user: { select: { id: true, firstname: true, lastname: true, vip: true, meal: true } } } } },
     }),
     readLog(eventId).catch(() => []),
   ]);
@@ -22,11 +22,13 @@ export async function GET(req: Request) {
   const latest = new Map<string, { at: string; action: string }>();
   for (const e of [...log].sort((a, b) => String(a.at).localeCompare(String(b.at))))
     if (e.seatId && (e.action === "arrived" || e.action === "undo")) latest.set(e.seatId, { at: String(e.at), action: e.action });
-  type S = { id: string; isReceived: boolean; user: { firstname: string; lastname: string; vip: boolean; meal: string | null } | null };
+  type S = { id: string; isReceived: boolean; user: { id: string; firstname: string; lastname: string; vip: boolean; meal: string | null } | null };
   const list = (tables as { name: string; Seat: S[] }[])
     .map((t) => ({
       name: t.name,
+      // the Excel order (ids follow the upload order)
       guests: t.Seat.filter((s) => s.user)
+        .sort((a, b) => (a.user!.id < b.user!.id ? -1 : a.user!.id > b.user!.id ? 1 : 0))
         .map((s) => {
           const l = latest.get(s.id);
           return {
@@ -36,8 +38,7 @@ export async function GET(req: Request) {
             came: s.isReceived,
             at: s.isReceived && l?.action === "arrived" ? l.at : null,
           };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name)),
+        }),
     }))
     .filter((t) => t.guests.length)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));

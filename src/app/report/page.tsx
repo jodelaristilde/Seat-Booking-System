@@ -5,7 +5,8 @@
 // link: /report?t=... Print it or save as PDF.
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Printer } from "lucide-react";
+import { FileDown, Printer } from "lucide-react";
+import { afterEventPdf } from "@/lib/afterEventPdf";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ReviewForm } from "@/components/ReviewForm";
 
@@ -50,8 +51,14 @@ function Report() {
     <div className="min-h-screen bg-white text-black">
       <style>{`@media print { .no-print { display: none !important } @page { margin: 12mm } .avoid { break-inside: avoid } }`}</style>
       <div className="no-print flex justify-end gap-2 border-b bg-zinc-50 px-6 py-3">
-        <button onClick={() => window.print()} className="inline-flex items-center gap-1 rounded bg-lime-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-lime-700">
-          <Printer className="h-4 w-4" /> Print / save as PDF
+        <button
+          onClick={() => afterEventPdf({ eventName: d.event.name, date: d.event.date, tables: d.tables, meals })}
+          className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+        >
+          <FileDown className="h-4 w-4" /> Download PDF
+        </button>
+        <button onClick={() => window.print()} className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100">
+          <Printer className="h-4 w-4" /> Print
         </button>
       </div>
       <div className="mx-auto max-w-4xl px-6 py-8">
@@ -107,6 +114,26 @@ function Report() {
           </section>
         )}
 
+        <section className="avoid mb-8 rounded-xl border-2 border-red-200 p-4">
+          <h2 className="mb-2 text-xl font-bold text-red-700">Did not come ({all.length - came.length})</h2>
+          {all.length === came.length ? (
+            <p>Everyone came.</p>
+          ) : (
+            <div className="grid gap-x-8 sm:grid-cols-2 print:grid-cols-2">
+              {d.tables.flatMap((tb) =>
+                tb.guests
+                  .filter((g) => !g.came)
+                  .map((g, i) => (
+                    <div key={`${tb.name}-${i}`} className="flex justify-between gap-2 border-b border-red-100 py-0.5 text-sm text-red-700">
+                      <span className="font-medium">{g.name}</span>
+                      <b>{tb.name}</b>
+                    </div>
+                  )),
+              )}
+            </div>
+          )}
+        </section>
+
         <section>
           <h2 className="mb-3 text-xl font-bold">Who came, table by table</h2>
           <div className="grid gap-3 sm:grid-cols-2 print:grid-cols-2">
@@ -120,13 +147,13 @@ function Report() {
                   </div>
                   <ul className="space-y-0.5 text-sm">
                     {tb.guests.map((g, i) => (
-                      <li key={i} className={`flex justify-between gap-2 ${g.came ? "" : "text-zinc-400"}`}>
+                      <li key={i} className={`flex justify-between gap-2 ${g.came ? "" : "font-semibold text-red-600"}`}>
                         <span>
                           {g.came ? "✓ " : "– "}
                           {g.vip && "★ "}
                           {g.name}
                         </span>
-                        <span className="tabular-nums text-zinc-500">{g.at ? time(g.at) : g.came ? "" : "didn't come"}</span>
+                        <span className={`tabular-nums ${g.came ? "text-zinc-500" : "text-red-600"}`}>{g.at ? time(g.at) : g.came ? "" : "didn't come"}</span>
                       </li>
                     ))}
                   </ul>

@@ -4,7 +4,8 @@
 // /dashboard/summary (login required)
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Printer } from "lucide-react";
+import { ArrowLeft, FileDown, Lock, Printer } from "lucide-react";
+import { afterEventPdf } from "@/lib/afterEventPdf";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -93,6 +94,33 @@ export default function Summary() {
     }
     return [...m.values()].sort((a, b) => byTable(a.name, b.name));
   }, [seated]);
+
+  // each seat's arrival time (latest check-in, if not undone)
+  const arrivedAt = useMemo(() => {
+    const latest = new Map<string, Entry>();
+    for (const e of [...log].sort((a, b) => a.at.localeCompare(b.at)))
+      if (e.seatId && (e.action === "arrived" || e.action === "undo")) latest.set(e.seatId, e);
+    return latest;
+  }, [log]);
+  // table by table, guests in the Excel order (ids follow the upload order)
+  const pdfTables = useMemo(() => {
+    const m = new Map<string, { name: string; guests: { id: string; name: string; came: boolean; at: string | null }[] }>();
+    for (const s of seated) {
+      const t = m.get(s.table.id) ?? { name: s.table.name, guests: [] };
+      const l = arrivedAt.get(s.id);
+      t.guests.push({
+        id: s.user!.id,
+        name: `${s.user!.firstname} ${s.user!.lastname}`.trim(),
+        came: s.isReceived,
+        at: s.isReceived && l?.action === "arrived" ? l.at : null,
+      });
+      m.set(s.table.id, t);
+    }
+    return [...m.values()]
+      .map((t) => ({ ...t, guests: t.guests.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) }))
+      .sort((a, b) => byTable(a.name, b.name));
+  }, [seated, arrivedAt]);
+  const noShows = useMemo(() => pdfTables.flatMap((t) => t.guests.filter((g) => !g.came).map((g) => ({ ...g, table: t.name }))), [pdfTables]);
 
   const meals = useMemo(() => {
     const m = new Map<string, number>();
@@ -190,10 +218,23 @@ export default function Summary() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
         <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-1 rounded bg-lime-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-lime-700"
+          onClick={() => {
+            try {
+              afterEventPdf({ eventName, tables: pdfTables, meals });
+              toast.success("PDF downloaded", { description: "Look in your Downloads folder." });
+            } catch {
+              toast.error("Could not make the PDF. Try Print instead.");
+            }
+          }}
+          className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
         >
-          <Printer className="h-4 w-4" /> Print / save as PDF
+          <FileDown className="h-4 w-4" /> Download PDF
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-100"
+        >
+          <Printer className="h-4 w-4" /> Print
         </button>
         <button
           onClick={closeOut}
@@ -216,15 +257,40 @@ export default function Summary() {
           {[
             ["Seated guests", String(seated.length)],
             ["Arrived", `${arrived.length} (${pct}%)`],
-            ["Did not come", String(noShow)],
+            ["Did not come", String(noShow), noShow ? "text-red-600" : ""],
             ["Busiest 15 min", peak ? `${fmtTime(peak.start)} · ${peak.count}` : "–"],
-          ].map(([k, v]) => (
+          ].map(([k, v, c]) => (
             <div key={k} className="rounded-xl border border-zinc-200 p-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{k}</div>
-              <div className="mt-1 text-2xl font-bold tabular-nums">{v}</div>
+              <div className={`mt-1 text-2xl font-bold tabular-nums ${c ?? ""}`}>{v}</div>
             </div>
           ))}
         </div>
+
+        {/* who did not come, in red, with their table */}
+        <section className="mb-8 rounded-xl border-2 border-red-200 bg-red-50/40 p-4">
+          <h2 className="mb-2 text-lg font-bold text-red-700">Did not come ({noShows.length})</h2>
+          {!noShows.length ? (
+            <p className="text-sm">Everyone came.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-red-200 text-left text-xs uppercase tracking-wide text-red-700">
+                  <th className="py-1.5">Name</th>
+                  <th className="py-1.5 text-right">Table</th>
+                </tr>
+              </thead>
+              <tbody>
+                {noShows.map((g) => (
+                  <tr key={g.id} className="border-b border-red-100 text-red-700">
+                    <td className="py-1.5 font-medium">{g.name}</td>
+                    <td className="py-1.5 text-right font-semibold">{g.table}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
 
         {/* arrivals over time */}
         <h2 className="mb-1 text-lg font-bold">Guests arriving, every 15 minutes</h2>
@@ -285,7 +351,7 @@ export default function Summary() {
                     <td className="py-1.5 text-right tabular-nums">
                       {t.came}/{t.seated}
                     </td>
-                    <td className={`py-1.5 text-right tabular-nums ${t.seated - t.came ? "font-semibold" : "text-zinc-400"}`}>
+                    <td className={`py-1.5 text-right tabular-nums ${t.seated - t.came ? "font-semibold text-red-600" : "text-zinc-400"}`}>
                       {t.seated - t.came}
                     </td>
                   </tr>
