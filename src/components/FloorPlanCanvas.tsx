@@ -274,7 +274,7 @@ export function FloorPlanCanvas({
   const cardMode: "seat" | "checkin" = roomOnly ? "checkin" : "seat";
   // Seat guests mode: have the guest list ready as soon as a table opens
   useEffect(() => {
-    if (zoomId && cardMode === "seat" && !allGuests) loadGuests();
+    if (zoomId && !staff && !allGuests) loadGuests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomId, cardMode]);
   // allergies (kept apart from the meal, shown in red)
@@ -3495,6 +3495,9 @@ export function FloorPlanCanvas({
                 <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet.</p>
               ) : (
                 <>
+                  <p className="mb-1 text-sm font-semibold text-zinc-800">
+                    The {booked.length} guest{booked.length === 1 ? "" : "s"} at {tableNameOf(table)}
+                  </p>
                   <p className="mb-1 text-[11px] text-zinc-500">
                     Tick the box to mark a guest arrived; they then leave this list. Marked by mistake? Search the name and untick it.
                   </p>
@@ -3534,12 +3537,8 @@ export function FloorPlanCanvas({
                         if (!q) return !s.isReceived;
                         return nameMatches(`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`, q);
                       })
-                      .sort((a, b) =>
-                        // by last name, then first name
-                        `${a.user?.lastname ?? ""} ${a.user?.firstname ?? ""}`.localeCompare(
-                          `${b.user?.lastname ?? ""} ${b.user?.firstname ?? ""}`
-                        )
-                      )
+                      // in the order of your Excel file
+                      .sort((a, b) => (a.user?.id ?? "").localeCompare(b.user?.id ?? ""))
                       .map((s) => {
                         const name = `${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest";
                         return (
@@ -3589,6 +3588,17 @@ export function FloorPlanCanvas({
                                 <span className="text-xs font-semibold text-green-700">Arrived · untick to undo</span>
                               )}
                               <span className="text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
+                              {!staff && !s.isReceived && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeFromSeat(s.id)}
+                                  className="rounded p-0.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                                  title="Take this guest off the table (they stay in your guest list, under No seat yet)"
+                                  aria-label={`Take ${name} off the table`}
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </li>
                         );
@@ -3656,13 +3666,13 @@ export function FloorPlanCanvas({
                 ))}
 
               {/* Add several guests to this table at once (Seat guests mode) */}
-              {cardMode === "seat" && !staff && seats.length > booked.length && (() => {
+              {!staff && seats.length > booked.length && (() => {
                 const free = seats.length - booked.length;
                 const q = addQuery.trim().toLowerCase();
                 const unseated = (allGuests ?? []).filter((g) => !g.seat?.length);
                 const matches = unseated
                   .filter((g) => !q || nameMatches(`${g.firstname} ${g.lastname}`, q))
-                  .sort((a, b) => `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`)) // by last name
+                  .sort((a, b) => a.id.localeCompare(b.id)) // in the order of your Excel file
                   .slice(0, 50);
                 const full = addPicked.length >= free;
                 return (
