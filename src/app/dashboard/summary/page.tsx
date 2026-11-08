@@ -220,12 +220,10 @@ export default function Summary() {
         </Link>
         <button
           onClick={() => {
-            try {
-              afterEventPdf({ eventName, tables: pdfTables, meals });
-              toast.success("PDF downloaded", { description: "Look in your Downloads folder." });
-            } catch {
-              toast.error("Could not make the PDF. Try Print instead.");
-            }
+            afterEventPdf({ eventName, tables: pdfTables, meals }).then(
+              () => toast.success("PDF downloaded", { description: "Look in your Downloads folder." }),
+              () => toast.error("Could not make the PDF. Try Print instead."),
+            );
           }}
           className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
         >

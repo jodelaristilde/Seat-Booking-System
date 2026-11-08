@@ -5,7 +5,23 @@ import { jsPDF } from "jspdf";
 
 export type PdfTable = { name: string; guests: { name: string; came: boolean; at?: string | null; vip?: boolean }[] };
 
-export function afterEventPdf(o: {
+// the logo as a picture the PDF can hold (null if it can't be loaded)
+async function logo(): Promise<string | null> {
+  try {
+    const b = await fetch("/seating4u-logo.png").then((r) => (r.ok ? r.blob() : null));
+    if (!b) return null;
+    return await new Promise((res) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.onerror = () => res(null);
+      fr.readAsDataURL(b);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function afterEventPdf(o: {
   eventName: string;
   date?: string | null;
   tables: PdfTable[];
@@ -25,7 +41,7 @@ export function afterEventPdf(o: {
       y = M;
     }
   };
-  const text = (s: string, x: number, size = 10, bold = false, color = BLACK, align: "left" | "right" = "left") => {
+  const text = (s: string, x: number, size = 10, bold = false, color = BLACK, align: "left" | "right" | "center" = "left") => {
     doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.setFontSize(size);
     doc.setTextColor(...color);
@@ -37,6 +53,79 @@ export function afterEventPdf(o: {
   const came = all.filter((g) => g.came);
   const noShow = all.filter((g) => !g.came);
 
+  const img = await logo();
+
+  // page 1: a thank-you card
+  {
+    const LIME: [number, number, number] = [132, 204, 22];
+    const GREEN: [number, number, number] = [21, 128, 61];
+    doc.setFillColor(247, 254, 231);
+    doc.rect(0, 0, W, H, "F");
+    doc.setDrawColor(...LIME);
+    doc.setLineWidth(6);
+    doc.roundedRect(M - 10, M - 10, W - 2 * M + 20, H - 2 * M + 20, 14, 14);
+    doc.setLineWidth(1);
+    doc.roundedRect(M, M, W - 2 * M, H - 2 * M, 10, 10);
+    let cy = M + 60;
+    if (img) {
+      const lw = 300;
+      doc.addImage(img, "PNG", (W - lw) / 2, cy, lw, (lw * 491) / 1600);
+      cy += (lw * 491) / 1600 + 70;
+    }
+    doc.setFont("times", "bolditalic");
+    doc.setFontSize(60);
+    doc.setTextColor(...GREEN);
+    doc.text("Thank You", W / 2, cy, { align: "center" });
+    cy += 30;
+    doc.setDrawColor(...LIME);
+    doc.setLineWidth(2);
+    doc.line(W / 2 - 60, cy, W / 2 + 60, cy);
+    cy += 40;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(14);
+    doc.setTextColor(...BLACK);
+    const note = [
+      `Thank you for the opportunity to be part of ${o.eventName || "your event"}${o.date ? ` on ${new Date(o.date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : ""}.`,
+      "",
+      "It was a pleasure welcoming your guests and helping every one of them find their seat.",
+      "",
+      "Your event report is on the next pages: who came, when they arrived, the meals served, and the guests who did not come, with their table numbers.",
+      "",
+      "We look forward to celebrating with you again.",
+    ];
+    for (const line of note) {
+      if (!line) {
+        cy += 8;
+        continue;
+      }
+      for (const l of doc.splitTextToSize(line, W - 2 * M - 120)) {
+        doc.text(l, W / 2, cy, { align: "center" });
+        cy += 19;
+      }
+    }
+    cy += 34;
+    doc.setFont("times", "italic");
+    doc.setFontSize(20);
+    doc.setTextColor(...GREEN);
+    doc.text("With gratitude,", W / 2, cy, { align: "center" });
+    cy += 26;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(...BLACK);
+    doc.text("Jodel Aristilde · Seating4U", W / 2, cy, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(...GREY);
+    doc.text("www.seating4u.com  ·  417-893-0047", W / 2, H - M - 30, { align: "center" });
+    doc.addPage();
+    doc.setLineWidth(1);
+  }
+
+  // the Seating4U logo, top right (1600 x 491)
+  if (img) {
+    const lw = 150;
+    doc.addImage(img, "PNG", W - M - lw, M - 14, lw, (lw * 491) / 1600);
+  }
   // title
   text(o.eventName || "Event", M, 20, true);
   y += 18;
@@ -125,6 +214,11 @@ export function afterEventPdf(o: {
     y += 8;
   }
 
+  // thank-you and contact at the bottom of the last page
+  need(40);
+  y += 10;
+  text("Thank you for choosing Seating4U  ·  www.seating4u.com  ·  417-893-0047", W / 2, 10, true, GREY, "center");
+  doc.setFontSize(10);
   const safe = (o.eventName || "event").replace(/[^\w\- ]+/g, "").trim() || "event";
   doc.save(`${safe} - after-event report.pdf`);
 }
