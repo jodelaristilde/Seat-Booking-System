@@ -379,14 +379,29 @@ export function FloorPlanCanvas({
     if (zoomTimer.current) clearTimeout(zoomTimer.current);
   };
   const [turned, setTurned] = useState(false);
+  // saved for the event, so the guests' phone map is turned the same way
   useEffect(() => {
-    if (readStored(FLIP_KEY) === "on") setTurned(true);
+    fetch("/api/map-turned")
+      .then((r) => r.json())
+      .then((j) => setTurned(j?.turned === true))
+      .catch(() => setTurned(readStored(FLIP_KEY) === "on"));
   }, []);
-  const toggleTurned = () =>
-    setTurned((v) => {
-      writeStored(FLIP_KEY, v ? "off" : "on");
-      return !v;
-    });
+  const toggleTurned = async () => {
+    const next = !turned;
+    setTurned(next);
+    writeStored(FLIP_KEY, next ? "on" : "off");
+    try {
+      const j = await fetch("/api/map-turned", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turned: next }),
+      }).then((r) => r.json());
+      if (!j?.success) throw new Error();
+      toast.success(next ? "Map turned around. Guests' phones show it this way too." : "Map back the normal way, on guests' phones too.");
+    } catch {
+      toast.error("Could not save the turned map for the guests' phones");
+    }
+  };
   const toggleHoverZoom = () =>
     setHoverZoom((v) => {
       writeStored(ZOOM_KEY, v ? "off" : "on");

@@ -1,5 +1,6 @@
 // app/api/floor-map/route.ts
 import { activeEventId, eventExists } from "@/lib/event";
+import { isTurned } from "@/lib/mapTurned";
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ image: null }, { status: 200 });
     }
 
-    return NextResponse.json({ image }, { status: 200 });
+    // turned: the map is shown upside down, the same way as on the floor plan
+    return NextResponse.json({ image, turned: await isTurned(eventId) }, { status: 200 });
   } catch (error) {
     console.error('Fetch floor map error:', error);
     return NextResponse.json(

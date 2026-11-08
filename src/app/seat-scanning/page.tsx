@@ -73,6 +73,7 @@ export default function SeatScanning() {
   const [isFloorMapOpen, setIsFloorMapOpen] = useState(false);
   // The way to the guest's table: their table on the plan + the entrance(s)
   const [way, setWay] = useState<Way | null>(null);
+  const [mapTurned, setMapTurned] = useState(false);
   const [floorMapImage, setFloorMapImage] = useState<FloorMapImage | null>(
     null
   );
@@ -253,7 +254,7 @@ export default function SeatScanning() {
   // Fetch floor map
   // The map and the way to the table are loaded as soon as the guest has
   // arrived, so "Show me my table" opens at once (slow phone data at venues)
-  const mapPre = useRef<{ key: string; p: Promise<[{ image?: FloorMapImage }, unknown]> } | null>(null);
+  const mapPre = useRef<{ key: string; p: Promise<[{ image?: FloorMapImage; turned?: boolean }, unknown]> } | null>(null);
   const loadMapData = () => {
     const ev = eventId || selectedUser?.eventId || "";
     const seatId = searchResult?.seatId ?? "";
@@ -262,7 +263,7 @@ export default function SeatScanning() {
     const p = Promise.all([
       fetch(`/api/floor-map${ev ? `?event=${encodeURIComponent(ev)}` : ""}`).then((r) => r.json()),
       seatId ? fetch(`/api/wayfind?seatId=${encodeURIComponent(seatId)}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
-    ]) as Promise<[{ image?: FloorMapImage }, unknown]>;
+    ]) as Promise<[{ image?: FloorMapImage; turned?: boolean }, unknown]>;
     p.catch(() => {
       if (mapPre.current?.key === key) mapPre.current = null; // try again next time
     });
@@ -300,6 +301,7 @@ export default function SeatScanning() {
         setWay({ table: w.table, entrances: w.entrances ?? [], obstacles: w.obstacles ?? [] });
 
       if (data.image) {
+        setMapTurned(data.turned === true);
         setFloorMapImage(data.image);
         setIsFloorMapOpen(true);
       } else {
@@ -1158,6 +1160,7 @@ export default function SeatScanning() {
       {/* Floor map: full screen, the right way up */}
       {isFloorMapOpen && (
         <MapViewer
+          turned={mapTurned}
           src={floorMapImage?.data ?? null}
           title={way ? "" : t.floorPlan}
           hint={way ? (way.entrances.length ? t.followLine : t.circled) : ""}
@@ -1177,7 +1180,7 @@ export default function SeatScanning() {
             if (!from && seatIsReceived) startOver();
           }}
         >
-          {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} />}
+          {way && <WayOverlay way={way} youAreHere={t.youAreHere} yourTable={t.yourTable} turned={mapTurned} />}
         </MapViewer>
       )}
     </div>
@@ -1215,7 +1218,7 @@ type Way = {
   obstacles?: { x: number; y: number; w: number | null; h: number | null; round: boolean; fixed?: boolean }[];
 };
 
-function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: string; yourTable: string }) {
+function WayOverlay({ way, youAreHere, yourTable, turned = false }: { way: Way; youAreHere: string; yourTable: string; turned?: boolean }) {
   const t = way.table;
   const ringW = Math.max(5, (t.w ?? 7) * 1.45);
   const round = (t.shape ?? "round") === "round";
@@ -1285,7 +1288,7 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
           aria-label={`${yourTable} ${t.name}`}
         />
         {/* just the number, flashing with the table ("Table 4" -> "4") */}
-        <span className="way-num absolute inset-0 flex items-center justify-center text-[clamp(1.25rem,5vw,2.5rem)] font-bold leading-none text-white [text-shadow:0_0_4px_#000,0_0_2px_#000]">
+        <span style={turned ? { rotate: "180deg" } : undefined} className="way-num absolute inset-0 flex items-center justify-center text-[clamp(1.25rem,5vw,2.5rem)] font-bold leading-none text-white [text-shadow:0_0_4px_#000,0_0_2px_#000]">
           {t.name.match(/\d+/)?.[0] ?? t.name}
         </span>
         {/* the arrow comes from above, or from below when the table is at the top of the room */}
@@ -1302,8 +1305,10 @@ function WayOverlay({ way, youAreHere, yourTable }: { way: Way; youAreHere: stri
             className="way-pulse absolute flex h-[50px] w-[50px] flex-col items-center justify-center rounded-full bg-lime-300/60 text-green-900 shadow-sm ring-2 ring-white/80 backdrop-blur-[1px]"
             style={{ left: `min(max(26px, ${door.x}%), calc(100% - 26px))`, top: `min(max(26px, ${door.y}%), calc(100% - 26px))` }}
           >
-            <DoorOpen className="h-5 w-5" strokeWidth={2.4} />
-            <span className="mt-0.5 text-[10px] font-bold leading-none">{youAreHere}</span>
+            <span className="flex flex-col items-center" style={turned ? { rotate: "180deg" } : undefined}>
+              <DoorOpen className="h-5 w-5" strokeWidth={2.4} />
+              <span className="mt-0.5 text-[10px] font-bold leading-none">{youAreHere}</span>
+            </span>
           </div>
         </>
       )}
@@ -1512,7 +1517,9 @@ function MapViewer({
   hint,
   onClose,
   children,
+  turned = false,
 }: {
+  turned?: boolean;
   src: string | null;
   title: string;
   hint: string;
@@ -1577,6 +1584,8 @@ function MapViewer({
         {/* the map, as big as it fits */}
         {src ? (
           <div className="absolute left-1/2 -translate-x-1/2" style={{ top: startY + top + 6, width: fitW, height: fitH }}>
+            {/* turned around like on the floor plan (the table number stays upright) */}
+            <div className="absolute inset-0" style={turned ? { rotate: "180deg" } : undefined}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
@@ -1589,6 +1598,7 @@ function MapViewer({
               }}
             />
             {children}
+            </div>
           </div>
         ) : (
           <p className="pt-24 text-center text-lg text-zinc-500">No floor map available</p>
