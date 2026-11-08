@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { Seat } from "@/types/booking";
-import { ChevronLeft, ChevronRight, Download, MapPin, Search, Trash2, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, MapPin, Pencil, Search, Trash2, User } from "lucide-react";
 import { showWay } from "@/components/ShowWayDialog";
 import { Fragment, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ interface BookingSidebarProps {
   // check a guest in straight away (after reading their note)
   onCheckInNow?: (seatId: string) => void;
   // guests on the list without a seat yet, and how to give them one
-  unseated?: { id: string; name: string }[];
+  unseated?: { id: string; name: string; first?: string; last?: string }[];
   seatTables?: { id: string; name: string; free: number }[];
   onSeatGuest?: (guestId: string, tableId: string) => Promise<void>;
   onSeatGuests?: (guestIds: string[], tableId: string) => Promise<void>; // several at once
@@ -47,6 +47,69 @@ export function BookingSidebar({
   onSeatGuests,
 }: BookingSidebarProps) {
   const [seating, setSeating] = useState<string | null>(null);
+  // Fix a misspelled name: the pencil next to a guest opens two boxes (first, last)
+  const [editing, setEditing] = useState<{ id: string; first: string; last: string } | null>(null);
+  const [savingName, setSavingName] = useState(false);
+  const saveName = async () => {
+    if (!editing) return;
+    if (!editing.first.trim() && !editing.last.trim()) return toast.error("Type the guest's name");
+    setSavingName(true);
+    const r = await fetch("/api/guest-update", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editing.id, firstname: editing.first, lastname: editing.last }),
+    })
+      .then((x) => x.json())
+      .catch(() => null);
+    setSavingName(false);
+    if (r?.success) {
+      toast.success(`Name changed to ${`${editing.first} ${editing.last}`.trim()}`);
+      setEditing(null);
+    } else toast.error(r?.message ?? "Could not change the name");
+  };
+  const nameEditor = (
+    <span className="inline-flex flex-wrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <input
+        autoFocus
+        value={editing?.first ?? ""}
+        onChange={(e) => setEditing((p) => (p ? { ...p, first: e.target.value } : p))}
+        onKeyDown={(e) => (e.key === "Enter" ? saveName() : e.key === "Escape" ? setEditing(null) : undefined)}
+        placeholder="First name"
+        aria-label="First name"
+        className="h-8 w-28 rounded border-2 border-green-500 px-1.5 text-sm"
+      />
+      <input
+        value={editing?.last ?? ""}
+        onChange={(e) => setEditing((p) => (p ? { ...p, last: e.target.value } : p))}
+        onKeyDown={(e) => (e.key === "Enter" ? saveName() : e.key === "Escape" ? setEditing(null) : undefined)}
+        placeholder="Last name"
+        aria-label="Last name"
+        className="h-8 w-28 rounded border-2 border-green-500 px-1.5 text-sm"
+      />
+      <button type="button" onClick={saveName} disabled={savingName} className="h-8 rounded bg-green-600 px-2 text-xs font-bold text-white hover:bg-green-700">
+        {savingName ? "Saving…" : "Save"}
+      </button>
+      <button type="button" onClick={() => setEditing(null)} className="h-8 px-1 text-xs text-gray-600 underline">
+        Cancel
+      </button>
+    </span>
+  );
+  const pencil = (id: string, first: string, last: string) =>
+    readOnly ? null : (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditing({ id, first, last });
+        }}
+        className="ml-1 inline-flex rounded p-0.5 align-middle text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+        title="Fix the spelling of this name"
+        aria-label={`Change the name ${`${first} ${last}`.trim()}`}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+    );
+
   // guests ticked in "No seat yet", to seat them together at one table
   const [picked, setPicked] = useState<string[]>([]);
   const togglePick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -463,7 +526,7 @@ export function BookingSidebar({
                         )}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium text-gray-900">
-                            {g.name}
+                            {editing?.id === g.id ? nameEditor : <>{g.name}{pencil(g.id, g.first ?? g.name.split(" ")[0], g.last ?? g.name.split(" ").slice(1).join(" "))}</>}
                             {notes[g.id] && (
                               <span className="ml-1.5 rounded bg-amber-200 px-1 text-[11px] font-bold text-amber-900" title={notes[g.id]}>
                                 📝 Note
@@ -552,7 +615,7 @@ export function BookingSidebar({
                     <tr
                       className={`border-b border-gray-100 ${dupes.has(dupKey(seat)) ? "keep-ink bg-red-100" : seat.isReceived ? "bg-green-50/70" : ""} ${seat.user ? "cursor-grab active:cursor-grabbing" : ""}`}
                       // drag a name onto a table on the floor plan to move the guest there
-                      draggable={!!seat.user && !readOnly}
+                      draggable={!!seat.user && !readOnly && editing?.id !== seat.user?.id}
                       onDragStart={(e) => {
                         // pressing on the arrived box ticks it; it never picks the name up
                         if (boxPress.current) {
@@ -604,10 +667,15 @@ export function BookingSidebar({
                       </td>
                       <td className="py-0.5 pr-6 align-middle whitespace-nowrap">
                         {/* only the box marks arrival; clicking the name does nothing */}
-                        <span className="font-medium text-gray-900 select-text">
-                          {seat.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
-                          {seat.user?.firstname} {seat.user?.lastname}
-                        </span>
+                        {seat.user && editing?.id === seat.user.id ? (
+                          nameEditor
+                        ) : (
+                          <span className="font-medium text-gray-900 select-text">
+                            {seat.user?.vip && <span className="mr-1 text-amber-500" title="VIP">★</span>}
+                            {seat.user?.firstname} {seat.user?.lastname}
+                            {seat.user && pencil(seat.user.id, seat.user.firstname, seat.user.lastname)}
+                          </span>
+                        )}
                         {seat.user && notes[seat.user.id] && (
                           <span
                             className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-800"
@@ -751,6 +819,8 @@ export function BookingSidebar({
       seating,
       seatTables,
       picked,
+      editing,
+      savingName,
     ]
   );
 

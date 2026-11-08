@@ -282,7 +282,18 @@ export function FloorPlanCanvas({
   // notes (the guest's phone hides the seat; the desk reads the note first)
   const { notes: guestNotes, saveNote } = useGuestNotes();
   // VIP star / meal choice for one guest
-  const updateGuest = async (id: string, data: { vip?: boolean; meal?: string | null }) => {
+  // the table's guest list shows just the names; "More" shows VIP, allergy, meal
+  const [tableExtras, setTableExtras] = useState(false);
+  // fixing a misspelled name right on the table
+  const [nameEdit, setNameEdit] = useState<{ id: string; first: string; last: string } | null>(null);
+  const saveNameEdit = async () => {
+    if (!nameEdit) return;
+    if (!nameEdit.first.trim() && !nameEdit.last.trim()) return toast.error("Type the guest's name");
+    await updateGuest(nameEdit.id, { firstname: nameEdit.first, lastname: nameEdit.last });
+    toast.success(`Name changed to ${`${nameEdit.first} ${nameEdit.last}`.trim()}`);
+    setNameEdit(null);
+  };
+  const updateGuest = async (id: string, data: { vip?: boolean; meal?: string | null; firstname?: string; lastname?: string }) => {
     try {
       const res = await fetch("/api/guest-update", {
         method: "PUT",
@@ -3283,7 +3294,7 @@ export function FloorPlanCanvas({
                   <p className="py-3 text-center text-sm text-zinc-500">No guests at this table yet. Add them below.</p>
                 ) : (
                   <>
-                  {(() => {
+                  {tableExtras && (() => {
                     const ids = booked.map((b) => b.user?.id).filter((x): x is string => !!x);
                     const allVip = booked.length > 0 && booked.every((b) => b.user?.vip);
                     return (
@@ -3304,19 +3315,19 @@ export function FloorPlanCanvas({
                   })()}
                   <ul className="space-y-1">
                     {[...booked]
-                      .sort((a, b) =>
-                        `${a.user?.lastname ?? ""} ${a.user?.firstname ?? ""}`.localeCompare(
-                          `${b.user?.lastname ?? ""} ${b.user?.firstname ?? ""}`
-                        )
-                      )
+                      .sort((a, b) => (a.user?.id ?? "").localeCompare(b.user?.id ?? ""))
                       .map((s) => (
                         <li
                           key={s.id}
-                          className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
+                          // a guest with a note is yellow; point at the name to read the note
+                          className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm ${
+                            s.user && guestNotes[s.user.id] ? "border-amber-300 bg-amber-100" : "border-zinc-200 bg-white"
+                          }`}
+                          title={(s.user && guestNotes[s.user.id]) ? `Note: ${guestNotes[s.user.id]}` : undefined}
                         >
-                          <span className="w-12 text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>
+                          {tableExtras && <span className="w-12 text-xs text-zinc-400 tabular-nums">Seat {s.seat}</span>}
                           {/* VIP star: the dashboard announces VIPs when they arrive */}
-                          <button
+                          {tableExtras && <button
                             type="button"
                             onClick={() => s.user && updateGuest(s.user.id, { vip: !s.user.vip })}
                             className={`text-base leading-none ${s.user?.vip ? "text-amber-500" : "text-zinc-300 hover:text-amber-400"}`}
@@ -3324,12 +3335,56 @@ export function FloorPlanCanvas({
                             aria-label="VIP"
                           >
                             ★
-                          </button>
-                          <span className="min-w-0 flex-1 truncate font-medium text-zinc-800">
-                            {`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"}
-                          </span>
+                          </button>}
+                          {s.user && nameEdit?.id === s.user.id ? (
+                            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                              <input
+                                autoFocus
+                                value={nameEdit.first}
+                                onChange={(e) => setNameEdit((p) => (p ? { ...p, first: e.target.value } : p))}
+                                onFocus={() => (zoomPinned.current = true)}
+                                onKeyDown={(e) => (e.key === "Enter" ? saveNameEdit() : e.key === "Escape" ? setNameEdit(null) : undefined)}
+                                placeholder="First name"
+                                aria-label="First name"
+                                className="h-8 w-28 rounded border-2 border-green-500 px-1.5 text-sm"
+                              />
+                              <input
+                                value={nameEdit.last}
+                                onChange={(e) => setNameEdit((p) => (p ? { ...p, last: e.target.value } : p))}
+                                onFocus={() => (zoomPinned.current = true)}
+                                onKeyDown={(e) => (e.key === "Enter" ? saveNameEdit() : e.key === "Escape" ? setNameEdit(null) : undefined)}
+                                placeholder="Last name"
+                                aria-label="Last name"
+                                className="h-8 w-28 rounded border-2 border-green-500 px-1.5 text-sm"
+                              />
+                              <button type="button" onClick={saveNameEdit} className="h-8 rounded bg-green-600 px-2 text-xs font-bold text-white hover:bg-green-700">
+                                Save
+                              </button>
+                              <button type="button" onClick={() => setNameEdit(null)} className="h-8 px-1 text-xs text-zinc-600 underline">
+                                Cancel
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="min-w-0 flex-1 break-words font-medium text-zinc-900">
+                              {`${s.user?.firstname ?? ""} ${s.user?.lastname ?? ""}`.trim() || "Guest"}
+                              {s.user && !staff && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    zoomPinned.current = true;
+                                    setNameEdit({ id: s.user!.id, first: s.user!.firstname, last: s.user!.lastname });
+                                  }}
+                                  className="ml-1 inline-flex rounded p-0.5 align-middle text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                                  title="Fix the spelling of this name"
+                                  aria-label={`Change the name ${s.user.firstname} ${s.user.lastname}`}
+                                >
+                                  <PenLine className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </span>
+                          )}
                           {/* allergy: red when filled in */}
-                          <input
+                          {tableExtras && <input
                             key={`${s.id}-al-${(s.user && allergies[s.user.id]) ?? ""}`}
                             defaultValue={(s.user && allergies[s.user.id]) ?? ""}
                             placeholder="Allergy"
@@ -3346,9 +3401,9 @@ export function FloorPlanCanvas({
                               if (s.user && v !== (allergies[s.user.id] ?? "")) saveAllergy(s.user.id, v);
                             }}
                             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                          />
+                          />}
                           {/* meal choice */}
-                          <input
+                          {tableExtras && <input
                             key={`${s.id}-${s.user?.meal ?? ""}`}
                             defaultValue={s.user?.meal ?? ""}
                             list="meal-options"
@@ -3360,7 +3415,7 @@ export function FloorPlanCanvas({
                               if (s.user && v !== (s.user.meal ?? "")) updateGuest(s.user.id, { meal: v || null });
                             }}
                             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                          />
+                          />}
                           {/* note: click to add / change it */}
                           <button
                             type="button"
@@ -3395,6 +3450,13 @@ export function FloorPlanCanvas({
                         </li>
                       ))}
                   </ul>
+                  <button
+                    type="button"
+                    onClick={() => setTableExtras((v) => !v)}
+                    className="mt-1.5 text-xs text-zinc-500 underline hover:text-zinc-800"
+                  >
+                    {tableExtras ? "Show just the names" : "More: VIP, allergy, meal"}
+                  </button>
                   </>
                 )
               )}

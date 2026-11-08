@@ -416,7 +416,7 @@ const [selectedTableGuests, setSelectedTableGuests] = useState<{
   const unseatedGuests = (allGuests || [])
     .filter((g) => !g.seat || g.seat.length === 0)
     // in the order of the Excel file (the order they were added), not A–Z
-    .map((g) => ({ id: g.id, name: `${g.firstname} ${g.lastname}`.trim() }))
+    .map((g) => ({ id: g.id, name: `${g.firstname} ${g.lastname}`.trim(), first: g.firstname, last: g.lastname }))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const seatTables = getTableInfo()
     .map((t) => ({ id: String(t.id), name: t.name, free: t.seats.filter((x) => !x.isBooked).length }))
